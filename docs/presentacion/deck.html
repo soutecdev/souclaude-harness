@@ -883,20 +883,20 @@
       <!-- 01 ───────────────────────────────────────────── -->
       <section class="slide on" data-act="0">
         <div class="hero">
-          <span class="eyebrow">SOUTEC · Metodología CCEM</span>
+          <span class="eyebrow">SOUTEC · Metodología de trabajo</span>
           <h1 class="t">El harness, de punta a punta</h1>
           <div class="rule"></div>
           <p class="lead" style="font-size:1.85cqi">
-            Cómo se instala en un proyecto nuevo, cómo se adopta en uno que ya lleva años,
-            y cómo el tablero compartido y el monitor de tokens vuelven visible el trabajo
-            de todo el equipo.
+            Cómo se instala en cualquier repo, cómo se declara el milestone antes de tocar
+            código, y cómo el tablero compartido y el monitor de tokens vuelven visible el
+            trabajo de todo el equipo.
           </p>
           <div class="term" style="max-width:56cqi">
             <span class="l"><span class="c"># en cualquier repo, nuevo o legacy</span></span>
-            <span class="l big"><span class="p">$</span> npx github:ialvarezsoutec/souclaude-harness#v1</span>
+            <span class="l big"><span class="p">$</span> npx github:ialvarezsoutec/souclaude-harness#v3</span>
           </div>
           <div class="meta">
-            <span><b>souclaude-harness</b> v2.3.0</span>
+            <span><b>souclaude-harness</b> v3.5.0</span>
             <span>·</span>
             <span>Node ≥ 22.4 + git</span>
             <span>·</span>
@@ -909,49 +909,48 @@
       <section class="slide" data-act="0">
         <div class="gutter"><b>Qué es</b><i></i><s>I</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Qué es</span><span class="count">02 / 15</span></div>
+          <div class="top"><span class="eyebrow">Qué es</span><span class="count">02 / 13</span></div>
           <h2 class="t">Tres capas que conviene no confundir</h2>
           <div class="body">
             <div class="cols c3" style="flex:1">
               <div class="card">
-                <span class="tag">El método</span>
-                <h3>CCEM</h3>
-                <p>Los principios, el flujo Spec-Driven, el prompting anti-hack, la trazabilidad
-                  y los criterios para evaluar herramientas.</p>
-                <p style="margin-top:auto;color:var(--muted)"><code>.claude/skills/</code>
-                  <code>docs/constitution.md</code></p>
+                <span class="tag">En tu repo</span>
+                <h3>El harness</h3>
+                <p>Las reglas y las skills que Claude aplica solo cuando el contexto lo
+                  amerita. Se commitean con el repo: quien clona, las tiene.</p>
+                <p style="margin-top:auto;color:var(--muted)"><code>CLAUDE.md</code>
+                  <code>.claude/skills/</code></p>
               </div>
               <div class="card">
-                <span class="tag">Cómo se ejecuta</span>
-                <h3>Orquestación multiagente</h3>
-                <p>Un patrón <b>opt-in</b>: cuatro roles con herramientas acotadas que hacen
-                  cumplir CCEM. No corre en cada sesión — lo pides cuando lo quieres.</p>
-                <p style="margin-top:auto;color:var(--muted)"><code>.claude/agents/</code>
-                  <code>AGENTS.md</code></p>
+                <span class="tag">Repo aparte</span>
+                <h3>El Vault</h3>
+                <p>El centro de información de <b>todos</b> los proyectos: milestones, planes,
+                  kanban y sesiones. Fuera del repo a propósito, para acumular visibilidad sin
+                  ensuciarlo.</p>
+                <p style="margin-top:auto;color:var(--muted)"><code>Project-&lt;PREFIJO&gt;/</code></p>
               </div>
               <div class="card">
-                <span class="tag">El vehículo</span>
-                <h3>souclaude-harness</h3>
-                <p>El CLI que emite y mantiene al día todo lo anterior en cualquier repo:
-                  uno vacío, uno legacy o uno con una versión vieja.</p>
-                <p style="margin-top:auto;color:var(--muted)"><code>src/</code>
-                  <code>templates/</code> <code>bin/cli.mjs</code></p>
+                <span class="tag">Para la organización</span>
+                <h3>Jira</h3>
+                <p>El espejo del Vault hacia afuera. Milestone = épica, tarea = issue hijo.
+                  Se sincroniza al mover la tarjeta, no al final del día.</p>
+                <p style="margin-top:auto;color:var(--muted)"><code>conector MCP de Atlassian</code></p>
               </div>
             </div>
           </div>
-          <p class="foot">Las skills son <em>project-local</em>: se commitean con el repo.
-            Quien clona, las tiene — no hay instalación por persona ni por máquina.</p>
+          <p class="foot">El Vault manda, Jira refleja. Si el conector no está autorizado,
+            <em>se avisa y el trabajo local sigue</em> — Jira nunca bloquea.</p>
         </div>
       </section>
 
       <!-- 03 ───────────────────────────────────────────── -->
       <section class="slide" data-act="1">
-        <div class="gutter"><b>Proyecto nuevo</b><i></i><s>II</s></div>
+        <div class="gutter"><b>Instalar</b><i></i><s>II</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto nuevo</span><span class="count">03 / 15</span></div>
-          <h2 class="t">Un comando. Cuatro verbos.</h2>
+          <div class="top"><span class="eyebrow">Instalar</span><span class="count">03 / 13</span></div>
+          <h2 class="t">Un comando. Siete verbos.</h2>
           <div class="body">
-            <div class="cols split" style="flex:1">
+            <div class="cols c2" style="flex:1;align-items:start">
               <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
                 <div class="tw" style="flex:1">
                   <table>
@@ -964,11 +963,14 @@
                       <tr><td><span class="verdict v-info">upgrade</span></td>
                         <td>Actualiza a la última versión y aplica las migraciones.</td></tr>
                       <tr><td><span class="verdict v-none">status</span></td>
-                        <td>Solo lectura. Salida <code>0</code> al día · <code>1</code> hay upgrade ·
-                          <code>2</code> hay drift.</td></tr>
+                        <td>Solo lectura. Salida 0 al día · 1 hay upgrade · 2 hay drift.</td></tr>
                       <tr><td><span class="verdict v-hold">adopt</span></td>
-                        <td>Para una estructura hecha a mano. <b>No toca ningún archivo</b>: solo
-                          escribe el lockfile.</td></tr>
+                        <td>Para una estructura hecha a mano. <b>No toca ningún archivo</b>:
+                          solo escribe el lockfile.</td></tr>
+                      <tr><td><span class="verdict v-none">monitor</span></td>
+                        <td>Panel de consumo de tokens: límites, sesiones y proyectos.</td></tr>
+                      <tr><td><span class="verdict v-info">vault-sync</span></td>
+                        <td>Sincroniza con el Vault. Jamás <code>--force</code>.</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -979,12 +981,12 @@
               <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
                 <div class="term" style="flex:1">
                   <span class="l"><span class="c"># ver el plan sin escribir un solo byte</span></span>
-                  <span class="l"><span class="p">$</span> npx …souclaude-harness#v1 --dry-run</span>
+                  <span class="l"><span class="p">$</span> npx …souclaude-harness#v3 --dry-run</span>
                   <span class="l">&nbsp;</span>
                   <span class="l"><span class="g">create</span>   CLAUDE.md</span>
-                  <span class="l"><span class="g">create</span>   docs/constitution.md</span>
-                  <span class="l"><span class="g">create</span>   .claude/skills/ccem-core/</span>
-                  <span class="l"><span class="c">noop</span>     .gitignore <span class="c">(bloque ya presente)</span></span>
+                  <span class="l"><span class="g">create</span>   .claude/skills/soutec-github/</span>
+                  <span class="l"><span class="g">create</span>   progress/README.md</span>
+                  <span class="l"><span class="c">noop</span>     <span class="c">.gitignore (bloque ya presente)</span></span>
                   <span class="l">&nbsp;</span>
                   <span class="l"><span class="c">→ 0 bytes escritos</span></span>
                 </div>
@@ -1001,620 +1003,419 @@
 
       <!-- 04 ───────────────────────────────────────────── -->
       <section class="slide" data-act="1">
-        <div class="gutter"><b>Proyecto nuevo</b><i></i><s>II</s></div>
+        <div class="gutter"><b>Instalar</b><i></i><s>II</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto nuevo</span><span class="count">04 / 15</span></div>
-          <h2 class="t">Día 1, de cero a listo</h2>
+          <div class="top"><span class="eyebrow">Instalar</span><span class="count">04 / 13</span></div>
+          <h2 class="t">Qué queda instalado</h2>
           <div class="body">
-            <div class="cols split" style="flex:1">
-              <ol class="steps">
-                <li><span><b>Ten git y Node ≥ 22.4.</b> Nada más: no hay registry,
-                  ni <code>.npmrc</code>, ni token.</span></li>
-                <li><span><b>Corre el instalador</b> en la raíz del repo.
-                  <code>npx github:ialvarezsoutec/souclaude-harness#v1</code></span></li>
-                <li><span><b>Responde las cuatro preguntas</b> — nombre, tipo, stack e idioma —
-                  o pásalas por flag y sáltate el modo interactivo.</span></li>
-                <li><span><b>Conecta el Vault</b> cuando lo pida (<code>--vault-path</code> si ya
-                  lo tienes clonado, <code>--no-vault</code> para omitirlo).</span></li>
-                <li><span><b>Abre el repo con Claude Code.</b> Lo primero que lee es
-                  <code>CLAUDE.md</code> y <code>docs/constitution.md</code>.</span></li>
-                <li><span><b>Completa P7 y P8</b> de la constitución: son los dos principios que
-                  cada proyecto define por su cuenta.</span></li>
-              </ol>
+            <div class="cols c2" style="flex:1;align-items:start">
+              <div class="tree"><b>CLAUDE.md</b>                  <i>las reglas del repo</i>
+<b>.claude/</b>
+  settings.json           <i>permisos y hooks</i>
+  skills/                 <i>las que elegiste</i>
+  vault.local.json        <i>no se commitea</i>
+  jira.json               <i>proyecto destino</i>
+<b>.github/</b>
+  pull_request_template.md
+  CODEOWNERS
+<b>progress/</b>
+  README.md               <i>el protocolo</i>
+  history.md              <i>append-only</i>
+<b>docs/decisions/</b>          <i>los ADR</i></div>
               <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
-                <div class="card" style="flex:1">
-                  <span class="tag">Lo que NO tienes que hacer</span>
-                  <ul class="plain" style="margin-top:.3cqi">
-                    <li>Instalar skills a mano, una por una.</li>
-                    <li>Copiar un <code>CLAUDE.md</code> de otro repo y editarlo.</li>
-                    <li>Pedirle a cada persona del equipo que configure su máquina.</li>
-                    <li>Mantener las reglas sincronizadas entre proyectos a mano.</li>
-                  </ul>
+                <div class="tw" style="flex:1">
+                  <table>
+                    <thead>
+                      <tr><th>Skill</th><th>Para qué</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td><span class="verdict v-ok">soutec-github</span></td>
+                        <td><b>Obligatoria.</b> Ramas, commits y PR de SOUTEC.</td></tr>
+                      <tr><td><span class="verdict v-info">vault-milestones</span></td>
+                        <td>Analizar e iterar el tablero de milestones.</td></tr>
+                      <tr><td><span class="verdict v-info">jira-sync</span></td>
+                        <td>Espejar el Vault en Jira al mover la tarjeta.</td></tr>
+                      <tr><td><span class="verdict v-none">harness-upgrade</span></td>
+                        <td>Actualizar el harness desde Claude.</td></tr>
+                      <tr><td><span class="verdict v-none">adr-new</span></td>
+                        <td>Documentar decisiones con trade-off.</td></tr>
+                      <tr><td><span class="verdict v-none">it-security-review</span></td>
+                        <td>Security review para IT.</td></tr>
+                      <tr><td><span class="verdict v-none">soutec-md-a-pdf</span></td>
+                        <td>Markdown a PDF con identidad Soutec.</td></tr>
+                    </tbody>
+                  </table>
                 </div>
-                <div class="note"><b>El repo queda autosuficiente.</b> Quien lo clona recibe el
-                  método completo — mismas skills, misma constitución, mismas reglas de Git.</div>
+                <div class="note">Al instalar eliges con un checkbox.
+                  <code>soutec-github</code> se instala <b>siempre</b>, esté o no en la lista.</div>
               </div>
             </div>
           </div>
+          <p class="foot">Las skills son <em>project-local</em>: se commitean con el repo.
+            No hay instalación por persona ni por máquina.</p>
         </div>
       </section>
 
       <!-- 05 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="1">
-        <div class="gutter"><b>Proyecto nuevo</b><i></i><s>II</s></div>
+      <section class="slide" data-act="2">
+        <div class="gutter"><b>La regla</b><i></i><s>III</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto nuevo</span><span class="count">05 / 15</span></div>
-          <h2 class="t">Qué queda instalado</h2>
+          <div class="top"><span class="eyebrow">La regla</span><span class="count">05 / 13</span></div>
+          <h2 class="t">Nada de código sin milestone declarado</h2>
           <div class="body">
-            <div class="cols split" style="flex:1">
-              <div class="tree"><b>CLAUDE.md</b>                    <i>contexto del proyecto, &lt;200 líneas</i>
-<b>AGENTS.md</b>                    <i>mapa del flujo multiagente</i>
-<b>notes.md</b>                     <i>scratchpad persistente</i>
-<b>docs/</b>
-  constitution.md            <i>principios P1-P10</i>
-  decisions/                 <i>ADRs + su template</i>
-<b>specs/</b>                       <i>plantillas SDD: full y lite</i>
-<b>progress/</b>                    <i>estado vivo del trabajo</i>
-<b>.claude/</b>
-  settings.json              <i>permisos + deny de secretos</i>
-  harness.json               <i>lockfile: versión + hash</i>
-  vault.local.json           <i>ruta local del Vault</i>
-  <u>skills/</u>                   <i>ccem-* · soutec-github · comandos</i>
-  <u>agents/</u>                   <i>orchestrator · spec-author</i>
-                             <i>implementer · reviewer</i>
-<b>.github/</b>                     <i>plantilla de PR + CODEOWNERS</i>
-<b>.gitignore</b>                   <i>solo un bloque delimitado</i></div>
-              <div style="display:flex;flex-direction:column;gap:1.1cqi;min-width:0">
-                <p class="lead" style="font-size:1.4cqi">Cada archivo tiene una <b>política</b> que
-                  decide qué pasa cuando llega una versión nueva del harness.</p>
-                <div class="kv">
-                  <div class="r"><span class="k">user-owned</span>
-                    <span>Se siembra una vez. Si lo editas, no se pisa nunca.<br>
-                      <code>CLAUDE.md</code> <code>constitution.md</code> <code>notes.md</code></span></div>
-                  <div class="r"><span class="k">managed</span>
-                    <span>El harness es dueño y el upgrade lo mantiene fresco.<br>
-                      <code>skills/</code> <code>agents/</code> <code>AGENTS.md</code></span></div>
-                  <div class="r"><span class="k">merge-json</span>
-                    <span>Solo agrega claves que faltan. Jamás pisa un valor tuyo.<br>
-                      <code>.claude/settings.json</code></span></div>
-                  <div class="r"><span class="k">append-block</span>
-                    <span>Solo gestiona un bloque delimitado. Tus líneas quedan intactas.<br>
-                      <code>.gitignore</code></span></div>
-                </div>
+            <p class="lead">Todo trabajo pertenece a un milestone del Vault. Antes de tocar
+              código, el agente <b>declara sobre cuál va a trabajar</b>. Si el pedido no
+              corresponde a ninguno, se da de alta uno en el Backlog <em>antes</em> de empezar.</p>
+            <div class="cols c2" style="flex:1;align-items:start">
+              <div class="term">
+                <span class="l"><span class="c"># al arrancar la sesión, el hook recuerda el tablero</span></span>
+                <span class="l">&nbsp;</span>
+                <span class="l"><span class="p">[harness]</span> Trazabilidad obligatoria.</span>
+                <span class="l">&nbsp;</span>
+                <span class="l">En curso (1):</span>
+                <span class="l">  <span class="g">SHS-M5 · conexión con el Vault</span> <span class="c">@ignacio</span></span>
+                <span class="l">&nbsp;</span>
+                <span class="l"><span class="c">Backlog: 6 milestone(s) pendiente(s).</span></span>
               </div>
+              <ul class="plain">
+                <li>Trabajo sin milestone declarado es <em>una violación del protocolo</em>,
+                  no una omisión menor.</li>
+                <li>El milestone es la <b>unidad de anti-solapamiento</b> entre máquinas: si ya
+                  está En curso con otro dueño, paras y preguntas.</li>
+                <li>El hook <code>SessionStart</code> lo recuerda solo — no depende de que
+                  alguien se acuerde.</li>
+              </ul>
             </div>
           </div>
+          <p class="foot">La skill <code>vault-milestones</code> da de alta el milestone que
+            falta, con el estándar del tablero.</p>
         </div>
       </section>
 
       <!-- 06 ───────────────────────────────────────────── -->
       <section class="slide" data-act="2">
-        <div class="gutter"><b>Proyecto existente</b><i></i><s>III</s></div>
+        <div class="gutter"><b>La regla</b><i></i><s>III</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto existente</span><span class="count">06 / 15</span></div>
-          <h2 class="t">El mismo comando, tres puntos de partida</h2>
+          <div class="top"><span class="eyebrow">La regla</span><span class="count">06 / 13</span></div>
+          <h2 class="t">Tres niveles: milestone, plan, tarea</h2>
           <div class="body">
-            <div class="cols c3" style="flex:1">
-              <div class="card">
-                <span class="chip ch-ok" style="align-self:flex-start">init</span>
-                <h3>Repo legacy, sin harness</h3>
-                <p>Cinco años de código y ninguna carpeta <code>.claude/</code>. El instalador
-                  <b>solo agrega la superficie de Claude</b>: no toca tu código, tus tests ni
-                  tu build.</p>
-                <p style="margin-top:auto;color:var(--muted)">Nada de lo tuyo entra en el plan.</p>
-              </div>
-              <div class="card">
-                <span class="chip ch-hold" style="align-self:flex-start">adopt</span>
-                <h3>Estructura hecha a mano</h3>
-                <p>Ya tienes un <code>CLAUDE.md</code> y skills propias que armaste tú.
-                  <b>No se escribe ni un archivo</b>: solo se anota en el lockfile que lo que hay
-                  ya cuenta como harness.</p>
-                <p style="margin-top:auto;color:var(--muted)">Desde ahí, los upgrades funcionan normal.</p>
-              </div>
-              <div class="card">
-                <span class="chip ch-info" style="align-self:flex-start">upgrade</span>
-                <h3>Harness de una versión vieja</h3>
-                <p>Trae skills nuevas, reglas nuevas y corre las <b>migraciones</b>, que
-                  transforman lo viejo antes de comparar — así un fix antiguo aparece como
-                  un update normal.</p>
-                <p style="margin-top:auto;color:var(--muted)">Se invoca con <code>/harness-upgrade</code>.</p>
-              </div>
+            <div class="chain">
+              <div class="link"><span class="k">Nivel alto</span><span class="v">SHS-M5</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">Cómo llegar</span><span class="v">SHS-M5-P1</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">El día</span><span class="v">SHS-M5-T002</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">El trabajo</span><span class="v">rama + PR</span></div>
             </div>
-            <div class="note">Los tres son <b>el mismo code path</b>. No hay tres flujos con tres
-              conjuntos de bugs: hay una sola tabla de veredictos, y es la de la próxima lámina.</div>
+            <div class="kv" style="margin-top:1.6cqi">
+              <div class="r"><span class="k">milestones.md</span>
+                <span>El tablero de milestones: qué se persigue. La tarjeta lleva dueño,
+                  máquina y el plan activo.</span></div>
+              <div class="r"><span class="k">plans/</span>
+                <span>Un archivo por plan: qué se va a hacer, en qué orden y con qué criterio
+                  de éxito. Un milestone puede cambiar de plan — el viejo <b>no se borra</b>.</span></div>
+              <div class="r"><span class="k">kanban.md</span>
+                <span>Las tareas del milestone en curso, en cuatro columnas: Backlog, En curso,
+                  En review, Hecho.</span></div>
+              <div class="r"><span class="k">sessions.md</span>
+                <span>Append-only: una línea por sesión con quién, qué tocó y cuántos tokens
+                  costó.</span></div>
+            </div>
           </div>
+          <p class="foot">El milestone es la unidad de anti-solapamiento entre máquinas;
+            la tarea es la unidad de trabajo del día.</p>
         </div>
       </section>
 
       <!-- 07 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="2">
-        <div class="gutter"><b>Proyecto existente</b><i></i><s>III</s></div>
+      <section class="slide" data-act="3">
+        <div class="gutter"><b>El día</b><i></i><s>IV</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto existente · la garantía</span><span class="count">07 / 15</span></div>
-          <h2 class="t">Un archivo tuyo nunca se sobrescribe en silencio</h2>
+          <div class="top"><span class="eyebrow">El día</span><span class="count">07 / 13</span></div>
+          <h2 class="t">El ciclo completo, sin saltos</h2>
           <div class="body">
-            <p class="lead" style="font-size:1.4cqi">El motor cruza tres cosas para cada archivo:
-              qué hay <b>en disco</b>, qué dice el <b>lockfile</b> que había, y qué querría
-              <b>emitir el harness hoy</b>.</p>
-            <div class="tw" style="flex:1">
-              <table>
-                <thead>
-                  <tr>
-                    <th>En disco</th><th>En el lockfile</th><th>¿Cambió el template?</th>
-                    <th>Veredicto</th><th>Qué pasa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>no está</td><td>no está</td><td>—</td>
-                    <td><span class="verdict v-ok">create</span></td><td>Se crea.</td></tr>
-                  <tr><td><b>está</b></td><td>no está</td><td>—</td>
-                    <td><span class="verdict v-hold">foreign</span></td>
-                    <td><b>Nunca se pisa</b> → queda <code>.new</code> al lado.</td></tr>
-                  <tr><td>está, intacto</td><td>está</td><td>no</td>
-                    <td><span class="verdict v-none">noop</span></td><td>Nada.</td></tr>
-                  <tr><td>está, intacto</td><td>está</td><td>sí</td>
-                    <td><span class="verdict v-info">update</span></td>
-                    <td>Se actualiza. No pierdes nada: no lo habías tocado.</td></tr>
-                  <tr><td>está, <b>editado por ti</b></td><td>está</td><td>no</td>
-                    <td><span class="verdict v-none">local-edit</span></td><td>Se respeta. No se toca.</td></tr>
-                  <tr><td>está, <b>editado por ti</b></td><td>está</td><td>sí</td>
-                    <td><span class="verdict v-hold">conflict</span></td>
-                    <td><b>Nunca se pisa</b> → queda <code>.new</code> al lado.</td></tr>
-                  <tr><td>lo escribimos, lo borraste</td><td>está</td><td>—</td>
-                    <td><span class="verdict v-ok">restore</span></td><td>Se reescribe.</td></tr>
-                  <tr><td>está</td><td>ya no en el manifest</td><td>—</td>
-                    <td><span class="verdict v-hold">obsolete</span></td>
-                    <td>Solo con <code>--prune</code> y doble confirmación.</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <ol class="steps">
+              <li><span><code>git -C "&lt;vault&gt;" pull --rebase</code> — el tablero primero,
+                siempre. O <code>npx souclaude vault-sync</code>.</span></li>
+              <li><span>Lees <code>milestones.md</code>. Si el milestone está En curso con
+                <em>otro dueño u otra máquina</em>: <b>paras y preguntas</b>.</span></li>
+              <li><span>Tomas la tarea, mueves la tarjeta a En curso y <b>pusheas en ese
+                momento</b> — no en un push final.</span></li>
+              <li><span>Jira se sincroniza inmediatamente después. Vault primero, Jira detrás.</span></li>
+              <li><span>Rama desde <code>dev</code>:
+                <code>feature/SHS-M5-T002-sembrar-carpeta</code>. El ID de la tarea va como
+                prefijo del slug.</span></li>
+              <li><span>PR a <code>dev</code> con la plantilla completa de verdad.
+                <b>Nunca</b> commit directo a <code>main</code>.</span></li>
+              <li><span>Al cerrar: tarjeta a Hecho, push inmediato, y tu línea en
+                <code>sessions.md</code> con los tokens.</span></li>
+            </ol>
           </div>
-          <p class="foot">Salvaguardas: backup de todo lo sobrescrito en
-            <code>.claude/backup-&lt;ts&gt;/</code> · <code>--prune</code> exige tipear
-            <em>BORRAR</em> · <code>--force</code> exige tipear <em>FORCE</em>.
-            La herramienta obedece la misma constitución que instala.</p>
+          <p class="foot">Cada movimiento se pushea al momento: el tablero refleja
+            <em>el ahora</em>, no el último merge.</p>
         </div>
       </section>
 
       <!-- 08 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="2">
-        <div class="gutter"><b>Proyecto existente</b><i></i><s>III</s></div>
+      <section class="slide" data-act="3">
+        <div class="gutter"><b>El día</b><i></i><s>IV</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Proyecto existente · mantenerlo al día</span><span class="count">08 / 15</span></div>
-          <h2 class="t">Qué haces cuando aparece un <code style="font-size:.72em">.new</code></h2>
+          <div class="top"><span class="eyebrow">El día</span><span class="count">08 / 13</span></div>
+          <h2 class="t">Dos repos con reglas opuestas, a propósito</h2>
           <div class="body">
-            <div class="cols split" style="flex:1">
-              <div style="display:flex;flex-direction:column;gap:1.1cqi;min-width:0">
-                <div class="term">
-                  <span class="l"><span class="c"># 1 · ¿estoy al día?</span></span>
-                  <span class="l"><span class="p">$</span> npx …#v1 status</span>
-                  <span class="l"><span class="c">→ salida 1: hay una versión nueva</span></span>
-                  <span class="l">&nbsp;</span>
-                  <span class="l"><span class="c"># 2 · ¿qué cambiaría?</span></span>
-                  <span class="l"><span class="p">$</span> npx …#v1 upgrade --dry-run</span>
-                  <span class="l">&nbsp;</span>
-                  <span class="l"><span class="c"># 3 · aplicarlo</span></span>
-                  <span class="l"><span class="p">$</span> npx …#v1 upgrade</span>
-                  <span class="l"><span class="g">update</span>    .claude/skills/ccem-sdd/</span>
-                  <span class="l"><span class="c">conflict</span>  CLAUDE.md <span class="c">→ CLAUDE.md.new</span></span>
-                </div>
-                <div class="note">Desde Claude Code es un solo comando:
-                  <code>/harness-upgrade</code>. Corre <code>status</code>, luego el
-                  <code>--dry-run</code>, <b>espera tu OK</b> y recién ahí aplica.</div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:1.1cqi;min-width:0">
-                <div class="card" style="flex:1">
-                  <span class="tag">El archivo .new</span>
-                  <h3>La propuesta queda al lado. Tú decides.</h3>
-                  <p>Cuando tu archivo difiere del que el harness querría emitir, no hay pisada
-                    y no hay merge automático: aparece <code>&lt;archivo&gt;.new</code> junto al
-                    tuyo y el original queda intacto.</p>
-                  <div class="term" style="font-size:1.1cqi">
-                    <span class="l"><span class="p">$</span> git diff --no-index \</span>
-                    <span class="l">      CLAUDE.md CLAUDE.md.new</span>
-                  </div>
-                  <p>Lees el diff, te llevas lo que sirve y borras el <code>.new</code>.
-                    Es una <b>sugerencia</b>, no una migración pendiente.</p>
-                </div>
-              </div>
+            <div class="tw" style="flex:1">
+              <table>
+                <thead>
+                  <tr><th></th><th>Repo del proyecto</th><th>Repo del Vault</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><b>Qué va</b></td>
+                    <td>Código, tests, progreso</td>
+                    <td>Milestones, planes, kanban, sesiones</td></tr>
+                  <tr><td><b>Cómo se escribe</b></td>
+                    <td><span class="verdict v-info">Rama + PR</span> Nunca directo a
+                      <code>main</code></td>
+                    <td><span class="verdict v-ok">Push directo a main</span> sin PR</td></tr>
+                  <tr><td><b>Por qué</b></td>
+                    <td>Todo cambio se revisa</td>
+                    <td>El tablero refleja el ahora</td></tr>
+                  <tr><td><b>Ramas</b></td>
+                    <td><code>tipo/&lt;ID&gt;-&lt;slug&gt;</code> desde <code>dev</code></td>
+                    <td>No hay: se escribe en <code>main</code></td></tr>
+                  <tr><td><b>Release</b></td>
+                    <td><code>dev</code> → <code>main</code> por PR, y recién ahí los tags</td>
+                    <td>No aplica</td></tr>
+                </tbody>
+              </table>
             </div>
+            <div class="note" style="margin-top:1.4cqi">Nunca se cruzan: código, diffs y tests
+              jamás van al Vault; los artefactos del Vault jamás se commitean en el proyecto.
+              Y en ninguno de los dos: <em>nunca <code>git push --force</code></em>.</div>
           </div>
-          <p class="foot">Los dos invariantes que sostienen esto en los tests:
-            <em>idempotencia</em> — correr <code>init</code> dos veces no cambia nada la segunda —
-            y <em>pureza de <code>--dry-run</code></em> — el árbol queda byte-idéntico.</p>
         </div>
       </section>
 
       <!-- 09 ───────────────────────────────────────────── -->
       <section class="slide" data-act="3">
-        <div class="gutter"><b>El hilo</b><i></i><s>IV</s></div>
+        <div class="gutter"><b>El día</b><i></i><s>IV</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">El día a día</span><span class="count">09 / 15</span></div>
-          <h2 class="t">El ID del hito es el hilo</h2>
+          <div class="top"><span class="eyebrow">El día</span><span class="count">09 / 13</span></div>
+          <h2 class="t">Nadie pisa el trabajo de nadie</h2>
           <div class="body">
-            <p class="lead" style="font-size:1.4cqi">La roca nace en la reunión trimestral y se
-              descompone en hitos. <b>El hito emite el ID</b>, y ese ID reaparece idéntico en cada
-              eslabón hasta el release.</p>
-            <div class="chain">
-              <div class="link"><span class="k">Roca · trimestre</span><span class="v">Q3Y26-REA</span></div>
-              <span class="arw">→</span>
-              <div class="link"><span class="k">Hito</span><span class="v">REA-H3</span></div>
-              <span class="arw">→</span>
-              <div class="link"><span class="k">Carpeta de spec</span><span class="v">specs/REA-H3-captura-lead/</span></div>
-              <span class="arw">→</span>
-              <div class="link"><span class="k">Rama</span><span class="v">feature/REA-H3-captura-lead</span></div>
-              <span class="arw">→</span>
-              <div class="link"><span class="k">Tasks</span><span class="v">REA-H3-T001…</span></div>
-              <span class="arw">→</span>
-              <div class="link"><span class="k">PR · release</span><span class="v">squash &amp; merge</span></div>
-            </div>
-            <div class="cols c2" style="flex:1">
-              <div class="card">
-                <span class="tag">Por qué importa</span>
-                <p><code>grep -r REA-H3 specs/</code> y <code>git log --grep=REA-H3</code>
-                  devuelven <b>lo mismo</b>. Cualquiera puede reconstruir por qué existe una línea
-                  de código sin preguntarle a nadie.</p>
-                <p>Un hito puede producir varios specs: mismo ID, distinto slug. Cada carpeta es
-                  una rama y un PR.</p>
+            <div class="kan">
+              <div class="col"><h4>Backlog</h4>
+                <div class="task"><span class="id">REA-M3-T004</span><span class="d">validar formulario</span><span class="w">@pendiente</span></div>
+                <div class="task"><span class="id">REA-M3-T005</span><span class="d">reintento de envío</span><span class="w">@pendiente</span></div>
               </div>
-              <div class="card" style="border-color:var(--hold)">
-                <span class="tag" style="color:var(--hold)">La regla dura</span>
-                <h3>Si no tienes el ID, pregunta. No lo inventes.</h3>
-                <p>Sin ID no hay rama — <b>los hotfixes incluidos</b>. La urgencia cambia la
-                  prioridad, nunca el procedimiento. Si una rama o un release no tiene ID, la
-                  cadena está rota y se repara antes de seguir.</p>
+              <div class="col"><h4>En curso</h4>
+                <div class="task mine"><span class="id">REA-M3-T003</span><span class="d">capturar lead al cierre</span><span class="w">@sofia · PC04</span></div>
+              </div>
+              <div class="col"><h4>En review</h4>
+                <div class="task"><span class="id">REA-M3-T002</span><span class="d">persistencia del ticket</span><span class="w">@nacho · PR #18</span></div>
+              </div>
+              <div class="col"><h4>Hecho</h4>
+                <div class="task done"><span class="id">REA-M3-T001</span><span class="d">esqueleto del dominio</span><span class="w">@nacho</span></div>
               </div>
             </div>
+            <ul class="plain" style="margin-top:1.4cqi">
+              <li>La tarjeta de <em>@sofia</em> está En curso en otra máquina: <b>no la tomas,
+                no la mueves, no saltas a otra por tu cuenta</b>. Paras y preguntas.</li>
+              <li>Una tarjeta = una línea. Al resolver un conflicto en los tableros, se
+                conservan ambas y se ordena.</li>
+            </ul>
           </div>
         </div>
       </section>
 
       <!-- 10 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="3">
-        <div class="gutter"><b>El hilo</b><i></i><s>IV</s></div>
+      <section class="slide" data-act="4">
+        <div class="gutter"><b>Tu código</b><i></i><s>V</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">El día a día</span><span class="count">10 / 15</span></div>
-          <h2 class="t">Tres frenos humanos antes de escribir código</h2>
+          <div class="top"><span class="eyebrow">Tu código</span><span class="count">10 / 13</span></div>
+          <h2 class="t">Un archivo tuyo nunca se sobrescribe en silencio</h2>
           <div class="body">
-            <div class="flow">
-              <span class="node">spec.md</span><span class="arw">→</span>
-              <span class="gate">⏸ HUMANO</span><span class="arw">→</span>
-              <span class="node">plan.md</span><span class="arw">→</span>
-              <span class="gate">⏸ HUMANO</span><span class="arw">→</span>
-              <span class="node">tasks.md</span><span class="arw">→</span>
-              <span class="gate">⏸ HUMANO</span><span class="arw">→</span>
-              <span class="node">implement</span><span class="arw">→</span>
-              <span class="node">review</span><span class="arw">→</span>
-              <span class="node">PR</span>
-            </div>
-            <p class="lead" style="font-size:1.4cqi">Hasta que los tres estén aprobados, la rama
-              <b>solo admite commits <code>docs:</code></b>. Durante <code>implement</code> el
-              review es incremental, task por task — nunca en batch al final.</p>
             <div class="cols c2" style="flex:1;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
+                <div class="term">
+                  <span class="l"><span class="p">$</span> npx …souclaude-harness#v3 upgrade</span>
+                  <span class="l">&nbsp;</span>
+                  <span class="l"><span class="g">update</span>   .claude/settings.json</span>
+                  <span class="l"><span class="c">keep</span>     <span class="c">CLAUDE.md  (lo editaste tú)</span></span>
+                  <span class="l"><span class="p">new</span>      CLAUDE.md.new</span>
+                  <span class="l">&nbsp;</span>
+                  <span class="l"><span class="c">→ tu version intacta</span></span>
+                </div>
+                <ul class="plain">
+                  <li>Si tocaste un archivo gestionado, el harness <b>no lo pisa</b>: deja la
+                    versión nueva al lado como <code>.new</code>.</li>
+                  <li>Comparas, te quedas con lo que sirve y borras el <code>.new</code>.
+                    La decisión es tuya.</li>
+                  <li>Antes de sobrescribir cualquier cosa hay copia en
+                    <code>.claude/backup-&lt;ts&gt;/</code>.</li>
+                </ul>
+              </div>
               <div class="tw">
                 <table>
-                  <thead><tr><th>Agente</th><th>Rol</th><th>¿Código?</th></tr></thead>
+                  <thead>
+                    <tr><th>Situación</th><th>Veredicto</th><th>Qué pasa</th></tr>
+                  </thead>
                   <tbody>
-                    <tr><td><code>orchestrator</code></td><td>Descompone, coordina y hace respetar
-                      los checkpoints.</td><td><span class="chip ch-hold">no</span></td></tr>
-                    <tr><td><code>spec-author</code></td><td>Redacta spec, plan y tasks — una fase
-                      por invocación.</td><td><span class="chip ch-hold">no</span></td></tr>
-                    <tr><td><code>implementer</code></td><td>Implementa task por task, cada cambio
-                      con su test.</td><td><span class="chip ch-ok">sí</span></td></tr>
-                    <tr><td><code>reviewer</code></td><td>Aprueba o rechaza. <b>Sin</b> herramientas
-                      de escritura: dictamina.</td><td><span class="chip ch-hold">no</span></td></tr>
+                    <tr><td>No está en disco</td>
+                      <td><span class="verdict v-ok">create</span></td><td>Se crea.</td></tr>
+                    <tr><td>Está, intacto, cambió el template</td>
+                      <td><span class="verdict v-info">update</span></td><td>Se actualiza.</td></tr>
+                    <tr><td>Está, intacto, sin cambios</td>
+                      <td><span class="verdict v-none">noop</span></td><td>Nada.</td></tr>
+                    <tr><td><b>Lo editaste tú</b>, sin cambios</td>
+                      <td><span class="verdict v-none">local-edit</span></td><td>Se respeta.</td></tr>
+                    <tr><td><b>Lo editaste tú</b>, cambió</td>
+                      <td><span class="verdict v-hold">conflict</span></td>
+                      <td><b>Nunca se pisa</b> → <code>.new</code>.</td></tr>
+                    <tr><td>Existía y lo borraste</td>
+                      <td><span class="verdict v-ok">restore</span></td><td>Se reescribe.</td></tr>
+                    <tr><td>Ya no está en el manifest</td>
+                      <td><span class="verdict v-hold">obsolete</span></td>
+                      <td>Solo con <code>--prune</code>.</td></tr>
                   </tbody>
                 </table>
               </div>
-              <div style="display:flex;flex-direction:column;gap:1.1cqi">
-                <div class="note"><b>La separación es el punto.</b> Quien especifica no implementa,
-                  y quien implementa <b>no se aprueba a sí mismo</b>. Un <code>reviewer</code> sin
-                  permiso de escritura no es una recomendación: es enforcement.</div>
-                <div class="card">
-                  <span class="tag">Cuándo NO montar todo esto</span>
-                  <p>Bug fix puntual, ajuste cosmético, spike, script one-off, hotfix o typo:
-                    <b>se hace directo</b>. Ceremonia que no sirve viola P9 — Simplicity First.</p>
-                  <p>Para un cambio mediano existe la versión comprimida:
-                    <code>/spec-new &lt;ID&gt; &lt;slug&gt; --lite</code>. Mismos checkpoints,
-                    menos ceremonia.</p>
-                </div>
-              </div>
             </div>
           </div>
+          <p class="foot"><code>--prune</code> exige tipear BORRAR y <code>--force</code> exige
+            tipear FORCE. La herramienta obedece las mismas reglas que instala.</p>
         </div>
       </section>
 
       <!-- 11 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="4">
-        <div class="gutter"><b>Equipo</b><i></i><s>V</s></div>
+      <section class="slide" data-act="5">
+        <div class="gutter"><b>Visibilidad</b><i></i><s>VI</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Trabajo en equipo</span><span class="count">11 / 15</span></div>
-          <h2 class="t">Dos repos con reglas opuestas, a propósito</h2>
+          <div class="top"><span class="eyebrow">Visibilidad</span><span class="count">11 / 13</span></div>
+          <h2 class="t">El tablero, espejado en Jira</h2>
           <div class="body">
-            <div class="cols c2" style="flex:1">
-              <div class="card" style="border-top:2px solid var(--info)">
-                <span class="tag" style="color:var(--info)">Repo del proyecto</span>
-                <h3>Todo cambio se revisa</h3>
-                <ul class="plain">
-                  <li>Código, tests, specs y progreso.</li>
-                  <li>Siempre <b>rama + Pull Request</b>. Nunca directo a <code>main</code>.</li>
-                  <li>El coordinador hace el squash &amp; merge.</li>
-                </ul>
-                <p style="margin-top:auto"><b>Por qué:</b> lo que entra al código pasa por revisión,
-                  sin excepciones y sin atajos por urgencia.</p>
-              </div>
-              <div class="card" style="border-top:2px solid var(--accent)">
-                <span class="tag">El Vault</span>
-                <h3>El tablero refleja el ahora</h3>
-                <ul class="plain">
-                  <li>Kanban, espejos de specs y progreso, rocas, evidencia.</li>
-                  <li><b>Push directo a <code>main</code></b>, sin PR.</li>
-                  <li>Repo aparte, para no ensuciar el del proyecto.</li>
-                </ul>
-                <p style="margin-top:auto"><b>Por qué:</b> si el tablero esperara a un merge,
-                  mostraría el pasado. Tiene que mostrar el ahora.</p>
-              </div>
+            <div class="chain">
+              <div class="link"><span class="k">Mueves</span><span class="v">la tarjeta</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">Commit</span><span class="v">al Vault</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">Push</span><span class="v">a main</span></div>
+              <span class="arw">→</span>
+              <div class="link"><span class="k">Y recién</span><span class="v">Jira</span></div>
             </div>
-            <div class="cols c3">
-              <div class="note" style="border-left-color:var(--info)">Nunca se cruzan: código,
-                diffs y tests <b>jamás</b> van al Vault.</div>
-              <div class="note">La ruta local vive en <code>.claude/vault.local.json</code>,
-                que escribe el instalador.</div>
-              <div class="note" style="border-left-color:var(--hold)">Si el Vault no está
-                configurado, el espejo <b>se omite sin fallar</b>. El trabajo local nunca se
-                bloquea.</div>
+            <div class="cols c2" style="flex:1;align-items:start;margin-top:1.6cqi">
+              <div class="kv">
+                <div class="r"><span class="k">Milestone</span>
+                  <span>Una <b>épica</b>, con su descripción y la etiqueta
+                    <code>&lt;PREFIJO&gt;-M&lt;n&gt;</code>.</span></div>
+                <div class="r"><span class="k">Tarea</span>
+                  <span>Un <b>issue hijo</b> de esa épica. El ID en el summary es la clave de
+                    idempotencia: nunca se duplica.</span></div>
+                <div class="r"><span class="k">Columna</span>
+                  <span>Backlog → To Do · En curso → In Progress · En review → In Review ·
+                    Hecho → Done.</span></div>
+              </div>
+              <ul class="plain">
+                <li>Se sincroniza <b>en el momento</b> en que mueves la tarjeta, no al final
+                  del día.</li>
+                <li><b>Jira nunca es la fuente.</b> Si alguien mueve un issue allá, se reporta
+                  la divergencia — no se toca el Vault para igualar.</li>
+                <li>Sin conector autorizado: se avisa una vez y el trabajo local sigue.</li>
+                <li>No se borran issues: una tarea eliminada se comenta y se cierra.</li>
+              </ul>
             </div>
           </div>
+          <p class="foot">Cada proyecto del Vault tiene su propio proyecto en Jira, y la clave
+            es el mismo PREFIJO: <code>Project-SHS</code> → <code>SHS</code>.</p>
         </div>
       </section>
 
       <!-- 12 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="4">
-        <div class="gutter"><b>Equipo</b><i></i><s>V</s></div>
+      <section class="slide" data-act="5">
+        <div class="gutter"><b>Visibilidad</b><i></i><s>VI</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Trabajo en equipo · el tablero</span><span class="count">12 / 15</span></div>
-          <h2 class="t">Nadie pisa el trabajo de nadie</h2>
+          <div class="top"><span class="eyebrow">Visibilidad</span><span class="count">12 / 13</span></div>
+          <h2 class="t">El equipo ve dónde se va el esfuerzo</h2>
           <div class="body">
-            <div class="kan">
-              <div class="col"><h4>Backlog</h4>
-                <div class="task"><span class="id">REA-H3-T004</span><span class="d">validar formulario</span><span class="w">@pendiente</span></div>
-                <div class="task"><span class="id">REA-H3-T005</span><span class="d">reintento de envío</span><span class="w">@pendiente</span></div>
-              </div>
-              <div class="col"><h4>En curso</h4>
-                <div class="task mine"><span class="id">REA-H3-T003</span><span class="d">capturar lead al cierre</span><span class="w">@sofia</span></div>
-              </div>
-              <div class="col"><h4>En review</h4>
-                <div class="task rev"><span class="id">REA-H3-T002</span><span class="d">persistencia del ticket</span><span class="w">@nacho</span></div>
-              </div>
-              <div class="col"><h4>Hecho</h4>
-                <div class="task done"><span class="id">REA-H3-T001</span><span class="d">esqueleto del dominio</span><span class="w">@nacho</span></div>
-              </div>
+            <div class="tiles">
+              <div class="tile"><span class="k">Ventana 5h</span>
+                <span class="n">38<small>%</small></span>
+                <span class="s">del límite de la cuenta</span></div>
+              <div class="tile"><span class="k">Ventana 7d</span>
+                <span class="n">61<small>%</small></span>
+                <span class="s">consumo propio del período</span></div>
+              <div class="tile"><span class="k">Sesiones</span>
+                <span class="n">3</span>
+                <span class="s">activas ahora en el equipo</span></div>
+              <div class="tile"><span class="k">Proyectos</span>
+                <span class="n">4</span>
+                <span class="s">publicando en el Vault</span></div>
             </div>
-            <div class="cols split" style="flex:1">
-              <div style="display:flex;flex-direction:column;gap:1cqi">
-                <p class="lead" style="font-size:1.34cqi"><b>La tarjeta se mueve al empezar</b>,
-                  no al terminar. Por eso el tablero sirve como señal en vivo y no como reporte
-                  tardío.</p>
-                <div class="tw">
-                  <table>
-                    <thead><tr><th>Quién</th><th>Mueve la tarjeta</th></tr></thead>
-                    <tbody>
-                      <tr><td><code>spec-author</code></td><td>La crea en <b>Backlog</b> al emitir <code>tasks.md</code>.</td></tr>
-                      <tr><td><code>implementer</code></td><td>A <b>En curso</b> al tomarla; a <b>En review</b> al cerrarla.</td></tr>
-                      <tr><td><code>reviewer</code></td><td>A <b>Hecho</b> con <code>APPROVED</code>, o de vuelta a <b>En curso</b>.</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:1cqi">
-                <div class="term" style="font-size:1.1cqi">
-                  <span class="l"><span class="c"># obligatorio antes de tomar un task</span></span>
-                  <span class="l"><span class="p">$</span> git -C "&lt;vault&gt;" pull --rebase</span>
-                  <span class="l"><span class="c"># y lee Project-REA/kanban.md</span></span>
-                </div>
-                <div class="card" style="border-color:var(--hold)">
-                  <span class="tag" style="color:var(--hold)">El anti-solapamiento</span>
-                  <p>Si la tarjeta ya está en <b>En curso</b> con otro dueño, la está trabajando
-                    otra persona u otra máquina: <b>paras y preguntas</b>. No la tomas, no la
-                    mueves y no saltas a otra por tu cuenta.</p>
-                  <p style="color:var(--muted)">Una tarjeta = una línea, así que dos personas
-                    nunca se contradicen al hacer merge: se conservan ambas.</p>
-                </div>
-              </div>
-            </div>
+            <ul class="plain" style="margin-top:1.6cqi">
+              <li><code>npx souclaude monitor</code> abre el panel en vivo;
+                <code>--usage</code> da el informe completo con filtros por proyecto,
+                contribuyente y cuenta.</li>
+              <li>Con el panel abierto, <b>cada sesión publica sola su línea</b> en
+                <code>sessions.md</code> y la actualiza mientras sigue viva.</li>
+              <li>Una línea que editaste a mano <em>nunca se pisa</em>: el monitor solo
+                actualiza la que escribió él, byte a byte.</li>
+            </ul>
           </div>
+          <p class="foot">Las cifras de arriba son de ejemplo, para mostrar la forma del panel.
+            Los datos reales salen del registro del Vault.</p>
         </div>
       </section>
 
       <!-- 13 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="5">
-        <div class="gutter"><b>Monitor</b><i></i><s>VI</s></div>
-        <div class="pane">
-          <div class="top"><span class="eyebrow">Monitor de tokens</span><span class="count">13 / 15</span></div>
-          <h2 class="t">Cada lanzamiento elige su modelo, y queda anotado</h2>
-          <div class="body">
-            <div class="cols c3">
-              <div class="card">
-                <span class="tag">Paso 1 · clasificar</span>
-                <p>La tarea se cuenta contra un checklist de señales, no por intuición.</p>
-                <p><span class="chip ch-mut">mecánica</span> 0 señales &nbsp;
-                  <span class="chip ch-info">estándar</span> 1-2 blandas &nbsp;
-                  <span class="chip ch-hold">compleja</span> ≥3 blandas o ≥1 dura</p>
-              </div>
-              <div class="card">
-                <span class="tag">Paso 2 · rutear</span>
-                <p>La matriz <b>agente × clase</b> decide modelo y esfuerzo. Cambiar la política es
-                  editar un solo archivo: la skill <code>ccem-model-router</code>.</p>
-              </div>
-              <div class="card">
-                <span class="tag">Paso 3 · registrar</span>
-                <p>Una línea JSONL por lanzamiento en <code>progress/model-router.jsonl</code>.
-                  <b>Un hito sin líneas es una violación visible del protocolo.</b></p>
-              </div>
-            </div>
-            <div class="cols split" style="flex:1;align-items:start">
-              <div class="tw">
-                <table>
-                  <thead><tr><th>Agente</th><th>mecánica</th><th>estándar</th><th>compleja</th></tr></thead>
-                  <tbody>
-                    <tr><td><code>spec-author</code></td><td>Ejecución</td><td>Ejecución</td>
-                      <td><b>Decisiones</b></td></tr>
-                    <tr><td><code>implementer</code></td><td>Volumen</td><td>Ejecución</td>
-                      <td>Ejecución <span class="chip ch-acc">+ Advisor</span></td></tr>
-                    <tr><td><code>reviewer</code></td><td>Ejecución</td><td>Ejecución</td>
-                      <td>Ejecución</td></tr>
-                  </tbody>
-                </table>
-                <p class="foot" style="border:0;padding-top:.8cqi">El <code>implementer</code>
-                  complejo <em>no</em> sube de tier: consulta puntualmente al modelo de Decisiones
-                  (~400-700 tokens) en vez de correr el task entero en el modelo caro.</p>
-              </div>
-              <div class="term" style="font-size:1.02cqi">
-                <span class="l"><span class="c">// una línea por lanzamiento</span></span>
-                <span class="l">{"hito": <span class="g">"REA-H3"</span>,</span>
-                <span class="l"> "task": <span class="g">"REA-H3-T003"</span>,</span>
-                <span class="l"> "agente": <span class="g">"implementer"</span>,</span>
-                <span class="l"> "clase": <span class="g">"estandar"</span>,</span>
-                <span class="l"> "senales": [<span class="g">"mas_de_3_archivos"</span>],</span>
-                <span class="l"> "resultado": <span class="g">"approved"</span>,</span>
-                <span class="l"> "rework": <span class="p">0</span>,</span>
-                <span class="l"> "tokens_in": <span class="p">42150</span>,</span>
-                <span class="l"> "tokens_out": <span class="p">8300</span>,</span>
-                <span class="l"> "costo_usd": <span class="p">0.94</span>,</span>
-                <span class="l"> "medicion": <span class="g">"estimado"</span>}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 14 ───────────────────────────────────────────── -->
-      <section class="slide" data-act="5">
-        <div class="gutter"><b>Monitor</b><i></i><s>VI</s></div>
-        <div class="pane">
-          <div class="top">
-            <span class="eyebrow">Monitor de tokens · qué te dice</span>
-            <span class="count">14 / 15</span>
-          </div>
-          <h2 class="t">El equipo ve dónde se va el esfuerzo</h2>
-          <div class="body">
-            <div class="tiles">
-              <div class="tile"><span class="k">Lanzamientos</span><span class="n">48</span>
-                <span class="s">en el trimestre</span></div>
-              <div class="tile"><span class="k">Escaladas</span>
-                <span class="n">6,2<small>%</small></span>
-                <span class="s">umbral de revisión: 10 %</span></div>
-              <div class="tile"><span class="k">Rework</span><span class="n">7</span>
-                <span class="s">devoluciones del reviewer</span></div>
-              <div class="tile"><span class="k">Medido</span>
-                <span class="n">34<small>%</small></span>
-                <span class="s">el resto es estimación</span></div>
-            </div>
-            <div class="cols split" style="flex:1;align-items:start">
-              <div style="display:flex;flex-direction:column;gap:.7cqi">
-                <span class="eyebrow" style="color:var(--muted)">Costo por hito · USD</span>
-                <div class="bars">
-                  <div class="bar"><span class="lb">REA-H1</span>
-                    <span class="tr"><span class="fl" style="width:46%"></span></span>
-                    <span class="vl">4,10</span></div>
-                  <div class="bar"><span class="lb">REA-H2</span>
-                    <span class="tr"><span class="fl" style="width:71%"></span></span>
-                    <span class="vl">6,35</span></div>
-                  <div class="bar"><span class="lb">REA-H3</span>
-                    <span class="tr"><span class="fl" style="width:100%"></span></span>
-                    <span class="vl">8,90</span></div>
-                  <div class="bar"><span class="lb">REA-H4</span>
-                    <span class="tr"><span class="fl" style="width:29%"></span></span>
-                    <span class="vl">2,58</span></div>
-                  <div class="bar"><span class="lb">REA-H5</span>
-                    <span class="tr"><span class="fl" style="width:38%"></span></span>
-                    <span class="vl">3,40</span></div>
-                </div>
-                <p class="foot" style="border:0;padding-top:.6cqi">Cifras de <em>ejemplo</em> para
-                  mostrar la forma del informe — no son telemetría real de ningún proyecto.</p>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:1cqi">
-                <div class="card" style="border-color:var(--hold)">
-                  <span class="tag" style="color:var(--hold)">La regla de honestidad</span>
-                  <p>Si la herramienta no reporta el uso real de tokens, el orchestrator
-                    <b>estima</b> por tamaño de artefactos y lo marca como tal. Un
-                    <code>estimado</code> sirve para <b>comparar</b> celdas de la matriz e hitos
-                    entre sí — <b>jamás</b> se presenta como cifra contable ni de facturación.</p>
-                </div>
-                <div class="card">
-                  <span class="tag">El ritual · /rock-close</span>
-                  <p>Al cerrar el trimestre se resume el JSONL y se ajusta la matriz si:</p>
-                  <ul class="plain" style="font-size:1.14cqi">
-                    <li>las escaladas superan el <b>10 %</b> de los lanzamientos,</li>
-                    <li>una celda <b>concentra el rework</b> — su tier quedó corto,</li>
-                    <li>una celda <b>nunca falla</b> — puede bajar un tier.</li>
-                  </ul>
-                  <p style="color:var(--muted)">Aprendizaje como ritual humano, sin ML: lo decide
-                    el equipo mirando los datos.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 15 ───────────────────────────────────────────── -->
       <section class="slide" data-act="6">
         <div class="gutter"><b>Empezar</b><i></i><s>VII</s></div>
         <div class="pane">
-          <div class="top"><span class="eyebrow">Cómo empezar hoy</span><span class="count">15 / 15</span></div>
-          <h2 class="t">Dos caminos, el mismo comando</h2>
+          <div class="top"><span class="eyebrow">Empezar</span><span class="count">13 / 13</span></div>
+          <h2 class="t">Empezar hoy</h2>
           <div class="body">
-            <div class="cols c2">
-              <div class="card" style="border-top:2px solid var(--ok)">
-                <span class="tag" style="color:var(--ok)">Proyecto nuevo</span>
-                <div class="term" style="font-size:1.14cqi">
-                  <span class="l"><span class="p">$</span> npx github:ialvarezsoutec/</span>
-                  <span class="l">      souclaude-harness#v1</span>
+            <div class="cols c2" style="flex:1;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
+                <div class="term">
+                  <span class="l"><span class="c"># repo nuevo o con años de código</span></span>
+                  <span class="l"><span class="p">$</span> npx github:…souclaude-harness#v3</span>
+                  <span class="l">&nbsp;</span>
+                  <span class="l"><span class="c"># ya lo tenías instalado</span></span>
+                  <span class="l"><span class="p">$</span> npx …#v3 upgrade --dry-run</span>
+                  <span class="l"><span class="p">$</span> npx …#v3 upgrade --prune</span>
                 </div>
-                <ul class="plain">
-                  <li>Responde nombre, tipo, stack e idioma.</li>
-                  <li>Conecta el Vault y completa P7 y P8.</li>
-                  <li>Abre el repo con Claude Code y arranca.</li>
-                </ul>
+                <ol class="steps">
+                  <li><span>Instala y elige tus skills. <code>soutec-github</code> viene
+                    siempre.</span></li>
+                  <li><span>Conecta el Vault: se clona y se declara tu
+                    <code>Project-&lt;PREFIJO&gt;</code>.</span></li>
+                  <li><span>Antes de la primera línea de código: <b>declara tu
+                    milestone</b>.</span></li>
+                </ol>
               </div>
-              <div class="card" style="border-top:2px solid var(--info)">
-                <span class="tag" style="color:var(--info)">Proyecto existente</span>
-                <div class="term" style="font-size:1.14cqi">
-                  <span class="l"><span class="p">$</span> npx …#v1 status</span>
-                  <span class="l"><span class="p">$</span> npx …#v1 upgrade --dry-run</span>
+              <div style="display:flex;flex-direction:column;gap:1.2cqi;min-width:0">
+                <div class="kv">
+                  <div class="r"><span class="k">progress/README.md</span>
+                    <span>El protocolo completo: los dos repos, el anti-solapamiento y el
+                      formato de los tableros.</span></div>
+                  <div class="r"><span class="k">CLAUDE.md</span>
+                    <span>Las reglas duras del repo: ramas, commits, PR y qué no se hace
+                      nunca.</span></div>
+                  <div class="r"><span class="k">docs/infografias/</span>
+                    <span>Una master de la metodología y una por caso de adopción, listas para
+                      imprimir.</span></div>
+                  <div class="r"><span class="k">docs/decisions/</span>
+                    <span>Los ADR: por qué las cosas son como son.</span></div>
                 </div>
-                <ul class="plain">
-                  <li>Lee el plan antes de aplicar nada.</li>
-                  <li>Revisa cada <code>.new</code> con <code>git diff --no-index</code>.</li>
-                  <li>Desde Claude Code: <code>/harness-upgrade</code>.</li>
-                </ul>
-              </div>
-            </div>
-            <div class="cols c3" style="flex:1">
-              <div class="card">
-                <span class="tag">Antes de cada task</span>
-                <p><code>git -C "&lt;vault&gt;" pull --rebase</code>, lee el kanban y mueve tu
-                  tarjeta <b>al empezar</b>. Si ya la tiene otra persona, para y pregunta.</p>
-              </div>
-              <div class="card">
-                <span class="tag">Antes de cada PR</span>
-                <p><code>/constitution-check</code> audita tu diff contra P1-P10 y te marca las
-                  violaciones con archivo y línea. Completa la plantilla de PR de verdad.</p>
-              </div>
-              <div class="card">
-                <span class="tag">Cuando dudes</span>
-                <p>Las fuentes de verdad son <code>docs/constitution.md</code>,
-                  <code>AGENTS.md</code> y <code>progress/README.md</code>. Si algo es ambiguo:
-                  <b>para y pregunta</b>.</p>
+                <div class="note">Si algo es ambiguo o parece mal: <em>para y pregunta</em>.
+                  No adivines.</div>
               </div>
             </div>
           </div>
-          <p class="foot"><em>P9 — Simplicity First</em> y <em>P10 — Surgical Changes</em> aplican
-            siempre, en todo proyecto. Todo lo demás es andamiaje para que esas dos se cumplan solas.</p>
+          <p class="foot">Los proyectos instalados antes de la v3 apuntan a <code>#v1</code>:
+            editas la ref a <code>#v3</code> y corres <code>upgrade --prune</code>.
+            El tag móvil <code>v2</code> nunca existió.</p>
         </div>
       </section>
-
     </div>
   </div>
 
@@ -1636,11 +1437,11 @@
     var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
     var acts = [
       { name: 'Qué es', n: 2 },
-      { name: 'Proyecto nuevo', n: 3 },
-      { name: 'Existente', n: 3 },
-      { name: 'El hilo', n: 2 },
-      { name: 'Equipo', n: 2 },
-      { name: 'Monitor', n: 2 },
+      { name: 'Instalar', n: 2 },
+      { name: 'La regla', n: 2 },
+      { name: 'El día', n: 3 },
+      { name: 'Tu código', n: 1 },
+      { name: 'Visibilidad', n: 2 },
       { name: 'Empezar', n: 1 }
     ];
     var rail = document.getElementById('rail');

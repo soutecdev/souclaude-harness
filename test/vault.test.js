@@ -419,9 +419,66 @@ test('camino interactivo: con varias carpetas se pregunta, con el repo homonimo 
     prompts,
   })
 
-  assert.deepEqual(opciones, ['Project-CSC', 'Project-OBS', 'Project-SHS'], 'las carpetas no se ofrecieron ordenadas')
+  assert.deepEqual(
+    opciones,
+    ['Project-CSC', 'Project-OBS', 'Project-SHS', '__crear_nuevo__'],
+    'las carpetas no se ofrecieron ordenadas, con "crear nuevo" al final'
+  )
   assert.equal(sugerido, 'Project-SHS', 'el default no salio del nombre del repo')
   assert.equal(readVaultConfig(cwd).project, 'Project-OBS', 'se persistio el default en vez de lo elegido')
+})
+
+test('camino interactivo: "Crear proyecto nuevo" registra el prefijo y siembra la carpeta', async () => {
+  const cwd = mkRepo({ 'package.json': JSON.stringify({ name: 'proyecto-nuevo' }) })
+  const vault = mkVault(['Project-CSC', 'Project-OBS'], [['SHS', 'souclaude-harness']])
+
+  const textos = ['ABC', 'Mi Proyecto Nuevo', '@leonardo']
+  const prompts = {
+    text: () => textos.shift(),
+    select: ({ options }) => options.find((o) => o.value === '__crear_nuevo__').value,
+  }
+
+  await ensureVault({
+    cwd,
+    flags: { 'vault-path': vault },
+    manifest: loadManifest(),
+    lock: null,
+    yes: false,
+    prompts,
+  })
+
+  const registro = leerRegistroDePrefijos(vault)
+  assert.deepEqual(
+    registro.find((f) => f.prefijo === 'ABC'),
+    { prefijo: 'ABC', proyecto: 'Mi Proyecto Nuevo' },
+    'el prefijo nuevo no quedo en el registro'
+  )
+  assert.ok(read(vault, '00-System/id-registry.md').includes('@leonardo'), 'el dueno no quedo en la fila')
+  for (const rel of ARCHIVOS_BASE) assert.ok(has(vault, `Project-ABC/${rel}`), `falta ${rel} en la carpeta sembrada`)
+  assert.equal(readVaultConfig(cwd).project, 'Project-ABC', 'no se declaro el proyecto creado')
+})
+
+test('"Crear proyecto nuevo" con un prefijo ya registrado no escribe nada', async () => {
+  const cwd = mkRepo({ 'package.json': JSON.stringify({ name: 'proyecto-nuevo' }) })
+  const vault = mkVault(['Project-CSC', 'Project-SHS'], [['SHS', 'souclaude-harness']])
+  const antes = fs.readFileSync(path.join(vault, '00-System', 'id-registry.md'), 'utf8')
+
+  const prompts = {
+    text: () => 'SHS',
+    select: ({ options }) => options.find((o) => o.value === '__crear_nuevo__').value,
+  }
+
+  await ensureVault({
+    cwd,
+    flags: { 'vault-path': vault },
+    manifest: loadManifest(),
+    lock: null,
+    yes: false,
+    prompts,
+  })
+
+  assert.equal(fs.readFileSync(path.join(vault, '00-System', 'id-registry.md'), 'utf8'), antes, 'se toco el registro con un prefijo repetido')
+  assert.equal(readVaultConfig(cwd).project, undefined, 'quedo un project declarado sin haberse creado nada')
 })
 
 test('un project declarado que ya no existe en el Vault se avisa pero no se pisa', async () => {
@@ -550,7 +607,7 @@ const FRONTMATTER = `---
 kanban-plugin: board
 ---`
 
-const ARCHIVOS_BASE = ['milestones.md', 'kanban.md', 'sessions.md', 'progress/history.md']
+const ARCHIVOS_BASE = ['milestones.md', 'kanban.md', 'sessions.md', 'progress/history.md', 'OBSERVATORIO.md']
 
 const proyectosEn = (vault) => fs.readdirSync(vault).filter((n) => n.startsWith('Project-')).sort()
 
@@ -611,8 +668,9 @@ test('desatendido sin --vault-seed: el Vault no se toca y queda el aviso', async
   assert.equal(JSON.parse(read(dir, VAULT_CONFIG)).project, undefined)
 })
 
-// El prefijo no se inventa: sin fila en el registro no hay carpeta que sembrar,
-// ni siquiera con el flag puesto (vault-guide §3).
+// Desatendido, el prefijo no se inventa: sin fila en el registro no hay carpeta
+// que sembrar, ni siquiera con el flag puesto. Darlo de alta requiere el
+// camino interactivo (crearProyectoNuevo, vault-guide §3).
 test('--vault-seed no inventa un prefijo: un repo fuera del registro no siembra nada', async () => {
   const dir = mkRepo({ 'package.json': JSON.stringify({ name: 'proyecto-sin-registrar' }) })
   const vault = mkVault([], [['SHS', 'souclaude-harness']])

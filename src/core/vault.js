@@ -100,8 +100,9 @@ export function carpetasProyecto(vaultPath) {
 }
 
 // El registro de prefijos del Vault: la fuente unica que dice que prefijo le
-// corresponde a cada proyecto de la organizacion (vault-guide §3). Un prefijo no
-// se inventa; si el repo no figura aca, no se resuelve.
+// corresponde a cada proyecto de la organizacion (vault-guide §3). Un prefijo
+// se agrega solo por una fila nueva -- a mano o desde el flujo interactivo del
+// CLI (agregarPrefijoAlRegistro) -- nunca se edita ni se reutiliza una ajena.
 const REGISTRO = '00-System/id-registry.md'
 
 // Filas { prefijo, proyecto } de la tabla markdown del registro. Tolerante: un
@@ -126,6 +127,31 @@ export function leerRegistroDePrefijos(vaultPath) {
     filas.push({ prefijo, proyecto })
   }
   return filas
+}
+
+// Forma valida de un prefijo: 2 a 6 letras mayusculas, el mismo alfabeto que ya
+// usan los prefijos existentes (RAM, REA, SHS, OBS...). No numeros ni simbolos:
+// el prefijo termina como segmento de ID (SHS-M18) en milestones, ramas y commits.
+const PREFIJO_VALIDO = /^[A-Z]{2,6}$/
+
+// Agrega una fila nueva al registro y la pushea -- unica escritura permitida
+// sobre id-registry.md (vault-guide §3: solo se agregan filas). No valida
+// duplicados: eso lo hace el llamador contra leerRegistroDePrefijos, que ya
+// tiene el registro fresco en memoria.
+async function agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto, dueño }, { git = gitReal } = {}) {
+  const abs = path.join(vaultPath, ...REGISTRO.split('/'))
+  const actual = fs.readFileSync(abs, 'utf8')
+  const fecha = new Date().toISOString().slice(0, 10)
+  const fila = `| ${prefijo}     | ${proyecto} | ${dueño} | ${fecha}    | activo |\n`
+  const conFila = actual.endsWith('\n') ? actual + fila : actual + '\n' + fila
+  writeFileLF(abs, conFila)
+
+  return pushSeguro({
+    vaultPath,
+    mensaje: `chore: alta del prefijo ${prefijo} en el registro`,
+    paths: [REGISTRO],
+    git,
+  })
 }
 
 // Nombres con los que este repo puede figurar en el registro, de la senal mas
@@ -203,6 +229,16 @@ export function isInsideCwd(cwd, target) {
 // espacios (todo OneDrive) dejan de ser un problema. Mismo criterio que gitUserName.
 function git(args, opts = {}) {
   return execFileSync('git', args, { encoding: 'utf8', stdio: 'pipe', ...opts })
+}
+
+// Duplica commands/_shared.js#gitUserName en vez de importarla: _shared.js ya
+// importa de este modulo (ensureVault), y el import inverso crearia un ciclo.
+function gitUserNameLocal(cwd) {
+  try {
+    return git(['config', 'user.name'], { cwd }).trim() || null
+  } catch {
+    return null
+  }
 }
 
 export function vaultRemote(abs) {
@@ -337,18 +373,84 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
     return null
   }
 
+  const CREAR_NUEVO = '__crear_nuevo__'
   const elegido = await prompts.select({
     message: 'A que proyecto del Vault pertenece este repo?',
-    options: carpetas.map((c) => ({ value: c, label: c })),
+    options: [
+      ...carpetas.map((c) => ({ value: c, label: c })),
+      { value: CREAR_NUEVO, label: '+ Crear proyecto nuevo...' },
+    ],
     initialValue: sugerirProyecto(cwd, carpetas),
   })
+
+  if (elegido === CREAR_NUEVO) {
+    const creado = await crearProyectoNuevo(cwd, vaultPath, carpetas, { prompts, git })
+    return creado ? persistirProyecto(cwd, vaultPath, creado) : null
+  }
+
   const nombre = String(elegido ?? '').trim()
   return nombre ? persistirProyecto(cwd, vaultPath, nombre) : null
 }
 
+// Alta de un prefijo nuevo desde el flujo interactivo: pide prefijo, nombre y
+// dueño, agrega la fila al registro (unica escritura permitida sobre
+// id-registry.md) y siembra la carpeta en el mismo paso. Solo interactivo: el
+// camino desatendido sigue resolviendo por --vault-project o por el registro
+// ya existente, nunca inventa un prefijo en silencio.
+async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts, git = gitReal }) {
+  const registrados = new Set(leerRegistroDePrefijos(vaultPath).map((f) => f.prefijo.toUpperCase()))
+
+  const prefijoIngresado = await prompts.text({
+    message: 'Prefijo del proyecto nuevo (2 a 6 letras mayusculas, ej. RAM)',
+  })
+  const prefijo = String(prefijoIngresado ?? '').trim().toUpperCase()
+  if (!PREFIJO_VALIDO.test(prefijo)) {
+    ui.log.warn(`Alta de proyecto cancelada: "${prefijoIngresado ?? ''}" no son 2 a 6 letras (A-Z).`)
+    return null
+  }
+  if (registrados.has(prefijo)) {
+    ui.log.warn(`Alta de proyecto cancelada: el prefijo ${prefijo} ya esta registrado.`)
+    return null
+  }
+  if (carpetasExistentes.includes(`${PREFIJO_PROYECTO}${prefijo}`)) {
+    ui.log.warn(`Alta de proyecto cancelada: ya existe ${PREFIJO_PROYECTO}${prefijo} en el Vault.`)
+    return null
+  }
+
+  const nombreIngresado = await prompts.text({
+    message: `Nombre del proyecto (para ${REGISTRO})`,
+  })
+  const nombreProyecto = String(nombreIngresado ?? '').trim()
+  if (!nombreProyecto) {
+    ui.log.warn('Alta de proyecto cancelada: falta el nombre del proyecto.')
+    return null
+  }
+
+  const dueñoSugerido = gitUserNameLocal(cwd)
+  const dueñoIngresado = await prompts.text({
+    message: `Dueño del proyecto (para ${REGISTRO}, ej. @usuario)`,
+    initialValue: dueñoSugerido ? `@${dueñoSugerido}` : '',
+  })
+  const dueño = String(dueñoIngresado ?? '').trim() || '[dueño]'
+
+  const carpeta = `${PREFIJO_PROYECTO}${prefijo}`
+  const registro = await agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto: nombreProyecto, dueño }, { git })
+  if (registro.ok) {
+    ui.log.success(`Prefijo ${prefijo} agregado a ${REGISTRO} (${nombreProyecto} · ${dueño}).`)
+  } else {
+    // La fila ya quedo escrita en el clon local (agregarPrefijoAlRegistro
+    // escribe antes de pushear): igual que sembrarProyecto, un push que falla
+    // degrada a warning y sigue -- el proximo push del Vault la empuja.
+    ui.log.warn(`Prefijo ${prefijo} agregado en el clon local pero no se pudo publicar (${registro.motivo}). Pushea el Vault a mano.`)
+  }
+
+  const sembrada = await sembrarProyecto(vaultPath, carpeta, { flags: { 'vault-seed': true }, yes: true, prompts, git })
+  return sembrada
+}
+
 // Alta de la carpeta del proyecto en el Vault. Solo se llama cuando el registro
-// de prefijos YA asocia este repo a `carpeta`: el prefijo no se inventa ni se
-// agrega la fila desde el CLI (vault-guide §3).
+// de prefijos YA asocia este repo a `carpeta` -- la fila la agrega quien llama
+// (a mano, o crearProyectoNuevo en el mismo paso), nunca esta funcion.
 //
 // Esto ESCRIBE en el repo compartido de la organizacion, asi que no pasa nunca
 // sin una decision explicita: interactivo, una confirmacion; desatendido, solo

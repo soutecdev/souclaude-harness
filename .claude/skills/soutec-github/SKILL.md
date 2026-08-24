@@ -121,6 +121,12 @@ igual, el rebase es esencialmente cosmético.
 
 ## Pull Request
 
+**El PR se abre solo a pedido explícito del usuario.** Terminar un cambio no
+implica abrir el PR: el agente lo crea únicamente cuando el usuario lo pide
+("abre el PR") o dice que quiere mergear/integrar el trabajo. Mientras tanto:
+commit y push a la rama, y reportar que está listo para PR. Esto evita PRs de
+features a medio terminar.
+
 Antes de pedir revisión:
 - El proyecto corre localmente.
 - El flujo afectado está probado.
@@ -171,6 +177,12 @@ El desarrollador **propone** la versión en el PR de release. Tras el merge
 `dev` → `main`, el **agente puede crear** el tag inmutable `vX.Y.Z` y mover el tag
 móvil de la serie (`v3`), y pushearlos. Los releases de GitHub siguen siendo del
 coordinador.
+
+Tras el release, revisa si `Project-<PREFIJO>/OBSERVATORIO.md` del Vault necesita
+actualizarse — tagline, plataforma, resumen, hitos u otra sección que el release
+cambie de forma relevante. Solo si hubo cambios importantes: editarla y pushear al
+Vault en el momento (push directo, sin PR — ver `progress/README.md`). Un release
+menor sin impacto en la ficha no requiere tocarla.
 
 ## Secretos
 

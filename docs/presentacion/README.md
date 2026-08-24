@@ -1,8 +1,10 @@
 # Presentación — el harness de punta a punta
 
-Deck de 15 láminas que explica cómo se usa `souclaude-harness`: en un proyecto nuevo, en
-uno que ya existe, y cómo el tablero compartido y el monitor de tokens hacen visible el
-trabajo del equipo.
+Deck de 13 láminas que explica la metodología de trabajo de SOUTEC: cómo se instala el
+harness, por qué nada se toca sin declarar antes el milestone del Vault, y cómo el tablero
+compartido y el monitor de tokens hacen visible el trabajo del equipo.
+
+Está dirigido al **desarrollador que adopta el harness** (SHS-M16).
 
 ## Qué hay acá
 
@@ -10,7 +12,7 @@ trabajo del equipo.
 |---|---|
 | `deck.html` | La presentación navegable. Es la fuente de contenido. |
 | `build-svg.mjs` | Generador de las láminas en SVG, para importar a Figma. |
-| `slides/` | 15 SVG de 1920×1080, tema claro. Se regeneran, no se editan a mano. |
+| `slides/` | 13 SVG de 1920×1080, tema claro. Se regeneran, no se editan a mano. |
 | `slides-dark/` | Lo mismo en tema oscuro (solo si corres el script con `--dark`). |
 
 ## Presentar
@@ -55,12 +57,21 @@ si cambias una lámina, cámbiala en ambos.
 
 ## Verificación
 
-El generador no valida por sí solo que el contenido entre en la lámina. Después de
-regenerar, conviene revisar que ninguna lámina se desborde de los 1080 px de alto — se
-nota a simple vista abriendo los SVG en el navegador.
+**El generador valida que el contenido entre en la lámina.** Si una se desborda, lo
+avisa por consola con el número, el título y cuántos píxeles sobran:
+
+```
+  AVISO — contenido que no entra en la lamina:
+    07  El ciclo completo, sin saltos — sobra 645px
+  Recorta el texto o baja el tamaño de los bloques.
+```
+
+Sin aviso, las láminas entran. Lo que el generador **no** puede verificar es que
+`deck.html` diga lo mismo que los SVG: eso se revisa a mano (ver abajo).
 
 ## Los datos del monitor de tokens
 
-La lámina 14 muestra un panel con costo por hito, escaladas y rework. **Esas cifras son de
-ejemplo**, para mostrar la forma del informe: no son telemetría real de ningún proyecto.
-Los datos reales salen de `progress/model-router.jsonl` y se resumen en `/rock-close`.
+La lámina 12 muestra ventanas de consumo, sesiones activas y proyectos. **Esas cifras son
+de ejemplo**, para mostrar la forma del panel: no son telemetría real de ningún proyecto.
+Los datos reales los publica el monitor en el Vault (`00-System/monitor/`) y se consultan
+con `npx souclaude monitor --usage`.

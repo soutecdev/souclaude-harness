@@ -121,6 +121,12 @@ igual, el rebase es esencialmente cosmético.
 
 ## Pull Request
 
+**El PR se abre solo a pedido explícito del usuario.** Terminar un cambio no
+implica abrir el PR: el agente lo crea únicamente cuando el usuario lo pide
+("abre el PR") o dice que quiere mergear/integrar el trabajo. Mientras tanto:
+commit y push a la rama, y reportar que está listo para PR. Esto evita PRs de
+features a medio terminar.
+
 Antes de pedir revisión:
 - El proyecto corre localmente.
 - El flujo afectado está probado.

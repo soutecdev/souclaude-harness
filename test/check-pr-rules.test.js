@@ -51,6 +51,35 @@ test('evaluaRama: rechaza lo que ninguna de las dos formas permite', () => {
   }
 })
 
+// El release dev -> main es un PR sobre la rama "dev" en si: nunca va a
+// cumplir tipo/descripcion-corta porque no es una rama de trabajo. La
+// excepcion exige AMBAS senales (rama "dev" Y base "main"): "dev" contra
+// cualquier otra base sigue siendo invalida, y no hay otro nombre de rama
+// que la excepcion perdone.
+test('evaluaRama: "dev" contra base "main" es la excepcion del release', () => {
+  assert.equal(evaluaRama('dev', 'main').cumple, true)
+})
+
+test('evaluaRama: "dev" sin base de release sigue siendo invalida', () => {
+  assert.equal(evaluaRama('dev').cumple, false)
+  assert.equal(evaluaRama('dev', 'dev').cumple, false)
+  assert.equal(evaluaRama('dev', null).cumple, false)
+})
+
+// El harness distribuye el check y su workflow a los repos consumidores via el
+// manifest. La fuente sigue siendo scripts/ y .github/workflows/ de este repo:
+// si alguien toca una copia y no la otra, los consumidores quedan con una
+// version distinta de la que este repo aplica sobre si mismo (SHS-M17).
+test('las copias distribuidas en templates/base son identicas a las fuentes', () => {
+  const espejos = [
+    ['scripts/check-pr-rules.mjs', 'templates/base/scripts/check-pr-rules.mjs'],
+    ['.github/workflows/reglas-pr.yml', 'templates/base/github/workflows/reglas-pr.yml'],
+  ]
+  for (const [fuente, copia] of espejos) {
+    assert.equal(readFileSync(copia, 'utf8'), readFileSync(fuente, 'utf8'), `${copia} difiere de ${fuente}`)
+  }
+})
+
 test('evaluaSeccionesCompletas: la plantilla sin rellenar NO pasa', () => {
   const plantilla = readFileSync('.github/pull_request_template.md', 'utf8')
   const r = evaluaSeccionesCompletas({ body: plantilla })

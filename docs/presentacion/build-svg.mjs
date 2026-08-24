@@ -489,6 +489,8 @@ function stack(x, y, w, blocks) {
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
+const OVERFLOW = [];
+
 function frame(slide, idx, total) {
   let out = rect(0, 0, W, H, { fill: C.surface, rx: 0 });
 
@@ -527,7 +529,13 @@ function frame(slide, idx, total) {
   }
 
   // cuerpo
-  out += stack(X0, cy, CW, slide.body).svg;
+  const body = stack(X0, cy, CW, slide.body);
+  out += body.svg;
+
+  // el contenido tiene que entrar: si no, se avisa con nombre y sobrante
+  const techo = H - PAD_B - footH - (slide.foot ? 16 : 0);
+  const sobra = cy + body.h - techo;
+  if (sobra > 0) OVERFLOW.push({ n: idx + 1, title: slide.title, px: Math.ceil(sobra) });
 
   if (slide.foot) {
     const fy = H - PAD_B - footH + 22;
@@ -560,20 +568,20 @@ function heroBody(s) {
 
 /* ── contenido ──────────────────────────────────────────────────────── */
 
-const ACTS = ['Qué es', 'Proyecto nuevo', 'Proyecto existente', 'El hilo', 'Equipo', 'Monitor', 'Empezar'];
+const ACTS = ['Qué es', 'Instalar', 'La regla', 'El día', 'Tu código', 'Visibilidad', 'Empezar'];
 
 const slides = [
   {
     hero: true,
     act: ACTS[0], actIdx: 0,
-    eyebrow: 'SOUTEC · Metodología CCEM',
+    eyebrow: 'SOUTEC · Metodología de trabajo',
     title: 'El harness, de punta a punta',
-    lead: 'Cómo se instala en un proyecto nuevo, cómo se adopta en uno que ya lleva años, y cómo el tablero compartido y el monitor de tokens vuelven visible el trabajo de todo el equipo.',
+    lead: 'Cómo se instala en cualquier repo, cómo se declara el milestone antes de tocar código, y cómo el tablero compartido y el monitor de tokens vuelven visible el trabajo de todo el equipo.',
     term: [
       [['# en cualquier repo, nuevo o legacy', 'c']],
-      [['$ ', 'p'], ['npx github:ialvarezsoutec/souclaude-harness#v1', 'ink']]
+      [['$ ', 'p'], ['npx github:ialvarezsoutec/souclaude-harness#v3', 'ink']]
     ],
-    meta: 'souclaude-harness v2.3.0   ·   Node ≥ 22.4 + git   ·   sin registry, sin token'
+    meta: 'souclaude-harness v3.5.0   ·   Node ≥ 22.4 + git   ·   sin registry, sin token'
   },
 
   {
@@ -584,42 +592,44 @@ const slides = [
       {
         type: 'cards', items: [
           {
-            tag: 'El método', h: 'CCEM',
-            p: ['Los principios, el flujo Spec-Driven, el prompting anti-hack, la trazabilidad y los criterios para evaluar herramientas.',
-              'Vive en `.claude/skills/` y `docs/constitution.md`']
+            tag: 'En tu repo', h: 'El harness',
+            p: ['Las reglas y las skills que Claude aplica solo cuando el contexto lo amerita. Se commitean con el repo: quien clona, las tiene.',
+              'Vive en `CLAUDE.md` y `.claude/skills/`']
           },
           {
-            tag: 'Cómo se ejecuta', h: 'Orquestación multiagente',
-            p: ['Un patrón *opt-in*: cuatro roles con herramientas acotadas que hacen cumplir CCEM. No corre en cada sesión — lo pides cuando lo quieres.',
-              'Vive en `.claude/agents/` y `AGENTS.md`']
+            tag: 'Repo aparte', h: 'El Vault',
+            p: ['El centro de información de *todos* los proyectos: milestones, planes, kanban y sesiones. Fuera del repo a propósito, para acumular visibilidad sin ensuciarlo.',
+              'Vive en `Project-<PREFIJO>/`']
           },
           {
-            tag: 'El vehículo', h: 'souclaude-harness',
-            p: ['El CLI que emite y mantiene al día todo lo anterior en cualquier repo: uno vacío, uno legacy o uno con una versión vieja.',
-              'Vive en `src/`, `templates/` y `bin/cli.mjs`']
+            tag: 'Para la organización', h: 'Jira',
+            p: ['El espejo del Vault hacia afuera. Milestone = épica, tarea = issue hijo. Se sincroniza al mover la tarjeta, no al final del día.',
+              'Vive en el conector MCP de Atlassian']
           }
         ]
       }
     ],
-    foot: 'Las skills son *project-local*: se commitean con el repo. Quien clona, las tiene — no hay instalación por persona ni por máquina.'
+    foot: 'El Vault manda, Jira refleja. Si el conector no está autorizado, *se avisa y el trabajo local sigue* — Jira nunca bloquea.'
   },
 
   {
     act: ACTS[1], actIdx: 1,
-    eyebrow: 'Proyecto nuevo',
-    title: 'Un comando. Cuatro verbos.',
+    eyebrow: 'Instalar',
+    title: 'Un comando. Siete verbos.',
     body: [
       {
         type: 'row', widths: [1.05, 1], cols: [
           [
             {
               type: 'table',
-              cols: [{ t: 'Comando', w: 26 }, { t: 'Qué hace', w: 74 }],
+              cols: [{ t: 'Comando', w: 28 }, { t: 'Qué hace', w: 72 }],
               rows: [
                 [{ dot: 'ok', t: 'init' }, 'Instala. Sirve igual en un repo vacío y en uno con cinco años de código.'],
                 [{ dot: 'info', t: 'upgrade' }, 'Actualiza a la última versión y aplica las migraciones.'],
                 [{ dot: 'muted', t: 'status' }, 'Solo lectura. Salida 0 al día · 1 hay upgrade · 2 hay drift.'],
-                [{ dot: 'hold', t: 'adopt' }, 'Para una estructura hecha a mano. *No toca ningún archivo*: solo escribe el lockfile.']
+                [{ dot: 'hold', t: 'adopt' }, 'Para una estructura hecha a mano. *No toca ningún archivo*: solo escribe el lockfile.'],
+                [{ dot: 'muted', t: 'monitor' }, 'Panel de consumo de tokens: límites, sesiones y proyectos.'],
+                [{ dot: 'info', t: 'vault-sync' }, 'Sincroniza con el Vault. Jamás `--force`.']
               ]
             },
             { type: 'note', text: 'Sin comando, *se autodetecta*: hay lockfile → `upgrade` · hay estructura previa → `adopt` · repo limpio → `init`.' }
@@ -628,11 +638,11 @@ const slides = [
             {
               type: 'term', size: 16, lines: [
                 [['# ver el plan sin escribir un solo byte', 'c']],
-                [['$ ', 'p'], ['npx …souclaude-harness#v1 --dry-run', 'ink']],
+                [['$ ', 'p'], ['npx …souclaude-harness#v3 --dry-run', 'ink']],
                 [['', 'ink']],
                 [['create', 'g'], ['   CLAUDE.md', 'ink']],
-                [['create', 'g'], ['   docs/constitution.md', 'ink']],
-                [['create', 'g'], ['   .claude/skills/ccem-core/', 'ink']],
+                [['create', 'g'], ['   .claude/skills/soutec-github/', 'ink']],
+                [['create', 'g'], ['   progress/README.md', 'ink']],
                 [['noop', 'c'], ['     .gitignore (bloque ya presente)', 'c']],
                 [['', 'ink']],
                 [['→ 0 bytes escritos', 'c']]
@@ -652,511 +662,350 @@ const slides = [
 
   {
     act: ACTS[1], actIdx: 1,
-    eyebrow: 'Proyecto nuevo',
-    title: 'Día 1, de cero a listo',
-    body: [
-      {
-        type: 'row', widths: [1.1, 1], cols: [
-          [{
-            type: 'steps', items: [
-              '*Ten git y Node ≥ 22.4.* Nada más: no hay registry, ni `.npmrc`, ni token.',
-              '*Corre el instalador* en la raíz del repo, con `npx github:ialvarezsoutec/souclaude-harness#v1`',
-              '*Responde las cuatro preguntas* — nombre, tipo, stack e idioma — o pásalas por flag y sáltate el modo interactivo.',
-              '*Conecta el Vault* cuando lo pida: `--vault-path` si ya lo tienes clonado, `--no-vault` para omitirlo.',
-              '*Abre el repo con Claude Code.* Lo primero que lee es `CLAUDE.md` y `docs/constitution.md`.',
-              '*Completa P7 y P8* de la constitución: son los dos principios que cada proyecto define por su cuenta.'
-            ]
-          }],
-          [
-            {
-              type: 'cards', items: [{
-                tag: 'Lo que NO tienes que hacer',
-                bullets: [
-                  'Instalar skills a mano, una por una.',
-                  'Copiar un `CLAUDE.md` de otro repo y editarlo.',
-                  'Pedirle a cada persona que configure su máquina.',
-                  'Sincronizar las reglas entre proyectos a mano.'
-                ]
-              }]
-            },
-            { type: 'note', text: '*El repo queda autosuficiente.* Quien lo clona recibe el método completo — mismas skills, misma constitución, mismas reglas de Git.' }
-          ]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[1], actIdx: 1,
-    eyebrow: 'Proyecto nuevo',
+    eyebrow: 'Instalar',
     title: 'Qué queda instalado',
     body: [
       {
-        type: 'row', widths: [1, 1], cols: [
-          [{
-            type: 'tree', lines: [
-              ['CLAUDE.md', 'contexto del proyecto, <200 líneas'],
-              ['AGENTS.md', 'mapa del flujo multiagente'],
-              ['notes.md', 'scratchpad persistente'],
-              ['docs/', ''],
-              ['  constitution.md', 'principios P1-P10'],
-              ['  decisions/', 'ADRs + su template'],
-              ['specs/', 'plantillas SDD: full y lite'],
-              ['progress/', 'estado vivo del trabajo'],
-              ['.claude/', ''],
-              ['  settings.json', 'permisos + deny de secretos'],
-              ['  harness.json', 'lockfile: versión + hash'],
-              ['  vault.local.json', 'ruta local del Vault'],
-              ['  skills/', 'ccem-* · soutec-github · comandos'],
-              ['  agents/', 'orchestrator · spec-author'],
-              ['', 'implementer · reviewer'],
-              ['.github/', 'plantilla de PR + CODEOWNERS'],
-              ['.gitignore', 'solo un bloque delimitado']
-            ]
-          }],
+        type: 'row', widths: [1, 1.15], cols: [
           [
-            { type: 'lead', size: 19, text: 'Cada archivo tiene una *política* que decide qué pasa cuando llega una versión nueva del harness.' },
             {
-              type: 'kv', rows: [
-                { k: 'user-owned', v: 'Se siembra una vez. Si lo editas, no se pisa nunca. `CLAUDE.md` `constitution.md` `notes.md`' },
-                { k: 'managed', v: 'El harness es dueño y el upgrade lo mantiene fresco. `skills/` `agents/` `AGENTS.md`' },
-                { k: 'merge-json', v: 'Solo agrega claves que faltan. Jamás pisa un valor tuyo. `.claude/settings.json`' },
-                { k: 'append-block', v: 'Solo gestiona un bloque delimitado. Tus líneas quedan intactas. `.gitignore`' }
+              type: 'tree', lines: [
+                ['CLAUDE.md', 'las reglas del repo'],
+                ['.claude/', ''],
+                ['  settings.json', 'permisos y hooks'],
+                ['  skills/', 'las que elegiste'],
+                ['  vault.local.json', 'no se commitea'],
+                ['  jira.json', 'proyecto destino'],
+                ['.github/', ''],
+                ['  pull_request_template.md', ''],
+                ['  CODEOWNERS', ''],
+                ['progress/', ''],
+                ['  README.md', 'el protocolo'],
+                ['  history.md', 'append-only'],
+                ['docs/decisions/', 'los ADR']
+              ]
+            }
+          ],
+          [
+            {
+              type: 'table',
+              cols: [{ t: 'Skill', w: 42 }, { t: 'Para qué', w: 58 }],
+              rows: [
+                [{ dot: 'ok', t: 'soutec-github' }, '*Obligatoria.* Ramas, commits y PR de SOUTEC.'],
+                [{ dot: 'info', t: 'vault-milestones' }, 'Analizar e iterar el tablero de milestones.'],
+                [{ dot: 'info', t: 'jira-sync' }, 'Espejar el Vault en Jira al mover la tarjeta.'],
+                [{ dot: 'muted', t: 'harness-upgrade' }, 'Actualizar el harness desde Claude.'],
+                [{ dot: 'muted', t: 'adr-new' }, 'Documentar decisiones con trade-off.'],
+                [{ dot: 'muted', t: 'it-security-review' }, 'Security review para IT.'],
+                [{ dot: 'muted', t: 'soutec-md-a-pdf' }, 'Markdown a PDF con identidad Soutec.']
+              ]
+            },
+            { type: 'note', text: 'Al instalar eliges con un checkbox. `soutec-github` se instala *siempre*, esté o no en la lista.' }
+          ]
+        ]
+      }
+    ],
+    foot: 'Las skills son *project-local*: se commitean con el repo. No hay instalación por persona ni por máquina.'
+  },
+
+  {
+    act: ACTS[2], actIdx: 2,
+    eyebrow: 'La regla',
+    title: 'Nada de código sin milestone declarado',
+    body: [
+      { type: 'lead', text: 'Todo trabajo pertenece a un milestone del Vault. Antes de tocar código, el agente **declara sobre cuál va a trabajar**. Si el pedido no corresponde a ninguno, se da de alta uno en el Backlog *antes* de empezar.' },
+      { type: 'spacer', h: 10 },
+      {
+        type: 'row', widths: [1, 1], cols: [
+          [
+            {
+              type: 'term', size: 15.5, lines: [
+                [['# al arrancar la sesión, el hook recuerda el tablero', 'c']],
+                [['', 'ink']],
+                [['[harness]', 'p'], [' Trazabilidad obligatoria.', 'ink']],
+                [['', 'ink']],
+                [['En curso (1):', 'ink']],
+                [['  SHS-M5 · conexión con el Vault', 'g'], [' @ignacio', 'c']],
+                [['', 'ink']],
+                [['Backlog: 6 milestone(s) pendiente(s).', 'c']]
+              ]
+            }
+          ],
+          [
+            {
+              type: 'bullets', items: [
+                'Trabajo sin milestone declarado es *una violación del protocolo*, no una omisión menor.',
+                'El milestone es la **unidad de anti-solapamiento** entre máquinas: si ya está En curso con otro dueño, paras y preguntas.',
+                'El hook `SessionStart` lo recuerda solo — no depende de que alguien se acuerde.'
               ]
             }
           ]
         ]
       }
-    ]
+    ],
+    foot: 'La skill `vault-milestones` da de alta el milestone que falta, con el estándar del tablero.'
   },
 
   {
     act: ACTS[2], actIdx: 2,
-    eyebrow: 'Proyecto existente',
-    title: 'El mismo comando, tres puntos de partida',
+    eyebrow: 'La regla',
+    title: 'Tres niveles: milestone, plan, tarea',
     body: [
       {
-        type: 'cards', items: [
-          {
-            tag: 'init', tone: 'ok', top: 'ok', h: 'Repo legacy, sin harness',
-            p: ['Cinco años de código y ninguna carpeta `.claude/`. El instalador *solo agrega la superficie de Claude*: no toca tu código, tus tests ni tu build.',
-              'Nada de lo tuyo entra en el plan.']
-          },
-          {
-            tag: 'adopt', tone: 'hold', top: 'hold', h: 'Estructura hecha a mano',
-            p: ['Ya tienes un `CLAUDE.md` y skills propias que armaste tú. *No se escribe ni un archivo*: solo se anota en el lockfile que lo que hay ya cuenta como harness.',
-              'Desde ahí, los upgrades funcionan normal.']
-          },
-          {
-            tag: 'upgrade', tone: 'info', top: 'info', h: 'Harness de una versión vieja',
-            p: ['Trae skills nuevas, reglas nuevas y corre las *migraciones*, que transforman lo viejo antes de comparar — así un fix antiguo aparece como un update normal.',
-              'Se invoca con `/harness-upgrade`.']
-          }
+        type: 'chain', items: [
+          { k: 'Nivel alto', v: 'SHS-M5' },
+          { k: 'Cómo llegar', v: 'SHS-M5-P1' },
+          { k: 'El día', v: 'SHS-M5-T002' },
+          { k: 'El trabajo', v: 'rama + PR' }
         ]
       },
-      { type: 'note', text: 'Los tres son *el mismo code path*. No hay tres flujos con tres conjuntos de bugs: hay una sola tabla de veredictos, y es la de la próxima lámina.' }
-    ]
-  },
-
-  {
-    act: ACTS[2], actIdx: 2,
-    eyebrow: 'Proyecto existente · la garantía',
-    title: 'Un archivo tuyo nunca se sobrescribe en silencio',
-    body: [
-      { type: 'lead', size: 19, text: 'El motor cruza tres cosas para cada archivo: qué hay *en disco*, qué dice el *lockfile* que había, y qué querría *emitir el harness hoy*.' },
+      { type: 'spacer', h: 18 },
       {
-        type: 'table', size: 16,
-        cols: [
-          { t: 'En disco', w: 19 }, { t: 'En el lockfile', w: 16 }, { t: '¿Cambió el template?', w: 15 },
-          { t: 'Veredicto', w: 16 }, { t: 'Qué pasa', w: 34 }
-        ],
-        rows: [
-          ['no está', 'no está', '—', { dot: 'ok', t: 'create' }, 'Se crea.'],
-          ['*está*', 'no está', '—', { dot: 'hold', t: 'foreign' }, '*Nunca se pisa* → queda `.new` al lado.'],
-          ['está, intacto', 'está', 'no', { dot: 'muted', t: 'noop' }, 'Nada.'],
-          ['está, intacto', 'está', 'sí', { dot: 'info', t: 'update' }, 'Se actualiza. No pierdes nada: no lo habías tocado.'],
-          ['está, *editado por ti*', 'está', 'no', { dot: 'muted', t: 'local-edit' }, 'Se respeta. No se toca.'],
-          ['está, *editado por ti*', 'está', 'sí', { dot: 'hold', t: 'conflict' }, '*Nunca se pisa* → queda `.new` al lado.'],
-          ['lo escribimos, lo borraste', 'está', '—', { dot: 'ok', t: 'restore' }, 'Se reescribe.'],
-          ['está', 'ya no en el manifest', '—', { dot: 'hold', t: 'obsolete' }, 'Solo con `--prune` y doble confirmación.']
+        type: 'kv', kw: 150, rows: [
+          { k: 'milestones.md', v: 'El tablero de milestones: qué se persigue. La tarjeta lleva dueño, máquina y el plan activo.' },
+          { k: 'plans/', v: 'Un archivo por plan: qué se va a hacer, en qué orden y con qué criterio de éxito. Un milestone puede cambiar de plan — el viejo *no se borra*.' },
+          { k: 'kanban.md', v: 'Las tareas del milestone en curso, en cuatro columnas: Backlog, En curso, En review, Hecho.' },
+          { k: 'sessions.md', v: 'Append-only: una línea por sesión con quién, qué tocó y cuántos tokens costó.' }
         ]
       }
     ],
-    foot: 'Salvaguardas: backup de todo lo sobrescrito en `.claude/backup-<ts>/` · `--prune` exige tipear BORRAR · `--force` exige tipear FORCE. La herramienta obedece la misma constitución que instala.'
+    foot: 'El milestone es la unidad de anti-solapamiento entre máquinas; la tarea es la unidad de trabajo del día.'
   },
 
   {
-    act: ACTS[2], actIdx: 2,
-    eyebrow: 'Proyecto existente · mantenerlo al día',
-    title: 'Qué haces cuando aparece un .new',
+    act: ACTS[3], actIdx: 3,
+    eyebrow: 'El día',
+    title: 'El ciclo completo, sin saltos',
+    body: [
+      {
+        type: 'steps', size: 18, items: [
+          '`git -C "<vault>" pull --rebase` — el tablero primero, siempre. O `npx souclaude vault-sync`.',
+          'Lees `milestones.md`. Si el milestone está En curso con *otro dueño u otra máquina*: **paras y preguntas**.',
+          'Tomas la tarea, mueves la tarjeta a En curso y **pusheas en ese momento** — no en un push final.',
+          'Jira se sincroniza inmediatamente después. Vault primero, Jira detrás.',
+          'Rama desde `dev`: `feature/SHS-M5-T002-sembrar-carpeta`. El ID de la tarea va como prefijo del slug.',
+          'PR a `dev` con la plantilla completa de verdad. **Nunca** commit directo a `main`.',
+          'Al cerrar: tarjeta a Hecho, push inmediato, y tu línea en `sessions.md` con los tokens.'
+        ]
+      }
+    ],
+    foot: 'Cada movimiento se pushea al momento: el tablero refleja *el ahora*, no el último merge.'
+  },
+
+  {
+    act: ACTS[3], actIdx: 3,
+    eyebrow: 'El día',
+    title: 'Dos repos con reglas opuestas, a propósito',
+    body: [
+      {
+        type: 'table',
+        cols: [{ t: '', w: 20 }, { t: 'Repo del proyecto', w: 40 }, { t: 'Repo del Vault', w: 40 }],
+        rows: [
+          [{ t: 'Qué va' }, 'Código, tests, progreso', 'Milestones, planes, kanban, sesiones'],
+          [{ t: 'Cómo se escribe' }, { dot: 'info', t: 'Rama + PR. *Nunca* directo a `main`' }, { dot: 'ok', t: '*Push directo a `main`*, sin PR' }],
+          [{ t: 'Por qué' }, 'Todo cambio se revisa', 'El tablero refleja el ahora'],
+          [{ t: 'Ramas' }, '`tipo/<ID>-<slug>` desde `dev`', 'No hay: se escribe en `main`'],
+          [{ t: 'Release' }, '`dev` → `main` por PR, y recién ahí los tags', 'No aplica']
+        ]
+      },
+      { type: 'spacer', h: 14 },
+      { type: 'note', text: 'Nunca se cruzan: código, diffs y tests jamás van al Vault; los artefactos del Vault jamás se commitean en el proyecto. Y en ninguno de los dos: *nunca `git push --force`*.' }
+    ]
+  },
+
+  {
+    act: ACTS[3], actIdx: 3,
+    eyebrow: 'El día',
+    title: 'Nadie pisa el trabajo de nadie',
+    body: [
+      {
+        type: 'kanban', h: 236, cols: [
+          {
+            t: 'Backlog', tasks: [
+              { id: 'REA-M3-T004', d: 'validar formulario', w: '@pendiente' },
+              { id: 'REA-M3-T005', d: 'reintento de envío', w: '@pendiente' }
+            ]
+          },
+          { t: 'En curso', tasks: [{ id: 'REA-M3-T003', d: 'capturar lead al cierre', w: '@sofia · PC04', tone: 'hold' }] },
+          { t: 'En review', tasks: [{ id: 'REA-M3-T002', d: 'persistencia del ticket', w: '@nacho · PR #18', tone: 'accent' }] },
+          { t: 'Hecho', tasks: [{ id: 'REA-M3-T001', d: 'esqueleto del dominio', w: '@nacho', tone: 'ok', done: true }] }
+        ]
+      },
+      { type: 'spacer', h: 12 },
+      {
+        type: 'bullets', items: [
+          'La tarjeta de *@sofia* está En curso en otra máquina: **no la tomas, no la mueves, no saltas a otra por tu cuenta**. Paras y preguntas.',
+          'Una tarjeta = una línea. Al resolver un conflicto en los tableros, se conservan ambas y se ordena.'
+        ]
+      }
+    ]
+  },
+
+  {
+    act: ACTS[4], actIdx: 4,
+    eyebrow: 'Tu código',
+    title: 'Un archivo tuyo nunca se sobrescribe en silencio',
+    body: [
+      {
+        type: 'row', widths: [1, 1.02], cols: [
+          [
+            {
+              type: 'term', size: 15, lines: [
+                [['$ ', 'p'], ['npx …souclaude-harness#v3 upgrade', 'ink']],
+                [['', 'ink']],
+                [['update', 'g'], ['   .claude/settings.json', 'ink']],
+                [['keep', 'c'], ['     CLAUDE.md', 'c'], ['  (lo editaste tú)', 'c']],
+                [['new', 'p'], ['      CLAUDE.md.new', 'ink']],
+                [['', 'ink']],
+                [['→ tu version intacta', 'c']]
+              ]
+            },
+            {
+              type: 'bullets', size: 16.5, items: [
+                'Si tocaste un archivo gestionado, el harness **no lo pisa**: deja la versión nueva al lado como `.new`.',
+                'Comparas, te quedas con lo que sirve y borras el `.new`. La decisión es tuya.',
+                'Antes de sobrescribir cualquier cosa hay copia en `.claude/backup-<ts>/`.'
+              ]
+            }
+          ],
+          [
+            {
+              type: 'table', size: 15,
+              cols: [{ t: 'Situación', w: 44 }, { t: 'Veredicto', w: 20 }, { t: 'Qué pasa', w: 36 }],
+              rows: [
+                ['No está en disco', { dot: 'ok', t: 'create' }, 'Se crea.'],
+                ['Está, intacto, cambió el template', { dot: 'info', t: 'update' }, 'Se actualiza.'],
+                ['Está, intacto, sin cambios', { dot: 'muted', t: 'noop' }, 'Nada.'],
+                ['*Lo editaste tú*, sin cambios', { dot: 'muted', t: 'local-edit' }, 'Se respeta.'],
+                ['*Lo editaste tú*, cambió', { dot: 'hold', t: 'conflict' }, '*Nunca se pisa* → `.new`.'],
+                ['Existía y lo borraste', { dot: 'ok', t: 'restore' }, 'Se reescribe.'],
+                ['Ya no está en el manifest', { dot: 'hold', t: 'obsolete' }, 'Solo con `--prune`.']
+              ]
+            }
+          ]
+        ]
+      }
+    ],
+    foot: '`--prune` exige tipear BORRAR y `--force` exige tipear FORCE. La herramienta obedece las mismas reglas que instala.'
+  },
+
+  {
+    act: ACTS[5], actIdx: 5,
+    eyebrow: 'Visibilidad',
+    title: 'El tablero, espejado en Jira',
+    body: [
+      {
+        type: 'chain', items: [
+          { k: 'Mueves', v: 'la tarjeta' },
+          { k: 'Commit', v: 'al Vault' },
+          { k: 'Push', v: 'a main' },
+          { k: 'Y recién', v: 'Jira' }
+        ]
+      },
+      { type: 'spacer', h: 16 },
+      {
+        type: 'row', widths: [1, 1], cols: [
+          [
+            {
+              type: 'kv', kw: 150, size: 16, rows: [
+                { k: 'Milestone', v: 'Una **épica**, con su descripción y la etiqueta `<PREFIJO>-M<n>`.' },
+                { k: 'Tarea', v: 'Un **issue hijo** de esa épica. El ID en el summary es la clave de idempotencia: nunca se duplica.' },
+                { k: 'Columna', v: 'Backlog → To Do · En curso → In Progress · En review → In Review · Hecho → Done.' }
+              ]
+            }
+          ],
+          [
+            {
+              type: 'bullets', size: 16.5, items: [
+                'Se sincroniza **en el momento** en que mueves la tarjeta, no al final del día.',
+                '**Jira nunca es la fuente.** Si alguien mueve un issue allá, se reporta la divergencia — no se toca el Vault para igualar.',
+                'Sin conector autorizado: se avisa una vez y el trabajo local sigue.',
+                'No se borran issues: una tarea eliminada se comenta y se cierra.'
+              ]
+            }
+          ]
+        ]
+      }
+    ],
+    foot: 'Cada proyecto del Vault tiene su propio proyecto en Jira, y la clave es el mismo PREFIJO: `Project-SHS` → `SHS`.'
+  },
+
+  {
+    act: ACTS[5], actIdx: 5,
+    eyebrow: 'Visibilidad',
+    title: 'El equipo ve dónde se va el esfuerzo',
+    body: [
+      {
+        type: 'tiles', items: [
+          { k: 'Ventana 5h', n: '38', u: '%', s: 'del límite de la cuenta' },
+          { k: 'Ventana 7d', n: '61', u: '%', s: 'consumo propio del período' },
+          { k: 'Sesiones', n: '3', s: 'activas ahora en el equipo' },
+          { k: 'Proyectos', n: '4', s: 'publicando en el Vault' }
+        ]
+      },
+      { type: 'spacer', h: 16 },
+      {
+        type: 'bullets', items: [
+          '`npx souclaude monitor` abre el panel en vivo; `--usage` da el informe completo con filtros por proyecto, contribuyente y cuenta.',
+          'Con el panel abierto, **cada sesión publica sola su línea** en `sessions.md` y la actualiza mientras sigue viva.',
+          'Una línea que editaste a mano *nunca se pisa*: el monitor solo actualiza la que escribió él, byte a byte.'
+        ]
+      }
+    ],
+    foot: 'Las cifras de arriba son de ejemplo, para mostrar la forma del panel. Los datos reales salen del registro del Vault.'
+  },
+
+  {
+    act: ACTS[6], actIdx: 6,
+    eyebrow: 'Empezar',
+    title: 'Empezar hoy',
     body: [
       {
         type: 'row', widths: [1, 1], cols: [
           [
             {
               type: 'term', size: 16, lines: [
-                [['# 1 · ¿estoy al día?', 'c']],
-                [['$ ', 'p'], ['npx …#v1 status', 'ink']],
-                [['→ salida 1: hay una versión nueva', 'c']],
+                [['# repo nuevo o con años de código', 'c']],
+                [['$ ', 'p'], ['npx github:…souclaude-harness#v3', 'ink']],
                 [['', 'ink']],
-                [['# 2 · ¿qué cambiaría?', 'c']],
-                [['$ ', 'p'], ['npx …#v1 upgrade --dry-run', 'ink']],
-                [['', 'ink']],
-                [['# 3 · aplicarlo', 'c']],
-                [['$ ', 'p'], ['npx …#v1 upgrade', 'ink']],
-                [['update', 'g'], ['    .claude/skills/ccem-sdd/', 'ink']],
-                [['conflict', 'c'], ['  CLAUDE.md → CLAUDE.md.new', 'c']]
+                [['# ya lo tenías instalado', 'c']],
+                [['$ ', 'p'], ['npx …#v3 upgrade --dry-run', 'ink']],
+                [['$ ', 'p'], ['npx …#v3 upgrade --prune', 'ink']]
               ]
             },
-            { type: 'note', text: 'Desde Claude Code es un solo comando: `/harness-upgrade`. Corre `status`, luego el `--dry-run`, *espera tu OK* y recién ahí aplica.' }
+            {
+              type: 'steps', size: 16.5, items: [
+                'Instala y elige tus skills. `soutec-github` viene siempre.',
+                'Conecta el Vault: se clona y se declara tu `Project-<PREFIJO>`.',
+                'Antes de la primera línea de código: **declara tu milestone**.'
+              ]
+            }
           ],
           [
             {
-              type: 'cards', items: [{
-                tag: 'El archivo .new', h: 'La propuesta queda al lado. Tú decides.',
-                p: ['Cuando tu archivo difiere del que el harness querría emitir, no hay pisada y no hay merge automático: aparece `<archivo>.new` junto al tuyo y el original queda intacto.',
-                  'Lo comparas con `git diff --no-index CLAUDE.md CLAUDE.md.new`, te llevas lo que sirve y borras el `.new`.',
-                  'Es una *sugerencia*, no una migración pendiente.']
-              }]
-            }
+              type: 'kv', kw: 190, size: 16, rows: [
+                { k: 'progress/README.md', v: 'El protocolo completo: los dos repos, el anti-solapamiento y el formato de los tableros.' },
+                { k: 'CLAUDE.md', v: 'Las reglas duras del repo: ramas, commits, PR y qué no se hace nunca.' },
+                { k: 'docs/infografias/', v: 'Una master de la metodología y una por caso de adopción, listas para imprimir.' },
+                { k: 'docs/decisions/', v: 'Los ADR: por qué las cosas son como son.' }
+              ]
+            },
+            { type: 'note', text: 'Si algo es ambiguo o parece mal: *para y pregunta*. No adivines.' }
           ]
         ]
       }
     ],
-    foot: 'Los dos invariantes que sostienen esto en los tests: *idempotencia* — correr `init` dos veces no cambia nada la segunda — y *pureza de --dry-run* — el árbol queda byte-idéntico.'
-  },
-
-  {
-    act: ACTS[3], actIdx: 3,
-    eyebrow: 'El día a día',
-    title: 'El ID del hito es el hilo',
-    body: [
-      { type: 'lead', size: 19, text: 'La roca nace en la reunión trimestral y se descompone en hitos. *El hito emite el ID*, y ese ID reaparece idéntico en cada eslabón hasta el release.' },
-      {
-        type: 'chain', items: [
-          { k: 'Roca · trimestre', v: 'Q3Y26-REA' },
-          { k: 'Hito', v: 'REA-H3' },
-          { k: 'Carpeta de spec', v: 'specs/REA-H3-captura-lead/' },
-          { k: 'Rama', v: 'feature/REA-H3-captura-lead' },
-          { k: 'Tasks', v: 'REA-H3-T001…' },
-          { k: 'PR · release', v: 'squash & merge' }
-        ]
-      },
-      {
-        type: 'cards', items: [
-          {
-            tag: 'Por qué importa',
-            p: ['`grep -r REA-H3 specs/` y `git log --grep=REA-H3` devuelven *lo mismo*. Cualquiera puede reconstruir por qué existe una línea de código sin preguntarle a nadie.',
-              'Un hito puede producir varios specs: mismo ID, distinto slug. Cada carpeta es una rama y un PR.']
-          },
-          {
-            tag: 'La regla dura', tone: 'hold', top: 'hold', h: 'Si no tienes el ID, pregunta. No lo inventes.',
-            p: ['Sin ID no hay rama — *los hotfixes incluidos*. La urgencia cambia la prioridad, nunca el procedimiento. Si una rama o un release no tiene ID, la cadena está rota y se repara antes de seguir.']
-          }
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[3], actIdx: 3,
-    eyebrow: 'El día a día',
-    title: 'Tres frenos humanos antes de escribir código',
-    body: [
-      {
-        type: 'flow', items: [
-          { t: 'spec.md' }, { t: '⏸ HUMANO', k: 'gate' }, { t: 'plan.md' }, { t: '⏸ HUMANO', k: 'gate' },
-          { t: 'tasks.md' }, { t: '⏸ HUMANO', k: 'gate' }, { t: 'implement' }, { t: 'review' }, { t: 'PR' }
-        ]
-      },
-      { type: 'lead', size: 19, text: 'Hasta que los tres estén aprobados, la rama *solo admite commits `docs:`*. Durante implement el review es incremental, task por task — nunca en batch al final.' },
-      {
-        type: 'row', widths: [1, 1], cols: [
-          [{
-            type: 'table', size: 16,
-            cols: [{ t: 'Agente', w: 26 }, { t: 'Rol', w: 58 }, { t: '¿Código?', w: 16 }],
-            rows: [
-              ['`orchestrator`', 'Descompone, coordina y hace respetar los checkpoints.', { dot: 'hold', t: 'no' }],
-              ['`spec-author`', 'Redacta spec, plan y tasks — una fase por invocación.', { dot: 'hold', t: 'no' }],
-              ['`implementer`', 'Implementa task por task, cada cambio con su test.', { dot: 'ok', t: 'sí' }],
-              ['`reviewer`', 'Aprueba o rechaza. Sin herramientas de escritura: dictamina.', { dot: 'hold', t: 'no' }]
-            ]
-          }],
-          [
-            { type: 'note', text: '*La separación es el punto.* Quien especifica no implementa, y quien implementa *no se aprueba a sí mismo*. Un `reviewer` sin permiso de escritura no es una recomendación: es enforcement.' },
-            {
-              type: 'cards', items: [{
-                tag: 'Cuándo NO montar todo esto',
-                p: ['Bug fix puntual, ajuste cosmético, spike, script one-off, hotfix o typo: *se hace directo*. Ceremonia que no sirve viola P9 — Simplicity First.',
-                  'Para un cambio mediano existe la versión comprimida: `/spec-new <ID> <slug> --lite`. Mismos checkpoints, menos ceremonia.']
-              }]
-            }
-          ]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[4], actIdx: 4,
-    eyebrow: 'Trabajo en equipo',
-    title: 'Dos repos con reglas opuestas, a propósito',
-    body: [
-      {
-        type: 'cards', items: [
-          {
-            tag: 'Repo del proyecto', tone: 'info', top: 'info', h: 'Todo cambio se revisa',
-            bullets: [
-              'Código, tests, specs y progreso.',
-              'Siempre *rama + Pull Request*. Nunca directo a `main`.',
-              'El coordinador hace el squash & merge.'
-            ],
-            p: ['*Por qué:* lo que entra al código pasa por revisión, sin excepciones y sin atajos por urgencia.']
-          },
-          {
-            tag: 'El Vault', top: 'accent', h: 'El tablero refleja el ahora',
-            bullets: [
-              'Kanban, espejos de specs y progreso, rocas, evidencia.',
-              '*Push directo a `main`*, sin PR.',
-              'Repo aparte, para no ensuciar el del proyecto.'
-            ],
-            p: ['*Por qué:* si el tablero esperara a un merge, mostraría el pasado. Tiene que mostrar el ahora.']
-          }
-        ]
-      },
-      {
-        type: 'row', widths: [1, 1, 1], gap: 20, cols: [
-          [{ type: 'note', tone: 'info', text: 'Nunca se cruzan: código, diffs y tests *jamás* van al Vault.' }],
-          [{ type: 'note', text: 'La ruta local vive en `.claude/vault.local.json`, que escribe el instalador.' }],
-          [{ type: 'note', tone: 'hold', text: 'Si el Vault no está configurado, el espejo *se omite sin fallar*. El trabajo local nunca se bloquea.' }]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[4], actIdx: 4,
-    eyebrow: 'Trabajo en equipo · el tablero',
-    title: 'Nadie pisa el trabajo de nadie',
-    body: [
-      {
-        type: 'kanban', h: 200, cols: [
-          {
-            t: 'Backlog', tasks: [
-              { id: 'REA-H3-T004', d: 'validar formulario', w: '@pendiente' },
-              { id: 'REA-H3-T005', d: 'reintento de envío', w: '@pendiente' }
-            ]
-          },
-          { t: 'En curso', tasks: [{ id: 'REA-H3-T003', d: 'capturar lead al cierre', w: '@sofia', tone: 'hold' }] },
-          { t: 'En review', tasks: [{ id: 'REA-H3-T002', d: 'persistencia del ticket', w: '@nacho', tone: 'accent' }] },
-          { t: 'Hecho', tasks: [{ id: 'REA-H3-T001', d: 'esqueleto del dominio', w: '@nacho', tone: 'ok', done: true }] }
-        ]
-      },
-      {
-        type: 'row', widths: [1.05, 1], cols: [
-          [
-            { type: 'lead', size: 18, text: '*La tarjeta se mueve al empezar*, no al terminar. Por eso el tablero sirve como señal en vivo y no como reporte tardío.' },
-            {
-              type: 'table', size: 16,
-              cols: [{ t: 'Quién', w: 28 }, { t: 'Mueve la tarjeta', w: 72 }],
-              rows: [
-                ['`spec-author`', 'La crea en *Backlog* al emitir `tasks.md`.'],
-                ['`implementer`', 'A *En curso* al tomarla; a *En review* al cerrarla.'],
-                ['`reviewer`', 'A *Hecho* con `APPROVED`, o de vuelta a *En curso*.']
-              ]
-            }
-          ],
-          [
-            {
-              type: 'term', size: 15.5, lines: [
-                [['# obligatorio antes de tomar un task', 'c']],
-                [['$ ', 'p'], ['git -C "<vault>" pull --rebase', 'ink']],
-                [['# y lee Project-REA/kanban.md', 'c']]
-              ]
-            },
-            {
-              type: 'cards', items: [{
-                tag: 'El anti-solapamiento', tone: 'hold', top: 'hold',
-                p: ['Si la tarjeta ya está en *En curso* con otro dueño, la está trabajando otra persona u otra máquina: *paras y preguntas*. No la tomas, no la mueves y no saltas a otra por tu cuenta.',
-                  'Una tarjeta = una línea, así que dos personas nunca se contradicen al hacer merge: se conservan ambas.']
-              }]
-            }
-          ]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[5], actIdx: 5,
-    eyebrow: 'Monitor de tokens',
-    title: 'Cada lanzamiento elige su modelo, y queda anotado',
-    body: [
-      {
-        type: 'cards', items: [
-          {
-            tag: 'Paso 1 · clasificar',
-            p: ['La tarea se cuenta contra un checklist de señales, no por intuición.',
-              '*mecánica* 0 señales · *estándar* 1-2 blandas · *compleja* ≥3 blandas o ≥1 dura']
-          },
-          {
-            tag: 'Paso 2 · rutear',
-            p: ['La matriz *agente × clase* decide modelo y esfuerzo.',
-              'Cambiar la política es editar un solo archivo: la skill `ccem-model-router`.']
-          },
-          {
-            tag: 'Paso 3 · registrar',
-            p: ['Una línea JSONL por lanzamiento en `progress/model-router.jsonl`.',
-              '*Un hito sin líneas es una violación visible del protocolo.*']
-          }
-        ]
-      },
-      {
-        type: 'row', widths: [1.15, 1], cols: [
-          [
-            {
-              type: 'table', size: 16,
-              cols: [{ t: 'Agente', w: 28 }, { t: 'mecánica', w: 20 }, { t: 'estándar', w: 20 }, { t: 'compleja', w: 32 }],
-              rows: [
-                ['`spec-author`', 'Ejecución', 'Ejecución', '*Decisiones*'],
-                ['`implementer`', 'Volumen', 'Ejecución', 'Ejecución + Advisor'],
-                ['`reviewer`', 'Ejecución', 'Ejecución', 'Ejecución']
-              ]
-            },
-            { type: 'lead', size: 16, text: 'El `implementer` complejo no sube de tier: consulta puntualmente al modelo de Decisiones (~400-700 tokens) en vez de correr el task entero en el modelo caro.' }
-          ],
-          [{
-            type: 'term', size: 15, lines: [
-              [['// una línea por lanzamiento', 'c']],
-              [['{"hito": ', 'ink'], ['"REA-H3"', 'g'], [',', 'ink']],
-              [[' "task": ', 'ink'], ['"REA-H3-T003"', 'g'], [',', 'ink']],
-              [[' "agente": ', 'ink'], ['"implementer"', 'g'], [',', 'ink']],
-              [[' "clase": ', 'ink'], ['"estandar"', 'g'], [',', 'ink']],
-              [[' "senales": [', 'ink'], ['"mas_de_3_archivos"', 'g'], ['],', 'ink']],
-              [[' "resultado": ', 'ink'], ['"approved"', 'g'], [',', 'ink']],
-              [[' "rework": ', 'ink'], ['0', 'p'], [',', 'ink']],
-              [[' "tokens_in": ', 'ink'], ['42150', 'p'], [',', 'ink']],
-              [[' "tokens_out": ', 'ink'], ['8300', 'p'], [',', 'ink']],
-              [[' "costo_usd": ', 'ink'], ['0.94', 'p'], [',', 'ink']],
-              [[' "medicion": ', 'ink'], ['"estimado"', 'g'], ['}', 'ink']]
-            ]
-          }]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[5], actIdx: 5,
-    eyebrow: 'Monitor de tokens · qué te dice',
-    title: 'El equipo ve dónde se va el esfuerzo',
-    body: [
-      {
-        type: 'tiles', items: [
-          { k: 'Lanzamientos', n: '48', s: 'en el trimestre' },
-          { k: 'Escaladas', n: '6,2', u: '%', s: 'umbral de revisión: 10 %' },
-          { k: 'Rework', n: '7', s: 'devoluciones del reviewer' },
-          { k: 'Medido', n: '34', u: '%', s: 'el resto es estimación' }
-        ]
-      },
-      {
-        type: 'row', widths: [1, 1.05], cols: [
-          [
-            { type: 'lead', size: 16, text: 'COSTO POR HITO · USD' },
-            {
-              type: 'bars', items: [
-                { k: 'REA-H1', pct: 0.46, v: '4,10' },
-                { k: 'REA-H2', pct: 0.71, v: '6,35' },
-                { k: 'REA-H3', pct: 1.00, v: '8,90' },
-                { k: 'REA-H4', pct: 0.29, v: '2,58' },
-                { k: 'REA-H5', pct: 0.38, v: '3,40' }
-              ]
-            },
-            { type: 'lead', size: 15, text: 'Cifras de ejemplo para mostrar la forma del informe — no son telemetría real de ningún proyecto.' }
-          ],
-          [
-            {
-              type: 'cards', items: [{
-                tag: 'La regla de honestidad', tone: 'hold', top: 'hold',
-                p: ['Si la herramienta no reporta el uso real de tokens, el orchestrator *estima* por tamaño de artefactos y lo marca como tal. Un `estimado` sirve para *comparar* celdas de la matriz e hitos entre sí — *jamás* se presenta como cifra contable ni de facturación.']
-              }]
-            },
-            {
-              type: 'cards', items: [{
-                tag: 'El ritual · /rock-close',
-                p: ['Al cerrar el trimestre se resume el JSONL y se ajusta la matriz si:'],
-                bullets: [
-                  'las escaladas superan el *10 %* de los lanzamientos,',
-                  'una celda *concentra el rework* — su tier quedó corto,',
-                  'una celda *nunca falla* — puede bajar un tier.'
-                ]
-              }]
-            }
-          ]
-        ]
-      }
-    ]
-  },
-
-  {
-    act: ACTS[6], actIdx: 6,
-    eyebrow: 'Cómo empezar hoy',
-    title: 'Dos caminos, el mismo comando',
-    body: [
-      {
-        type: 'row', widths: [1, 1], cols: [
-          [{
-            type: 'cards', items: [{
-              tag: 'Proyecto nuevo', tone: 'ok', top: 'ok',
-              p: ['`npx github:ialvarezsoutec/souclaude-harness#v1`'],
-              bullets: [
-                'Responde nombre, tipo, stack e idioma.',
-                'Conecta el Vault y completa P7 y P8.',
-                'Abre el repo con Claude Code y arranca.'
-              ]
-            }]
-          }],
-          [{
-            type: 'cards', items: [{
-              tag: 'Proyecto existente', tone: 'info', top: 'info',
-              p: ['`npx …#v1 status` y después `npx …#v1 upgrade --dry-run`'],
-              bullets: [
-                'Lee el plan antes de aplicar nada.',
-                'Revisa cada `.new` con `git diff --no-index`.',
-                'Desde Claude Code: `/harness-upgrade`.'
-              ]
-            }]
-          }]
-        ]
-      },
-      {
-        type: 'cards', items: [
-          {
-            tag: 'Antes de cada task',
-            p: ['`git -C "<vault>" pull --rebase`, lee el kanban y mueve tu tarjeta *al empezar*. Si ya la tiene otra persona, para y pregunta.']
-          },
-          {
-            tag: 'Antes de cada PR',
-            p: ['`/constitution-check` audita tu diff contra P1-P10 y te marca las violaciones con archivo y línea. Completa la plantilla de PR de verdad.']
-          },
-          {
-            tag: 'Cuando dudes',
-            p: ['Las fuentes de verdad son `docs/constitution.md`, `AGENTS.md` y `progress/README.md`. Si algo es ambiguo: *para y pregunta*.']
-          }
-        ]
-      }
-    ],
-    foot: 'P9 — Simplicity First y P10 — Surgical Changes aplican siempre, en todo proyecto. Todo lo demás es andamiaje para que esas dos se cumplan solas.'
+    foot: 'Los proyectos instalados antes de la v3 apuntan a `#v1`: editas la ref a `#v3` y corres `upgrade --prune`. El tag móvil `v2` nunca existió.'
   }
 ];
 
 /* ── salida ─────────────────────────────────────────────────────────── */
 
 const slugs = [
-  'portada', 'tres-capas', 'un-comando', 'dia-1', 'que-instala',
-  'tres-puntos-partida', 'tabla-veredictos', 'archivo-new', 'el-hilo',
-  'checkpoints-agentes', 'dos-repos', 'kanban-vivo', 'monitor-como-decide',
-  'monitor-que-dice', 'empezar-hoy'
+  'portada', 'tres-capas', 'un-comando', 'que-instala',
+  'milestone-obligatorio', 'tres-niveles', 'el-ciclo', 'dos-repos',
+  'nadie-pisa', 'archivo-new', 'jira-espejo', 'monitor-tokens',
+  'empezar-hoy'
 ];
 
 rmSync(OUT, { recursive: true, force: true });
@@ -1173,6 +1022,14 @@ slides.forEach((s, i) => {
   writeFileSync(join(OUT, name), svg, 'utf8');
   console.log('  ' + name);
 });
+
+if (OVERFLOW.length) {
+  console.error('\n  AVISO — contenido que no entra en la lamina:');
+  for (const o of OVERFLOW) {
+    console.error(`    ${String(o.n).padStart(2, '0')}  ${o.title} — sobra ${o.px}px`);
+  }
+  console.error('  Recorta el texto o baja el tamano de los bloques.\n');
+}
 
 console.log(`\n${slides.length} laminas en ${OUT}`);
 console.log('Figma: File > Import > selecciona los .svg (cada uno entra como Frame 1920x1080).');

@@ -61,6 +61,42 @@ Formato: \`- <fecha> · <tarea o rama> · <quién> · <resultado> · <referencia
 // nuevo -- pero el tablero ya la habria mostrado como inexistente.
 const GITKEEP = ''
 
+// Ficha para el Observatorio: se siembra vacia y el equipo del proyecto la
+// completa y actualiza (release con cambios importantes). No confundir con el
+// README del repo tecnico -- OBS-M6 sincroniza secciones del README hacia el
+// portal, esta ficha es aparte y vive solo en el Vault.
+const OBSERVATORIO = `# Ficha para el Observatorio
+
+## Tagline
+<!-- Una frase: qué es y para quién. Entre 20 y 200 caracteres. -->
+
+## Plataforma
+<!-- Dónde corre. Ej.: "App de escritorio (Windows · macOS)", "Servicio en Cloudflare Workers", "Robot + Jetson". -->
+
+## Resumen
+<!-- Uno a tres párrafos en prosa. Sin tablas, imágenes ni bloques de código. -->
+
+## Por qué importa
+<!-- Una razón por viñeta, una frase cada una (3 a 5). -->
+-
+-
+
+## Próximos pasos
+<!-- Un paso por viñeta. Si el repo usa Milestones de GitHub con fecha, dejar vacío. -->
+-
+-
+
+## Equipo
+<!-- Una línea por persona: @usuario-github · Rol -->
+- @ ·
+
+## Hitos
+<!-- Una línea por hito: AAAA-MM-DD · Versión o título · Descripción -->
+<!-- Si la versión coincide con un release de GitHub, manda esta fecha y descripción. -->
+- AAAA-MM-DD · v0.0.0 ·
+- AAAA-MM-DD · Título ·
+`
+
 // Ruta relativa a Project-<PREFIJO>/ -> contenido. El orden es el de la
 // estructura documentada en docs/vault-guide.md §2.
 export const SEMILLAS_PROYECTO = {
@@ -69,6 +105,7 @@ export const SEMILLAS_PROYECTO = {
   'kanban.md': KANBAN,
   'sessions.md': SESSIONS,
   'progress/history.md': HISTORY,
+  'OBSERVATORIO.md': OBSERVATORIO,
 }
 
 export function renderSemilla(contenido, proyecto) {
