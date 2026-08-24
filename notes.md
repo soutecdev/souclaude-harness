@@ -110,6 +110,27 @@ rm -rf "$WORK"
   historial de git.
 - **Skill gemela `soutec-md-a-pdf-nativo`** — no se creó: `soutec-md-a-pdf` ya es nativa.
 
+## 2026-08-24 — SHS-M14 resuelto: `node --test` en paralelo corrompe su propio pipe IPC en ubuntu + Node 22
+
+Diagnóstico de la causa raíz del "Unable to deserialize cloned data" que hacía
+fallar `test/monitor-cmd.test.js` de forma no determinista, solo en
+`ubuntu-latest` + Node 22. **No es un bug del código del test**: el propio
+archivo ya evita el patrón peligroso conocido (interceptar `process.stdout.write`
+global con un `await` en medio, documentado en su propia cabecera desde antes).
+
+La causa real: `node --test` corre los archivos de test **en paralelo** por
+defecto (concurrencia = CPUs disponibles), y cada proceso hijo le reporta al
+proceso padre vía un canal IPC que usa serialización estructurada (V8
+`structured clone`) sobre el mismo pipe de stdout del hijo. En Linux, con
+varios procesos hijos activos a la vez, esto deja una ventana de carrera donde
+el runner mismo corrompe su propio canal — no el test. Windows no lo reproduce
+(comportamiento de pipes distinto) y Node 24 tampoco (cambios internos del test
+runner entre versiones).
+
+Fix: `npm run test:ci` (`node --test --test-concurrency=1`), usado solo en el
+workflow de CI. `npm test` local queda sin tocar — en paralelo, rápido, y no
+reproduce el bug de todos modos.
+
 ## 2026-08-24 — `check-pr-rules.mjs` (rama-formato) tuvo dos falsos positivos al debutar
 
 Al distribuirse por primera vez (SHS-M17) contra PRs reales, `rama-formato` rechazó
