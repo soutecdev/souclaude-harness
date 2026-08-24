@@ -110,6 +110,45 @@ rm -rf "$WORK"
   historial de git.
 - **Skill gemela `soutec-md-a-pdf-nativo`** — no se creó: `soutec-md-a-pdf` ya es nativa.
 
+## 2026-08-24 — SHS-M14 resuelto: `node --test` en paralelo corrompe su propio pipe IPC en ubuntu + Node 22
+
+Diagnóstico de la causa raíz del "Unable to deserialize cloned data" que hacía
+fallar `test/monitor-cmd.test.js` de forma no determinista, solo en
+`ubuntu-latest` + Node 22. **No es un bug del código del test**: el propio
+archivo ya evita el patrón peligroso conocido (interceptar `process.stdout.write`
+global con un `await` en medio, documentado en su propia cabecera desde antes).
+
+La causa real: `node --test` corre los archivos de test **en paralelo** por
+defecto (concurrencia = CPUs disponibles), y cada proceso hijo le reporta al
+proceso padre vía un canal IPC que usa serialización estructurada (V8
+`structured clone`) sobre el mismo pipe de stdout del hijo. En Linux, con
+varios procesos hijos activos a la vez, esto deja una ventana de carrera donde
+el runner mismo corrompe su propio canal — no el test. Windows no lo reproduce
+(comportamiento de pipes distinto) y Node 24 tampoco (cambios internos del test
+runner entre versiones).
+
+Fix: `npm run test:ci` (`node --test --test-concurrency=1`), usado solo en el
+workflow de CI. `npm test` local queda sin tocar — en paralelo, rápido, y no
+reproduce el bug de todos modos.
+
+## 2026-08-24 — `check-pr-rules.mjs` (rama-formato) tuvo dos falsos positivos al debutar
+
+Al distribuirse por primera vez (SHS-M17) contra PRs reales, `rama-formato` rechazó
+dos casos legítimos que el regex no contemplaba:
+1. **El PR de release `dev` → `main`**: la rama origen es literalmente `dev`, que
+   nunca va a cumplir `tipo/descripcion-corta` (no es una rama de trabajo). Fix:
+   excepción explícita `nombre === 'dev' && baseRefName === 'main'` (PR #48).
+2. **Puntos en el slug**: `chore/bump-3.6.0` fallaba porque el regex solo admitía
+   `[a-z0-9-]+`. Había precedente ya mergeado con puntos (`feature/SHS-M15-T001-bump-3.5.0`,
+   previo a este check) y la skill `soutec-github` no los prohíbe. Fix: agregar `.` a
+   la clase de caracteres (PR #49).
+
+Moraleja: un check nuevo que reimplementa una convención documentada en prosa
+(la skill) va a divergir de casos reales que la prosa nunca prohibió explícitamente.
+Antes de exigir un check nuevo en CI, correrlo primero contra el historial real de
+ramas mergeadas (`git log --all --format='%D' | grep -o 'origin/[^,]*'`) para
+detectar estos huecos sin esperar a que un PR real los encuentre.
+
 ## 2026-08-10 — Optimización de consumo de tokens
 La telemetría de SHS-H3 mostró tareas estándar de 243k-319k tokens de salida. Causas:
 contexto fijo grande (conectores MCP + relecturas completas de constitución/spec por cada

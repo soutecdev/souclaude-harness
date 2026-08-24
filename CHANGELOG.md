@@ -2,6 +2,19 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+### Corregido
+
+- **CI determinista en ubuntu + Node 22** (SHS-M14). `node --test` corre los
+  archivos de test en paralelo por defecto (concurrencia = CPUs); en Linux eso
+  dejaba una ventana de carrera en la que el propio test runner corrompía su
+  canal IPC (serialización estructurada sobre el pipe de stdout del proceso
+  hijo), fallando con "Unable to deserialize cloned data" — no era un bug del
+  código de los tests. CI ahora corre `npm run test:ci`
+  (`--test-concurrency=1`); `npm test` local sigue en paralelo (rápido, y el
+  bug no reproduce ahí de todos modos).
+
 ## [3.6.0] — 2026-08-24
 
 Reglas de PR distribuidas por el harness (SHS-M17) y alta de proyectos del Vault
