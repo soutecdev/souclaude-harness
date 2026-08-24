@@ -165,3 +165,10 @@ subagente) y rework (1 devolución ≈ duplica el costo del task). Cambios aplic
 "Economía de tokens" en CLAUDE.md, tier `haiku` para tareas mecánicas en ccem-model-router,
 reglas de lectura mínima en los 4 agentes, pre-flight anti-rework en el orchestrator.
 Pendiente humano: desconectar conectores de claude.ai que este repo no usa.
+
+## 2026-08-24 — jira-sync pendiente para SHS-M19
+Alta de SHS-M19 (tag automático al mergear a main) en el Vault hecha y pusheada,
+pero el conector MCP de Atlassian no está autorizado en esta sesión (no aparecen
+herramientas Jira). Falta crear la épica SHS-M19 en Jira — próxima sesión con el
+conector autorizado (`/mcp` → autenticar Atlassian), correr `jira-sync` sobre esta
+tarjeta.

@@ -113,6 +113,18 @@
       "policy": "managed"
     },
     {
+      "id": "tag-release",
+      "src": "base/scripts/tag-release.mjs",
+      "dest": "scripts/tag-release.mjs",
+      "policy": "managed"
+    },
+    {
+      "id": "workflow-tag-release",
+      "src": "base/github/workflows/tag-release.yml",
+      "dest": ".github/workflows/tag-release.yml",
+      "policy": "managed"
+    },
+    {
       "id": "skill-soutec-github",
       "src": "base/claude/skills/soutec-github/SKILL.md",
       "dest": ".claude/skills/soutec-github/SKILL.md",
