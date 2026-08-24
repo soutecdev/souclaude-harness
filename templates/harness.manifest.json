@@ -101,6 +101,18 @@
       "policy": "user-owned"
     },
     {
+      "id": "check-pr-rules",
+      "src": "base/scripts/check-pr-rules.mjs",
+      "dest": "scripts/check-pr-rules.mjs",
+      "policy": "managed"
+    },
+    {
+      "id": "workflow-reglas-pr",
+      "src": "base/github/workflows/reglas-pr.yml",
+      "dest": ".github/workflows/reglas-pr.yml",
+      "policy": "managed"
+    },
+    {
       "id": "skill-soutec-github",
       "src": "base/claude/skills/soutec-github/SKILL.md",
       "dest": ".claude/skills/soutec-github/SKILL.md",

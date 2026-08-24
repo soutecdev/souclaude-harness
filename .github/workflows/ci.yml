@@ -37,24 +37,3 @@ jobs:
       # El CLI tiene que poder instalarse sobre un repo real sin escribir nada.
       - name: dry-run sobre el propio repo
         run: node bin/cli.mjs upgrade --dry-run --yes
-
-  reglas-pr:
-    # Reglas deterministas de la skill soutec-github (rama, commits, secretos,
-    # base=dev, mergeable, version, secciones de la plantilla). Solo corre en
-    # PR: necesita gh pr view para leer el cuerpo del PR.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: verifica reglas de PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: node scripts/check-pr-rules.mjs --pr ${{ github.event.pull_request.number }}
