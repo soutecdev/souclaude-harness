@@ -178,6 +178,12 @@ El desarrollador **propone** la versión en el PR de release. Tras el merge
 móvil de la serie (`v3`), y pushearlos. Los releases de GitHub siguen siendo del
 coordinador.
 
+Tras el release, revisa si `Project-<PREFIJO>/OBSERVATORIO.md` del Vault necesita
+actualizarse — tagline, plataforma, resumen, hitos u otra sección que el release
+cambie de forma relevante. Solo si hubo cambios importantes: editarla y pushear al
+Vault en el momento (push directo, sin PR — ver `progress/README.md`). Un release
+menor sin impacto en la ficha no requiere tocarla.
+
 ## Secretos
 
 Nunca en el repo. `.env.example` sin valores. Si una credencial se expone por accidente:
