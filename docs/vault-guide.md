@@ -36,8 +36,9 @@ Vault/
     ├── plans/                          # planes por milestone: <PREFIJO>-M<n>-P<n>-<slug>.md
     ├── kanban.md                       # ESTADO VIVO — tablero de tareas
     ├── sessions.md                     # append-only: una línea por sesión (quién, qué, tokens)
-    └── progress/
-        └── history.md                  # espejo del historial del repo
+    ├── progress/
+    │   └── history.md                  # espejo del historial del repo
+    └── OBSERVATORIO.md                 # ficha del proyecto para el Observatorio de AI
 ```
 
 Carpetas heredadas de series anteriores del harness (`specs/`, `roca_*.yaml`,
@@ -81,6 +82,7 @@ existe **para y lo pide**: sin prefijo registrado no hay carpeta `Project-<PREFI
 | `kanban.md` | **Agentes**, en vivo | Crear tarjetas al planificar; moverlas al cambiar el estado, con push inmediato. |
 | `sessions.md` | **Agentes**, al cerrar cada sesión | Una línea append-only con milestone, dueño, máquina, tokens y resultado. |
 | `progress/history.md` | **Agentes**, al cerrar tareas | Copia del `history.md` del repo. |
+| `OBSERVATORIO.md` | **Agentes**, en release con cambios importantes | Se siembra vacía al crear el proyecto; se actualiza en el release `dev` → `main` (skill `soutec-github`) solo si el release trae cambios que la ficha deba reflejar — tagline, plataforma, resumen, hitos. No es un espejo del README del repo: es independiente del sync GitHub → Observatorio (`OBS-M6`). |
 | `00-System/monitor/` | **Generado** (`souclaude monitor`) | Snapshots agregados por (cuenta, máquina); no se editan a mano. |
 
 ## 5. Relación Vault ↔ repos de código
@@ -165,10 +167,11 @@ en cada repo y en cada máquina.
 2. Sembrar `00-System/id-registry.md` con los prefijos activos y su dueño.
 3. Por cada proyecto activo, crear `Project-<PREFIJO>/` con `milestones.md` y
    `kanban.md` (frontmatter `kanban-plugin: board` + columnas vacías), `plans/`,
-   `sessions.md` y `progress/history.md`. **No hace falta a mano**: si el prefijo
-   ya está en `00-System/id-registry.md`, `npx souclaude` siembra la carpeta y la
-   pushea al conectar el repo — confirma en interactivo, o `--vault-seed` sin TTY.
-   Un prefijo que no está registrado no se siembra: primero va la fila (§3).
+   `sessions.md`, `progress/history.md` y `OBSERVATORIO.md`. **No hace falta a
+   mano**: si el prefijo ya está en `00-System/id-registry.md`, `npx souclaude`
+   siembra la carpeta y la pushea al conectar el repo — confirma en interactivo,
+   o `--vault-seed` sin TTY. Un prefijo que no está registrado no se siembra:
+   primero va la fila (§3).
 4. Si el Vault es un vault de Obsidian: instalar el plugin **Kanban** para ver los
    tableros.
 5. En cada repo de proyecto: correr `npx souclaude` y aceptar el paso del Vault (clona

@@ -550,7 +550,7 @@ const FRONTMATTER = `---
 kanban-plugin: board
 ---`
 
-const ARCHIVOS_BASE = ['milestones.md', 'kanban.md', 'sessions.md', 'progress/history.md']
+const ARCHIVOS_BASE = ['milestones.md', 'kanban.md', 'sessions.md', 'progress/history.md', 'OBSERVATORIO.md']
 
 const proyectosEn = (vault) => fs.readdirSync(vault).filter((n) => n.startsWith('Project-')).sort()
 
