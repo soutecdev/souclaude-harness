@@ -88,7 +88,14 @@ function compararSemver(a, b) {
   return 0
 }
 
-export function evaluaRama(nombre) {
+// El release dev -> main es un PR sobre la propia rama "dev": nunca va a
+// cumplir tipo/descripcion-corta porque no es una rama de trabajo (skill
+// soutec-github §Pull Request). baseRefName === 'main' es la misma senal que
+// ya usa evaluaBaseDev para reconocer el release.
+export function evaluaRama(nombre, baseRefName) {
+  if (nombre === 'dev' && baseRefName === 'main') {
+    return { regla: 'rama-formato', cumple: true, detalle: 'PR de release dev -> main' }
+  }
   if (!RAMA_REGEX.test(nombre)) {
     return { regla: 'rama-formato', cumple: false, detalle: `"${nombre}" no cumple tipo/descripcion-corta` }
   }
@@ -247,7 +254,7 @@ function main() {
   const baseRefName = pr?.baseRefName ?? (values.pr ? null : baseLocal)
 
   const resultados = []
-  resultados.push(evaluaRama(ramaActual()))
+  resultados.push(evaluaRama(ramaActual(), pr?.baseRefName ?? null))
   resultados.push(...evaluaCommits(commitsDeLaRama(baseLocal)))
   resultados.push(evaluaSecretos(archivosAgregados(baseLocal)))
   resultados.push(evaluaBaseDev(pr?.baseRefName ?? null))
