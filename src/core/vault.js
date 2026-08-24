@@ -331,6 +331,8 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
     // -- corregirlo es una decision del usuario, con --vault-project.
     if (carpetas.length && !carpetas.includes(declarado)) {
       ui.log.warn(`${VAULT_CONFIG} declara "${declarado}", que no existe en el Vault. ${disponibles()}`)
+    } else if (carpetas.includes(declarado)) {
+      await completarProyectoDeclarado(vaultPath, declarado, { git })
     }
     return declarado
   }
@@ -344,7 +346,10 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
   // recien clonado que todavia no tiene NINGUNA es justamente el caso que hay
   // que poder sembrar, y cortar antes lo dejaba sin salida.
   const { carpeta: porRegistro, esperada } = resolverPorRegistro(cwd, vaultPath, carpetas)
-  if (porRegistro) return persistirProyecto(cwd, vaultPath, porRegistro)
+  if (porRegistro) {
+    await completarProyectoDeclarado(vaultPath, porRegistro, { git })
+    return persistirProyecto(cwd, vaultPath, porRegistro)
+  }
 
   if (esperada) {
     // El registro sabe cual es su proyecto y su carpeta no esta en el Vault.
@@ -456,6 +461,52 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
 // sin una decision explicita: interactivo, una confirmacion; desatendido, solo
 // con --vault-seed. Un `init --yes` de CI no siembra -- correria en cada
 // corrida. Nunca lanza: devuelve la carpeta sembrada o null.
+// Escribe en `carpeta` los archivos de SEMILLAS_PROYECTO que todavia falten,
+// sin pisar lo que ya haya -- una carpeta a medio sembrar (un push que quedo
+// por la mitad) o una carpeta ya conectada a la que una version anterior del
+// harness no le escribio un archivo que SEMILLAS_PROYECTO agrego despues
+// (ej. OBSERVATORIO.md, progress/history.md, SHS-M18). Solo escribe en disco:
+// pushear es responsabilidad de quien llama, con su propio mensaje de commit.
+function escribirSemillasFaltantes(vaultPath, carpeta) {
+  const raiz = path.join(vaultPath, carpeta)
+  const escritos = []
+  for (const [rel, contenido] of Object.entries(SEMILLAS_PROYECTO)) {
+    const abs = path.join(raiz, ...rel.split('/'))
+    if (exists(abs)) continue
+    writeFileLF(abs, renderSemilla(contenido, carpeta))
+    escritos.push(rel)
+  }
+  return escritos
+}
+
+// Backfill de una carpeta YA declarada en vault.local.json: asegurarProyecto
+// nunca vuelve a llamar sembrarProyecto para un proyecto ya conocido, asi que
+// sin esto un archivo base agregado a SEMILLAS_PROYECTO despues de que la
+// carpeta se sembro (por una version vieja del harness) queda huerfano para
+// siempre -- ningun `upgrade` posterior lo completa. Se llama en cada
+// upgrade/init sobre un proyecto declarado; es idempotente: no hay nada que
+// escribir despues del primer backfill exitoso. Nunca lanza: cualquier fallo
+// de push degrada a warning, igual que sembrarProyecto.
+async function completarProyectoDeclarado(vaultPath, carpeta, { git = gitReal } = {}) {
+  const escritos = escribirSemillasFaltantes(vaultPath, carpeta)
+  if (!escritos.length) return
+
+  const push = await pushSeguro({
+    vaultPath,
+    mensaje: `chore: completa archivos base de ${carpeta} en el Vault`,
+    paths: [carpeta],
+    git,
+  })
+
+  if (push.ok) {
+    ui.log.success(`${carpeta}: se completaron archivos base que faltaban en el Vault (${escritos.join(', ')}).`)
+  } else {
+    ui.log.warn(
+      `${carpeta}: se completaron archivos base en el clon local del Vault pero no se pudo publicar (${push.motivo}). Pushea el Vault a mano.`
+    )
+  }
+}
+
 async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, git = gitReal }) {
   if (yes) {
     if (!flags['vault-seed']) {
@@ -475,17 +526,7 @@ async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, g
     }
   }
 
-  const raiz = path.join(vaultPath, carpeta)
-  const escritos = []
-  for (const [rel, contenido] of Object.entries(SEMILLAS_PROYECTO)) {
-    const abs = path.join(raiz, ...rel.split('/'))
-    // Una carpeta a medio sembrar (un push que quedo por la mitad) se completa
-    // sin pisar lo que ya tenga: el Vault es estado vivo, no un destino de
-    // plantillas que se re-aplica.
-    if (exists(abs)) continue
-    writeFileLF(abs, renderSemilla(contenido, carpeta))
-    escritos.push(rel)
-  }
+  const escritos = escribirSemillasFaltantes(vaultPath, carpeta)
 
   if (!escritos.length) {
     ui.log.warn(`${carpeta} ya tenia sus archivos base: no se sembro nada.`)

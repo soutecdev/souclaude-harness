@@ -10,6 +10,7 @@ import {
   cloneVault,
   looksLikeVault,
   readVaultConfig,
+  writeVaultConfig,
   VAULT_CONFIG,
   harnessDocsUrl,
   isInsideCwd,
@@ -726,6 +727,87 @@ test('camino interactivo: aceptar siembra y publica con pushSeguro, sobre la car
   assert.deepEqual(llamadas[1], ['commit', '-m', 'chore: alta de Project-SHS en el Vault'])
   assert.deepEqual(llamadas[2], ['pull', '--rebase'])
   assert.equal(readVaultConfig(cwd).project, 'Project-SHS')
+})
+
+test('upgrade sobre un proyecto ya declarado completa archivos base que faltaban (SHS-M18)', async () => {
+  const cwd = mkRepo({ 'package.json': JSON.stringify({ name: 'souclaude-harness' }) })
+  const vault = mkVault(['Project-SHS'], [['SHS', 'souclaude-harness']])
+
+  // Simula una instalacion vieja: la carpeta ya existe con solo un archivo
+  // base (como si SEMILLAS_PROYECTO hubiera agregado los demas despues de
+  // que se sembro), y "project" ya esta declarado -- el camino que un
+  // upgrade normal recorre.
+  fs.writeFileSync(path.join(vault, 'Project-SHS', 'milestones.md'), '# viejo\n', 'utf8')
+  writeVaultConfig(cwd, { path: vault, project: 'Project-SHS' })
+
+  const llamadas = []
+  const git = async (args) => {
+    llamadas.push(args.slice(2))
+    return ''
+  }
+
+  await ensureVault({
+    cwd,
+    flags: { 'vault-path': vault },
+    manifest: loadManifest(),
+    lock: null,
+    yes: true,
+    prompts: { text: () => '', confirm: () => true, select: () => '' },
+    git,
+  })
+
+  assert.ok(has(path.join(vault, 'Project-SHS'), 'OBSERVATORIO.md'), 'OBSERVATORIO.md deberia haberse completado')
+  assert.ok(has(path.join(vault, 'Project-SHS'), 'progress/history.md'), 'progress/history.md deberia haberse completado')
+  assert.equal(
+    read(path.join(vault, 'Project-SHS'), 'milestones.md'),
+    '# viejo\n',
+    'lo que ya existia no se pisa'
+  )
+  assert.deepEqual(
+    llamadas.map((a) => a[0]),
+    ['add', 'commit', 'pull', 'push'],
+    'el backfill tiene que pushear igual que la siembra inicial'
+  )
+  assert.deepEqual(llamadas[0], ['add', 'Project-SHS'])
+  assert.match(llamadas[1][2], /^chore: completa archivos base de Project-SHS en el Vault$/)
+  assert.equal(readVaultConfig(cwd).project, 'Project-SHS')
+})
+
+test('upgrade repetido sobre un proyecto ya completo no vuelve a escribir ni pushear', async () => {
+  const cwd = mkRepo({ 'package.json': JSON.stringify({ name: 'souclaude-harness' }) })
+  const vault = mkVault(['Project-SHS'], [['SHS', 'souclaude-harness']])
+  writeVaultConfig(cwd, { path: vault, project: 'Project-SHS' })
+
+  const llamadas = []
+  const git = async (args) => {
+    llamadas.push(args.slice(2))
+    return ''
+  }
+
+  // Primera corrida: completa lo que falta y pushea.
+  await ensureVault({
+    cwd,
+    flags: { 'vault-path': vault },
+    manifest: loadManifest(),
+    lock: null,
+    yes: true,
+    prompts: { text: () => '', confirm: () => true, select: () => '' },
+    git,
+  })
+  llamadas.length = 0
+
+  // Segunda corrida (upgrade siguiente): ya no falta nada, no debe pushear.
+  await ensureVault({
+    cwd,
+    flags: { 'vault-path': vault },
+    manifest: loadManifest(),
+    lock: null,
+    yes: true,
+    prompts: { text: () => '', confirm: () => true, select: () => '' },
+    git,
+  })
+
+  assert.deepEqual(llamadas, [], 'sin archivos faltantes no debe llamar a git')
 })
 
 // --- Regresion multi-proyecto ----------------------------------------------
