@@ -2,6 +2,51 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.6.0] — 2026-08-24
+
+Reglas de PR distribuidas por el harness (SHS-M17) y alta de proyectos del Vault
+desde el CLI (SHS-M18).
+
+### Agregado
+
+- **Reglas de PR distribuidas vía el manifest.** `check-pr-rules.mjs` y su workflow
+  (`reglas-pr`) entran al manifest: `souclaude init`/`upgrade` los instala y
+  actualiza en los repos consumidores. Valida en CI, contra cada PR, las reglas
+  deterministas de la skill `soutec-github` (formato de rama, formato de commits,
+  ausencia de secretos, `base=dev`, `mergeable`, versión semver propuesta,
+  secciones de la plantilla completas).
+- **El PR se abre solo a pedido explícito del usuario.** La skill `soutec-github`
+  fija que terminar un cambio no implica abrir el PR: se crea únicamente cuando el
+  usuario lo pide o dice que quiere mergear/integrar. Mientras tanto, commit y push
+  a la rama, reportando que está listo para PR.
+- **Ficha `OBSERVATORIO.md` como semilla de proyecto.** Se crea vacía en
+  `Project-<PREFIJO>/` al conectar cualquier repo al Vault, junto al resto de
+  archivos base. La skill `soutec-github` recuerda revisarla y actualizarla en cada
+  release `dev` → `main` con cambios importantes (tagline, plataforma, resumen,
+  hitos). Es independiente del README del repo técnico.
+- **Opción "Crear proyecto nuevo" al conectar el repo al Vault.** En el prompt
+  interactivo que pregunta a qué `Project-<PREFIJO>/` pertenece el repo (varias
+  carpetas, ninguna declarada), se puede dar de alta un prefijo nuevo en el
+  momento: pide prefijo, nombre y dueño, agrega la fila a
+  `00-System/id-registry.md`, la pushea y siembra la carpeta en el mismo paso. Esto
+  cambia la regla anterior (el prefijo se pedía antes, a un coordinador) — ahora el
+  CLI también puede darlo de alta.
+
+### Corregido
+
+- **`rama-formato` no rechaza el PR de release `dev` → `main`.** La regla exigía
+  `tipo/descripcion-corta` también sobre la rama de un PR de release, cuya rama
+  origen es siempre literalmente `dev` — nunca iba a cumplir ese patrón. Ahora
+  reconoce la combinación rama=`dev` + base=`main` como la misma excepción que ya
+  usa `pr-apunta-a-dev`.
+
+### Problemas conocidos
+
+- **CI no determinista en ubuntu + Node 22** (SHS-M14): el runner de `node --test`
+  se cae con "Unable to deserialize cloned data" en `test/monitor-cmd.test.js`. Es un
+  fallo del runner en esa combinación de la matriz, no del código publicado: la
+  suite completa pasa en el resto de la matriz. Sigue en Backlog.
+
 ## [3.5.0] — 2026-08-21
 
 Primer release publicado de la serie v3. La conexión del repo con su proyecto del
