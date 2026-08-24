@@ -29,8 +29,10 @@ Estas no se negocian, ni siquiera en un hotfix.
   tracker externo — va como prefijo del slug (`feature/SHS-M7-T006-playbook-adopcion`,
   `feature/REA-123-captura-lead`); si no lo hay, el slug solo. **No inventes IDs.**
 - **Nunca crear repositorios.** Eso es del coordinador. Los **tags de versión**
-  (`vX.Y.Z` y el tag móvil por major) sí puede crearlos el agente, únicamente al
-  publicar y después del merge de release `dev` → `main`.
+  (`vX.Y.Z` y el tag móvil por major) los crea el workflow `tag-release.yml` al
+  mergear el PR de release `dev` → `main` (SHS-M19); si el repo no tiene ese
+  workflow instalado, el agente puede crearlos a mano en su lugar, únicamente al
+  publicar y después del merge.
 - **Un hotfix NO es un bypass.** Aun en máxima criticidad: rama + Pull Request.
 
 ## Antes de tocar código
@@ -173,10 +175,12 @@ SemVer con prefijo `v`: `v1.2.3`.
 | Funcionalidad compatible | MINOR · `v1.0.1 → v1.1.0` |
 | Cambio incompatible | MAJOR · `v1.1.0 → v2.0.0` |
 
-El desarrollador **propone** la versión en el PR de release. Tras el merge
-`dev` → `main`, el **agente puede crear** el tag inmutable `vX.Y.Z` y mover el tag
-móvil de la serie (`v3`), y pushearlos. Los releases de GitHub siguen siendo del
-coordinador.
+El desarrollador **propone** la versión editando `version` en `package.json` como
+parte del PR de release. Tras el merge `dev` → `main`, el workflow `tag-release.yml`
+lee esa versión del commit de merge y crea/pushea el tag inmutable `vX.Y.Z` y el
+tag móvil de la serie (`v3`) — es idempotente: si el tag ya existe, no falla ni
+duplica. Los releases de GitHub siguen siendo del coordinador; el workflow no los
+crea.
 
 Tras el release, revisa si `Project-<PREFIJO>/OBSERVATORIO.md` del Vault necesita
 actualizarse — tagline, plataforma, resumen, hitos u otra sección que el release

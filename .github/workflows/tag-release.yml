@@ -1,0 +1,37 @@
+name: Tag de release
+
+# Automatiza lo que la skill soutec-github documenta como paso manual del
+# agente: tras el merge de release dev -> main, crea el tag inmutable vX.Y.Z
+# (leyendo package.json del commit de merge) y mueve el tag móvil vX. No crea
+# el GitHub Release: eso sigue siendo del coordinador. Este workflow y
+# scripts/tag-release.mjs los distribuye y actualiza el harness (npx souclaude
+# upgrade); no los edites a mano en el repo consumidor.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  tag-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: identidad git para el tag anotado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: crea/actualiza el tag de release
+        run: node scripts/tag-release.mjs
