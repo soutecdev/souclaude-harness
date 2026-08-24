@@ -110,6 +110,24 @@ rm -rf "$WORK"
   historial de git.
 - **Skill gemela `soutec-md-a-pdf-nativo`** — no se creó: `soutec-md-a-pdf` ya es nativa.
 
+## 2026-08-24 — `check-pr-rules.mjs` (rama-formato) tuvo dos falsos positivos al debutar
+
+Al distribuirse por primera vez (SHS-M17) contra PRs reales, `rama-formato` rechazó
+dos casos legítimos que el regex no contemplaba:
+1. **El PR de release `dev` → `main`**: la rama origen es literalmente `dev`, que
+   nunca va a cumplir `tipo/descripcion-corta` (no es una rama de trabajo). Fix:
+   excepción explícita `nombre === 'dev' && baseRefName === 'main'` (PR #48).
+2. **Puntos en el slug**: `chore/bump-3.6.0` fallaba porque el regex solo admitía
+   `[a-z0-9-]+`. Había precedente ya mergeado con puntos (`feature/SHS-M15-T001-bump-3.5.0`,
+   previo a este check) y la skill `soutec-github` no los prohíbe. Fix: agregar `.` a
+   la clase de caracteres (PR #49).
+
+Moraleja: un check nuevo que reimplementa una convención documentada en prosa
+(la skill) va a divergir de casos reales que la prosa nunca prohibió explícitamente.
+Antes de exigir un check nuevo en CI, correrlo primero contra el historial real de
+ramas mergeadas (`git log --all --format='%D' | grep -o 'origin/[^,]*'`) para
+detectar estos huecos sin esperar a que un PR real los encuentre.
+
 ## 2026-08-10 — Optimización de consumo de tokens
 La telemetría de SHS-H3 mostró tareas estándar de 243k-319k tokens de salida. Causas:
 contexto fijo grande (conectores MCP + relecturas completas de constitución/spec por cada
