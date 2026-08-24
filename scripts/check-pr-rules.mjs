@@ -19,7 +19,10 @@ import { parseArgs } from 'node:util'
 
 // El prefijo opcional en mayusculas es el ID de tarea del tracker que la skill
 // exige anteponer al slug (feature/REA-123-captura-lead, feature/SHS-M4-T001-...).
-const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+-)?[a-z0-9-]+$/
+// El slug admite puntos ademas de [a-z0-9-]: un bump de version como
+// chore/bump-3.6.0 es un slug legitimo (precedente ya mergeado:
+// feature/SHS-M15-T001-bump-3.5.0) y la skill soutec-github no los prohibe.
+const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+-)?[a-z0-9.-]+$/
 const RAMA_LISTA_NEGRA = ['cambios', 'prueba', 'final', 'final-final', 'arreglo']
 const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style', 'build', 'ci', 'perf', 'revert']
 const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-z].*[^.]$`)

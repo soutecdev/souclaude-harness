@@ -23,6 +23,13 @@ test('evaluaRama: acepta la forma simple tipo/descripcion-corta', () => {
   }
 })
 
+test('evaluaRama: acepta puntos en el slug (bump de version)', () => {
+  const validas = ['chore/bump-3.6.0', 'feature/SHS-M15-T001-bump-3.5.0']
+  for (const rama of validas) {
+    assert.equal(evaluaRama(rama).cumple, true, rama)
+  }
+})
+
 test('evaluaRama: acepta el prefijo de ID en sus tres variantes', () => {
   const validas = [
     'feature/SHS-M7-T006-playbook-adopcion', // tarea del Vault
