@@ -64,7 +64,10 @@ La **sesión** es la unidad de consumo.
 Fuente única de prefijos de proyecto. Solo se **agregan** filas; nunca se edita ni se
 reutiliza una fila ajena. Un proyecto cerrado pasa a `retirado` — su prefijo jamás se
 reutiliza (los IDs históricos lo referencian). Un agente que necesita un prefijo que no
-existe **para y lo pide**: sin prefijo registrado no hay carpeta `Project-<PREFIJO>/`.
+existe puede darlo de alta en el momento — el flujo interactivo del CLI (`npx
+souclaude`, opción "Crear proyecto nuevo" al preguntar a qué proyecto pertenece el
+repo) pide prefijo, nombre y dueño, agrega la fila y siembra `Project-<PREFIJO>/` en
+el mismo paso. Fuera de ese flujo, sin prefijo registrado no hay carpeta.
 
 ```markdown
 | Prefijo | Proyecto | Dueño | Fecha de alta | Estado |
