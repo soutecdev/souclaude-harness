@@ -149,6 +149,15 @@ Antes de exigir un check nuevo en CI, correrlo primero contra el historial real 
 ramas mergeadas (`git log --all --format='%D' | grep -o 'origin/[^,]*'`) para
 detectar estos huecos sin esperar a que un PR real los encuentre.
 
+## 2026-08-24 — SHS-M18-T001: pendiente espejo a Jira (conector no autenticado)
+
+Se movió SHS-M18-T001 a "En curso" en `Project-SHS/kanban.md` (backfill de archivos
+base del Vault en `upgrade`). El conector MCP de Atlassian no está autenticado en
+esta sesión (`ToolSearch` no devuelve `mcp__atlassian__searchJiraIssuesUsingJql` ni
+el resto de las herramientas de Jira, solo `authenticate`/`complete_authentication`).
+Pendiente: la próxima sesión con el conector autorizado debe reflejar en Jira este
+movimiento (crear/transicionar el issue hijo de la épica SHS-M18 a In Progress).
+
 ## 2026-08-10 — Optimización de consumo de tokens
 La telemetría de SHS-H3 mostró tareas estándar de 243k-319k tokens de salida. Causas:
 contexto fijo grande (conectores MCP + relecturas completas de constitución/spec por cada
