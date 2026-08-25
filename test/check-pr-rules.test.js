@@ -73,6 +73,15 @@ test('evaluaRama: "dev" sin base de release sigue siendo invalida', () => {
   assert.equal(evaluaRama('dev', null).cumple, false)
 })
 
+// Ninguna rama de trabajo mergea directo a main, ni siquiera hotfix/*: los
+// hotfixes tambien pasan por dev (CLAUDE.md, regla dura).
+test('evaluaRama: contra base "main", ninguna rama de trabajo pasa, ni hotfix/*', () => {
+  const invalidas = ['feature/captura-lead', 'fix/error-integracion-odoo', 'chore/bump-3.6.0', 'hotfix/correccion-produccion']
+  for (const rama of invalidas) {
+    assert.equal(evaluaRama(rama, 'main').cumple, false, rama)
+  }
+})
+
 // El harness distribuye el check y su workflow a los repos consumidores via el
 // manifest. La fuente sigue siendo scripts/ y .github/workflows/ de este repo:
 // si alguien toca una copia y no la otra, los consumidores quedan con una
