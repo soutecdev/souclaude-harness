@@ -4,7 +4,29 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+### Agregado
+
+- **Branch protection de `main` configurada por el CLI** (SHS-M17). `souclaude
+  init`/`upgrade` aplican, siempre y sin preguntar, la protección de `main` vía
+  `gh api`: PR obligatorio (sin exigir aprobaciones — nadie aprueba lo suyo), el
+  check `reglas-pr` en verde, sin force-push ni borrado de la rama, alcanzando
+  también a administradores. Si `gh` no está instalado/autenticado o falta permiso
+  de admin en el repo, se reporta con un aviso accionable y el resto de
+  init/upgrade sigue igual. Complementa a `check-pr-rules.mjs`: ese workflow
+  bloquea el *merge* del PR; esto bloquea el *push* directo en el propio GitHub.
+
 ### Corregido
+
+- **La descripción del commit puede arrancar en mayúscula** (SHS-M17).
+  `check-pr-rules.mjs` exigía que la descripción del commit empezara en
+  minúscula, sin que la skill `soutec-github` lo pidiera — rechazaba siglas
+  legítimas como "PR" o "API" al inicio. Ahora acepta cualquier letra.
+
+- **PR a `main` solo puede venir de `dev`** (SHS-M17). `check-pr-rules.mjs`
+  aceptaba cualquier rama con formato válido (`feature/`, `fix/`, `hotfix/`, etc.)
+  como base de un PR contra `main`. Ahora un PR con base `main` solo pasa el
+  check si la rama de origen es exactamente `dev`, sin excepción para hotfixes
+  (`CLAUDE.md`: "los hotfixes también" pasan por `dev`).
 
 - **CI determinista en ubuntu + Node 22** (SHS-M14). `node --test` corre los
   archivos de test en paralelo por defecto (concurrencia = CPUs); en Linux eso

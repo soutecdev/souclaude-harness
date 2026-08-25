@@ -3,6 +3,7 @@ import * as ui from '../ui.js'
 import { computePlan, writeActions, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
+import { protegeBranchMain } from '../core/github-protect.js'
 
 // execFile con args en array: nunca pasa por el shell, asi que las rutas con
 // espacios (todo OneDrive) dejan de ser un problema.
@@ -168,6 +169,18 @@ export async function vaultStep({ code, cwd, flags, manifest, lock }) {
   const yes = Boolean(flags.yes) || ui.isCI()
   await ensureVault({ cwd, flags, manifest, lock, yes })
   return 0
+}
+
+// Siempre activa, sin pedir confirmacion: "main solo recibe merges desde dev"
+// es una regla dura de CLAUDE.md/soutec-github, no una preferencia opcional.
+// Igual que vaultStep, corre solo si el plan se aplico y nunca en --dry-run
+// (no toca nada fuera del repo local). Si gh no esta disponible o falla, se
+// reporta y el resto de init/upgrade sigue: nunca bloquea la instalacion.
+export function githubProtectionStep({ code, cwd, flags }) {
+  if (code !== 0) return code
+  if (flags['dry-run']) return code
+  protegeBranchMain({ cwd })
+  return code
 }
 
 function report(result, plan, manifest) {

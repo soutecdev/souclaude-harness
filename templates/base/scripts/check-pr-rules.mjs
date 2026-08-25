@@ -25,7 +25,11 @@ import { parseArgs } from 'node:util'
 const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+-)?[a-z0-9.-]+$/
 const RAMA_LISTA_NEGRA = ['cambios', 'prueba', 'final', 'final-final', 'arreglo']
 const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style', 'build', 'ci', 'perf', 'revert']
-const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-z].*[^.]$`)
+// La descripcion puede arrancar en mayuscula: una sigla legitima (PR, API, CI,
+// ID) no tiene por que forzarse a minuscula (precedente: commit 9dbe36f,
+// "fix: PR a main solo puede venir de dev..." rechazado sin motivo real -- la
+// skill soutec-github nunca exigio minuscula, solo "descripcion breve").
+const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-zA-Z].*[^.]$`)
 const COMMIT_MENSAJES_PROHIBIDOS = ['update', 'fix', 'cosas', 'ya', 'ahora si', 'ahora sí']
 const SECRETO_ARCHIVOS = [/(^|\/)\.env(\..+)?$/, /\.pem$/, /\.key$/, /\.pfx$/, /(^|\/)credentials\.json$/, /(^|\/)secrets\.json$/]
 
@@ -94,10 +98,14 @@ function compararSemver(a, b) {
 // El release dev -> main es un PR sobre la propia rama "dev": nunca va a
 // cumplir tipo/descripcion-corta porque no es una rama de trabajo (skill
 // soutec-github §Pull Request). baseRefName === 'main' es la misma senal que
-// ya usa evaluaBaseDev para reconocer el release.
+// ya usa evaluaBaseDev para reconocer el release. Ninguna rama de trabajo,
+// ni siquiera hotfix/*, mergea directo a main (CLAUDE.md, regla dura).
 export function evaluaRama(nombre, baseRefName) {
   if (nombre === 'dev' && baseRefName === 'main') {
     return { regla: 'rama-formato', cumple: true, detalle: 'PR de release dev -> main' }
+  }
+  if (baseRefName === 'main') {
+    return { regla: 'rama-formato', cumple: false, detalle: `PR a main solo puede venir de "dev", no de "${nombre}"` }
   }
   if (!RAMA_REGEX.test(nombre)) {
     return { regla: 'rama-formato', cumple: false, detalle: `"${nombre}" no cumple tipo/descripcion-corta` }
@@ -138,12 +146,15 @@ function evaluaSecretos(archivos) {
   return { regla: 'sin-secretos', cumple: true, detalle: 'sin archivos de credenciales agregados' }
 }
 
-function evaluaBaseDev(baseRefName) {
+function evaluaBaseDev(baseRefName, nombreRama) {
   if (baseRefName == null) {
     return { regla: 'pr-apunta-a-dev', cumple: null, detalle: 'no hay datos de PR (falta --pr o gh)' }
   }
   if (baseRefName === 'main') {
-    return { regla: 'pr-apunta-a-dev', cumple: true, detalle: 'PR de release dev -> main' }
+    if (nombreRama === 'dev') {
+      return { regla: 'pr-apunta-a-dev', cumple: true, detalle: 'PR de release dev -> main' }
+    }
+    return { regla: 'pr-apunta-a-dev', cumple: false, detalle: `base es "main" pero la rama es "${nombreRama}", debe ser "dev"` }
   }
   if (baseRefName !== 'dev') {
     return { regla: 'pr-apunta-a-dev', cumple: false, detalle: `base es "${baseRefName}", debe ser "dev"` }
@@ -260,7 +271,7 @@ function main() {
   resultados.push(evaluaRama(ramaActual(), pr?.baseRefName ?? null))
   resultados.push(...evaluaCommits(commitsDeLaRama(baseLocal)))
   resultados.push(evaluaSecretos(archivosAgregados(baseLocal)))
-  resultados.push(evaluaBaseDev(pr?.baseRefName ?? null))
+  resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, ramaActual()))
   resultados.push(evaluaMergeable(pr))
   resultados.push(evaluaVersion(pr, baseRefName))
   resultados.push(evaluaSeccionesCompletas(pr))
