@@ -172,3 +172,11 @@ pero el conector MCP de Atlassian no está autorizado en esta sesión (no aparec
 herramientas Jira). Falta crear la épica SHS-M19 en Jira — próxima sesión con el
 conector autorizado (`/mcp` → autenticar Atlassian), correr `jira-sync` sobre esta
 tarjeta.
+
+## 2026-08-25 — jira-sync pendiente para SHS-M17 (ampliación)
+SHS-M17 se amplió en el Vault (branch protection de main configurada por
+souclaude init/upgrade vía gh api + regla "PR a main solo desde dev" en
+check-pr-rules.mjs) y quedó pusheado a main. El conector MCP de Atlassian no
+está autorizado en esta sesión. Falta actualizar la descripción de la épica
+SHS-M17 en Jira — próxima sesión con el conector autorizado, correr
+`jira-sync` sobre esta tarjeta.
