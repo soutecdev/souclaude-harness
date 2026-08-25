@@ -25,7 +25,11 @@ import { parseArgs } from 'node:util'
 const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+-)?[a-z0-9.-]+$/
 const RAMA_LISTA_NEGRA = ['cambios', 'prueba', 'final', 'final-final', 'arreglo']
 const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style', 'build', 'ci', 'perf', 'revert']
-const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-z].*[^.]$`)
+// La descripcion puede arrancar en mayuscula: una sigla legitima (PR, API, CI,
+// ID) no tiene por que forzarse a minuscula (precedente: commit 9dbe36f,
+// "fix: PR a main solo puede venir de dev..." rechazado sin motivo real -- la
+// skill soutec-github nunca exigio minuscula, solo "descripcion breve").
+const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-zA-Z].*[^.]$`)
 const COMMIT_MENSAJES_PROHIBIDOS = ['update', 'fix', 'cosas', 'ya', 'ahora si', 'ahora sí']
 const SECRETO_ARCHIVOS = [/(^|\/)\.env(\..+)?$/, /\.pem$/, /\.key$/, /\.pfx$/, /(^|\/)credentials\.json$/, /(^|\/)secrets\.json$/]
 
