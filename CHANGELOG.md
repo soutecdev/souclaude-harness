@@ -17,6 +17,11 @@ El harness y el CLI se versionan juntos.
 
 ### Corregido
 
+- **La descripción del commit puede arrancar en mayúscula** (SHS-M17).
+  `check-pr-rules.mjs` exigía que la descripción del commit empezara en
+  minúscula, sin que la skill `soutec-github` lo pidiera — rechazaba siglas
+  legítimas como "PR" o "API" al inicio. Ahora acepta cualquier letra.
+
 - **PR a `main` solo puede venir de `dev`** (SHS-M17). `check-pr-rules.mjs`
   aceptaba cualquier rama con formato válido (`feature/`, `fix/`, `hotfix/`, etc.)
   como base de un PR contra `main`. Ahora un PR con base `main` solo pasa el
