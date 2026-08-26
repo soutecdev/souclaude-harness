@@ -83,10 +83,13 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
   souclaude monitor --usage  # consumo de TODO el equipo (córrelo dentro del repo)
   ```
 
-  El panel funciona desde cualquier carpeta; las vistas de equipo (`--usage`,
-  publicación de tu sesión en el Vault) necesitan correrse **dentro de un repo
-  con el harness instalado**. El global se actualiza aceptando la misma oferta
-  en el próximo `souclaude upgrade`.
+  Funciona desde **cualquier carpeta**: al conectar el Vault, `init`/`upgrade`
+  dejan también una config a nivel máquina (`~/.claude/souclaude/vault.json`),
+  así el monitor publica tu consumo al Vault y ve las sesiones del resto del
+  equipo estés donde estés. Solo la línea de tu sesión en `sessions.md` del
+  proyecto requiere correrlo dentro del repo (fuera de un repo no se sabe a qué
+  proyecto atribuirla). El global se actualiza aceptando la misma oferta en el
+  próximo `souclaude upgrade`.
 
 ## 3. La regla central: trazabilidad por milestone
 

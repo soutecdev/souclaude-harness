@@ -217,6 +217,11 @@ export function crearPublisherDeSesiones(flags, cwd) {
   if (flags.publish === false) return null
   const config = readVaultConfig(cwd)
   if (!config?.path) return null
+  // SHS-M21-T002: con la config de MAQUINA (CLI global fuera de un repo) no se
+  // publica sessions.md — la linea de sesion pertenece a un Project-<PREFIJO>
+  // y sin repo bajo los pies carpetaProyecto() solo podria adivinarlo. El
+  // snapshot de cuenta y el registro de usage (de organizacion) si publican.
+  if (config.origen === 'maquina') return null
   const proyecto = carpetaProyecto(config.path, config)
   if (!proyecto) {
     if (flags.publish === true) {

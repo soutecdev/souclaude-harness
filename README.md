@@ -82,11 +82,19 @@ souclaude monitor                                           # desde cualquier ca
 
 `souclaude init`/`upgrade` lo ofrecen solos al final (pregunta con TTY; en modo no
 interactivo solo con `--cli-global`), y es idempotente: si el global ya está en la
-versión del harness, no hace nada. El panel funciona desde cualquier carpeta; las
-vistas de equipo (`--usage`, publicación de sesiones) necesitan correrlo **dentro de
-un repo con el harness instalado** (leen `.claude/vault.local.json`). Al publicarse
-un release, repetir el `npm install -g` (o aceptar la oferta de `souclaude upgrade`)
-actualiza el global al tag `v3` vigente.
+versión del harness, no hace nada. Al publicarse un release, repetir el
+`npm install -g` (o aceptar la oferta de `souclaude upgrade`) actualiza el global al
+tag `v3` vigente.
+
+Además, al conectar el Vault, `init`/`upgrade` espejan la conexión a nivel máquina
+(`~/.claude/souclaude/vault.json`): con eso el monitor resuelve el Vault desde
+**cualquier carpeta** — publica el snapshot de cuenta y el registro de consumo, y
+lee las sesiones del resto del equipo, sin `vault.local.json` en el cwd. Orden de
+resolución: config del repo > `VAULT_PATH` > config de máquina. La línea por sesión
+en `Project-<PREFIJO>/sessions.md` es la excepción: solo se publica corriendo el
+monitor dentro de un repo con `project` declarado (fuera de un repo no hay a qué
+proyecto atribuirla). Bonus: un repo nuevo con la config de máquina presente se
+autoconecta al Vault en el `init`, sin preguntas.
 
 Cuatro modos, excluyentes entre sí:
 

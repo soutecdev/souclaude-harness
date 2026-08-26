@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -29,18 +30,62 @@ export const VAULT_CONFIG = '.claude/vault.local.json'
 
 const configPath = (cwd) => path.join(cwd, ...VAULT_CONFIG.split('/'))
 
+// SHS-M21-T002: config del Vault a nivel MAQUINA, para que el CLI global
+// (`souclaude monitor` desde cualquier terminal) resuelva el Vault sin un
+// vault.local.json en el cwd. Vive junto al resto del estado de maquina del
+// monitor (~/.claude/souclaude/: usage-cache, sesiones-publicadas...). La
+// resolucion del home replica la de monitor/adapters/claude-home.js
+// (os.homedir(), nunca $HOME; SOUCLAUDE_CLAUDE_HOME la redirige en tests) --
+// importar ese adapter desde core invertiria las capas.
+export function machineConfigPath() {
+  const home = process.env.SOUCLAUDE_CLAUDE_HOME ?? path.join(os.homedir(), '.claude')
+  return path.join(home, 'souclaude', 'vault.json')
+}
+
+// La escribe init/upgrade al conectar el Vault (ver ensureVault): instalar el
+// harness en UN repo deja la maquina configurada. Preserva lo previo campo a
+// campo, como writeVaultConfig. Sin "project" a proposito: el proyecto es del
+// repo, no de la maquina.
+export function writeMachineVaultConfig({ path: vaultPath, repo, quien } = {}) {
+  const file = machineConfigPath()
+  let previo = null
+  try {
+    previo = JSON.parse(readIfExists(file) ?? 'null')
+  } catch {
+    previo = null
+  }
+  const contenido = {
+    _comentario: 'Config de MAQUINA del Vault (fallback de .claude/vault.local.json). La escribe souclaude init/upgrade.',
+    path: toPosix(vaultPath),
+    repo: repo ?? previo?.repo ?? null,
+  }
+  const autor = quien ?? previo?.quien ?? null
+  if (autor) contenido.quien = autor
+  writeFileLF(file, JSON.stringify(contenido, null, 2))
+}
+
+// Orden: config del repo > VAULT_PATH > config de maquina. `origen` distingue
+// las fuentes: con 'maquina' no hay repo bajo los pies, asi que quien consuma
+// datos por-proyecto (sessions.md) debe abstenerse en vez de adivinar.
 export function readVaultConfig(cwd) {
   const raw = readIfExists(configPath(cwd))
   if (raw) {
     try {
       const parsed = JSON.parse(raw)
-      if (parsed?.path) return parsed
+      if (parsed?.path) return { ...parsed, origen: 'repo' }
     } catch {
       // Un JSON corrupto no rompe la instalacion: se trata como "no configurado".
     }
   }
   // Respaldo: la variable de entorno, para quien la exporta a mano o en un runner.
-  return process.env.VAULT_PATH ? { path: toPosix(process.env.VAULT_PATH), repo: null } : null
+  if (process.env.VAULT_PATH) return { path: toPosix(process.env.VAULT_PATH), repo: null, origen: 'env' }
+  try {
+    const maquina = JSON.parse(readIfExists(machineConfigPath()) ?? 'null')
+    if (maquina?.path && exists(maquina.path)) return { ...maquina, origen: 'maquina' }
+  } catch {
+    // Corrupta o ilegible: mismo criterio, "no configurado".
+  }
+  return null
 }
 
 export function writeVaultConfig(cwd, { path: vaultPath, repo, project, quien } = {}) {
@@ -284,6 +329,14 @@ export async function ensureVault({ cwd, flags = {}, manifest, lock, yes, prompt
     await asegurarQuien(cwd, { yes, prompts })
   } catch (err) {
     ui.log.warn(`No se pudo completar la config del Vault: ${err.message}`)
+  }
+  // SHS-M21-T002: espeja la conexion a nivel maquina para el CLI global
+  // (`souclaude monitor` fuera de un repo). Mismo contrato "nunca lanza".
+  try {
+    const config = leerConfigDeArchivo(cwd)
+    writeMachineVaultConfig({ path: abs, repo: config?.repo ?? null, quien: config?.quien ?? null })
+  } catch (err) {
+    ui.log.warn(`No se pudo escribir la config de maquina del Vault: ${err.message}`)
   }
   return abs
 }
