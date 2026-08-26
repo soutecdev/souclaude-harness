@@ -47,6 +47,11 @@ por PR.
   publicar y después del merge de release `dev` → `main`.
 - **El PR se abre solo cuando el usuario lo pide explícitamente** o dice que quiere
   mergear. Trabajo terminado sin ese pedido: push a la rama y reportar, sin PR.
+- **Si el pedido de PR incluye correr antes el security review, terminado el review
+  no te detengas**: seguí directo con push/PR si no hay hallazgos que bloqueen. El
+  security review es un paso intermedio del mismo pedido, no un punto de checkpoint —
+  el usuario ya autorizó el PR al pedirlo. Si el review sí encuentra algo bloqueante,
+  ahí parás y reportás.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
 
