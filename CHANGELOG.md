@@ -17,6 +17,14 @@ El harness y el CLI se versionan juntos.
   init/upgrade sigue igual. Complementa a `check-pr-rules.mjs`: ese workflow
   bloquea el *merge* del PR; esto bloquea el *push* directo en el propio GitHub.
 
+- **Tag automático de release al mergear el PR a `main`** (SHS-M19). Workflow
+  `tag-release.yml` distribuido por el harness: dispara en `pull_request`
+  `closed`+`merged` con base `main`, lee la versión de `package.json` en el
+  commit de merge y crea/pushea el tag inmutable `vX.Y.Z` y el tag móvil de la
+  serie (`vX`). Idempotente: si el tag ya existe, no falla ni duplica. No crea el
+  GitHub Release —sigue siendo del coordinador—. Se dogfoodea en este repo y se
+  distribuye vía el manifest a los repos consumidores.
+
 ### Corregido
 
 - **La descripción del commit puede arrancar en mayúscula** (SHS-M17).
@@ -38,6 +46,18 @@ El harness y el CLI se versionan juntos.
   código de los tests. CI ahora corre `npm run test:ci`
   (`--test-concurrency=1`); `npm test` local sigue en paralelo (rápido, y el
   bug no reproduce ahí de todos modos).
+
+- **Backfill de archivos base del Vault en `upgrade`** (SHS-M18-T001).
+  `asegurarProyecto()` cortaba en cuanto `vault.local.json` ya tenía `project`
+  declarado, así que `sembrarProyecto()` —único lugar que escribía las semillas—
+  nunca se volvía a llamar para un proyecto ya conectado: un archivo base
+  agregado después (`OBSERVATORIO.md`, `progress/history.md`) quedaba huérfano
+  para siempre en instalaciones viejas. Se extrae el bucle a
+  `escribirSemillasFaltantes()` y se agrega `completarProyectoDeclarado()`, que
+  la corre sin pisar lo existente y pushea solo si faltó algo, en las dos ramas
+  donde el proyecto ya se resuelve sin sembrar (`declarado` en `vault.local.json`
+  y `porRegistro` vía `id-registry.md`). Idempotente: sin archivos faltantes, no
+  toca el Vault.
 
 ## [3.6.0] — 2026-08-24
 
