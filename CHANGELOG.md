@@ -4,6 +4,8 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.7.0] — 2026-08-26
+
 ### Agregado
 
 - **Branch protection de `main` configurada por el CLI** (SHS-M17). `souclaude
