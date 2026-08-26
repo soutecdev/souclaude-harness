@@ -180,3 +180,19 @@ check-pr-rules.mjs) y quedó pusheado a main. El conector MCP de Atlassian no
 está autorizado en esta sesión. Falta actualizar la descripción de la épica
 SHS-M17 en Jira — próxima sesión con el conector autorizado, correr
 `jira-sync` sobre esta tarjeta.
+
+## 2026-08-25 — jira-sync pendiente: cierre de SHS-M17, M18, M19, M14 (a medias)
+Los cuatro milestones pasaron a Hecho en el Vault (PRs #45, #51, #52, #53, #54
+mergeados). Conector Atlassian autorizado y usado, pero el token expiró a
+mitad de la sincronización. Estado real en Jira a esta fecha:
+- Creados y en "Por hacer" (falta transicionar a "Listo"): SHS-57 (épica
+  SHS-M18), SHS-58 (épica SHS-M19), SHS-59 (SHS-M17-T001, parent SHS-55),
+  SHS-60 (SHS-M17-T002, parent SHS-55), SHS-61 (SHS-M17-T003, parent SHS-55),
+  SHS-62 (SHS-M14-T001, parent SHS-43).
+- Épicas SHS-43 (M14) y SHS-55 (M17) siguen sin transicionar a "Listo".
+- Faltan por crear: SHS-M18-T001 (parent SHS-57) y SHS-M19-T001 (parent
+  SHS-58) — no llegaron a crearse por el corte de token.
+Próxima sesión con el conector autorizado: NO recrear SHS-57/58/59/60/61/62
+(ya existen, evitar duplicados por idempotencia de summary); solo falta
+crear los dos issues pendientes y transicionar los ocho issues (6 tareas +
+2 épicas) a "Listo".
