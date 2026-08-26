@@ -2,6 +2,63 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+## [3.7.0] — 2026-08-26
+
+### Agregado
+
+- **Branch protection de `main` configurada por el CLI** (SHS-M17). `souclaude
+  init`/`upgrade` aplican, siempre y sin preguntar, la protección de `main` vía
+  `gh api`: PR obligatorio (sin exigir aprobaciones — nadie aprueba lo suyo), el
+  check `reglas-pr` en verde, sin force-push ni borrado de la rama, alcanzando
+  también a administradores. Si `gh` no está instalado/autenticado o falta permiso
+  de admin en el repo, se reporta con un aviso accionable y el resto de
+  init/upgrade sigue igual. Complementa a `check-pr-rules.mjs`: ese workflow
+  bloquea el *merge* del PR; esto bloquea el *push* directo en el propio GitHub.
+
+- **Tag automático de release al mergear el PR a `main`** (SHS-M19). Workflow
+  `tag-release.yml` distribuido por el harness: dispara en `pull_request`
+  `closed`+`merged` con base `main`, lee la versión de `package.json` en el
+  commit de merge y crea/pushea el tag inmutable `vX.Y.Z` y el tag móvil de la
+  serie (`vX`). Idempotente: si el tag ya existe, no falla ni duplica. No crea el
+  GitHub Release —sigue siendo del coordinador—. Se dogfoodea en este repo y se
+  distribuye vía el manifest a los repos consumidores.
+
+### Corregido
+
+- **La descripción del commit puede arrancar en mayúscula** (SHS-M17).
+  `check-pr-rules.mjs` exigía que la descripción del commit empezara en
+  minúscula, sin que la skill `soutec-github` lo pidiera — rechazaba siglas
+  legítimas como "PR" o "API" al inicio. Ahora acepta cualquier letra.
+
+- **PR a `main` solo puede venir de `dev`** (SHS-M17). `check-pr-rules.mjs`
+  aceptaba cualquier rama con formato válido (`feature/`, `fix/`, `hotfix/`, etc.)
+  como base de un PR contra `main`. Ahora un PR con base `main` solo pasa el
+  check si la rama de origen es exactamente `dev`, sin excepción para hotfixes
+  (`CLAUDE.md`: "los hotfixes también" pasan por `dev`).
+
+- **CI determinista en ubuntu + Node 22** (SHS-M14). `node --test` corre los
+  archivos de test en paralelo por defecto (concurrencia = CPUs); en Linux eso
+  dejaba una ventana de carrera en la que el propio test runner corrompía su
+  canal IPC (serialización estructurada sobre el pipe de stdout del proceso
+  hijo), fallando con "Unable to deserialize cloned data" — no era un bug del
+  código de los tests. CI ahora corre `npm run test:ci`
+  (`--test-concurrency=1`); `npm test` local sigue en paralelo (rápido, y el
+  bug no reproduce ahí de todos modos).
+
+- **Backfill de archivos base del Vault en `upgrade`** (SHS-M18-T001).
+  `asegurarProyecto()` cortaba en cuanto `vault.local.json` ya tenía `project`
+  declarado, así que `sembrarProyecto()` —único lugar que escribía las semillas—
+  nunca se volvía a llamar para un proyecto ya conectado: un archivo base
+  agregado después (`OBSERVATORIO.md`, `progress/history.md`) quedaba huérfano
+  para siempre en instalaciones viejas. Se extrae el bucle a
+  `escribirSemillasFaltantes()` y se agrega `completarProyectoDeclarado()`, que
+  la corre sin pisar lo existente y pushea solo si faltó algo, en las dos ramas
+  donde el proyecto ya se resuelve sin sembrar (`declarado` en `vault.local.json`
+  y `porRegistro` vía `id-registry.md`). Idempotente: sin archivos faltantes, no
+  toca el Vault.
+
 ## [3.6.0] — 2026-08-24
 
 Reglas de PR distribuidas por el harness (SHS-M17) y alta de proyectos del Vault

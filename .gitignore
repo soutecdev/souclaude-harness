@@ -12,6 +12,7 @@
 *.pfx
 credentials.json
 secrets.json
+artifacts/*
 
 # === Claude Code ===
 # Los settings del equipo se commitean; los personales, no.

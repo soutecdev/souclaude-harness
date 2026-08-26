@@ -29,7 +29,14 @@ jobs:
 
       - run: npm ci
 
-      - run: npm test
+      # SHS-M14: node --test corre archivos en paralelo por defecto (concurrencia
+      # = CPUs). En ubuntu + Node 22 eso deja una ventana de carrera real en el
+      # pipe IPC que el test runner usa para reportar resultados estructurados al
+      # proceso padre -- no es un bug del codigo de los tests, es el runner
+      # corrompiendo su propio canal bajo solapamiento de procesos hijos.
+      # --test-concurrency=1 en CI elimina la carrera; en local (npm test) la
+      # suite sigue en paralelo, que es rapido y no reproduce el problema.
+      - run: npm run test:ci
 
       - name: verifica integridad del manifest (huerfanos, rutas rotas, duplicados, criticos)
         run: node bin/cli.mjs verify --strict

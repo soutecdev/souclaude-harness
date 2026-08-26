@@ -1,6 +1,6 @@
 {
   "name": "souclaude-harness",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "CLI para inicializar y migrar el harness de Claude Code de SOUTEC",
   "type": "module",
   "bin": {
@@ -15,7 +15,8 @@
     "node": ">=22.4"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "test:ci": "node --test --test-concurrency=1"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",

@@ -110,6 +110,54 @@ rm -rf "$WORK"
   historial de git.
 - **Skill gemela `soutec-md-a-pdf-nativo`** — no se creó: `soutec-md-a-pdf` ya es nativa.
 
+## 2026-08-24 — SHS-M14 resuelto: `node --test` en paralelo corrompe su propio pipe IPC en ubuntu + Node 22
+
+Diagnóstico de la causa raíz del "Unable to deserialize cloned data" que hacía
+fallar `test/monitor-cmd.test.js` de forma no determinista, solo en
+`ubuntu-latest` + Node 22. **No es un bug del código del test**: el propio
+archivo ya evita el patrón peligroso conocido (interceptar `process.stdout.write`
+global con un `await` en medio, documentado en su propia cabecera desde antes).
+
+La causa real: `node --test` corre los archivos de test **en paralelo** por
+defecto (concurrencia = CPUs disponibles), y cada proceso hijo le reporta al
+proceso padre vía un canal IPC que usa serialización estructurada (V8
+`structured clone`) sobre el mismo pipe de stdout del hijo. En Linux, con
+varios procesos hijos activos a la vez, esto deja una ventana de carrera donde
+el runner mismo corrompe su propio canal — no el test. Windows no lo reproduce
+(comportamiento de pipes distinto) y Node 24 tampoco (cambios internos del test
+runner entre versiones).
+
+Fix: `npm run test:ci` (`node --test --test-concurrency=1`), usado solo en el
+workflow de CI. `npm test` local queda sin tocar — en paralelo, rápido, y no
+reproduce el bug de todos modos.
+
+## 2026-08-24 — `check-pr-rules.mjs` (rama-formato) tuvo dos falsos positivos al debutar
+
+Al distribuirse por primera vez (SHS-M17) contra PRs reales, `rama-formato` rechazó
+dos casos legítimos que el regex no contemplaba:
+1. **El PR de release `dev` → `main`**: la rama origen es literalmente `dev`, que
+   nunca va a cumplir `tipo/descripcion-corta` (no es una rama de trabajo). Fix:
+   excepción explícita `nombre === 'dev' && baseRefName === 'main'` (PR #48).
+2. **Puntos en el slug**: `chore/bump-3.6.0` fallaba porque el regex solo admitía
+   `[a-z0-9-]+`. Había precedente ya mergeado con puntos (`feature/SHS-M15-T001-bump-3.5.0`,
+   previo a este check) y la skill `soutec-github` no los prohíbe. Fix: agregar `.` a
+   la clase de caracteres (PR #49).
+
+Moraleja: un check nuevo que reimplementa una convención documentada en prosa
+(la skill) va a divergir de casos reales que la prosa nunca prohibió explícitamente.
+Antes de exigir un check nuevo en CI, correrlo primero contra el historial real de
+ramas mergeadas (`git log --all --format='%D' | grep -o 'origin/[^,]*'`) para
+detectar estos huecos sin esperar a que un PR real los encuentre.
+
+## 2026-08-24 — SHS-M18-T001: pendiente espejo a Jira (conector no autenticado)
+
+Se movió SHS-M18-T001 a "En curso" en `Project-SHS/kanban.md` (backfill de archivos
+base del Vault en `upgrade`). El conector MCP de Atlassian no está autenticado en
+esta sesión (`ToolSearch` no devuelve `mcp__atlassian__searchJiraIssuesUsingJql` ni
+el resto de las herramientas de Jira, solo `authenticate`/`complete_authentication`).
+Pendiente: la próxima sesión con el conector autorizado debe reflejar en Jira este
+movimiento (crear/transicionar el issue hijo de la épica SHS-M18 a In Progress).
+
 ## 2026-08-10 — Optimización de consumo de tokens
 La telemetría de SHS-H3 mostró tareas estándar de 243k-319k tokens de salida. Causas:
 contexto fijo grande (conectores MCP + relecturas completas de constitución/spec por cada
@@ -117,3 +165,34 @@ subagente) y rework (1 devolución ≈ duplica el costo del task). Cambios aplic
 "Economía de tokens" en CLAUDE.md, tier `haiku` para tareas mecánicas en ccem-model-router,
 reglas de lectura mínima en los 4 agentes, pre-flight anti-rework en el orchestrator.
 Pendiente humano: desconectar conectores de claude.ai que este repo no usa.
+
+## 2026-08-24 — jira-sync pendiente para SHS-M19
+Alta de SHS-M19 (tag automático al mergear a main) en el Vault hecha y pusheada,
+pero el conector MCP de Atlassian no está autorizado en esta sesión (no aparecen
+herramientas Jira). Falta crear la épica SHS-M19 en Jira — próxima sesión con el
+conector autorizado (`/mcp` → autenticar Atlassian), correr `jira-sync` sobre esta
+tarjeta.
+
+## 2026-08-25 — jira-sync pendiente para SHS-M17 (ampliación)
+SHS-M17 se amplió en el Vault (branch protection de main configurada por
+souclaude init/upgrade vía gh api + regla "PR a main solo desde dev" en
+check-pr-rules.mjs) y quedó pusheado a main. El conector MCP de Atlassian no
+está autorizado en esta sesión. Falta actualizar la descripción de la épica
+SHS-M17 en Jira — próxima sesión con el conector autorizado, correr
+`jira-sync` sobre esta tarjeta.
+
+## 2026-08-25 — jira-sync pendiente: cierre de SHS-M17, M18, M19, M14 (a medias)
+Los cuatro milestones pasaron a Hecho en el Vault (PRs #45, #51, #52, #53, #54
+mergeados). Conector Atlassian autorizado y usado, pero el token expiró a
+mitad de la sincronización. Estado real en Jira a esta fecha:
+- Creados y en "Por hacer" (falta transicionar a "Listo"): SHS-57 (épica
+  SHS-M18), SHS-58 (épica SHS-M19), SHS-59 (SHS-M17-T001, parent SHS-55),
+  SHS-60 (SHS-M17-T002, parent SHS-55), SHS-61 (SHS-M17-T003, parent SHS-55),
+  SHS-62 (SHS-M14-T001, parent SHS-43).
+- Épicas SHS-43 (M14) y SHS-55 (M17) siguen sin transicionar a "Listo".
+- Faltan por crear: SHS-M18-T001 (parent SHS-57) y SHS-M19-T001 (parent
+  SHS-58) — no llegaron a crearse por el corte de token.
+Próxima sesión con el conector autorizado: NO recrear SHS-57/58/59/60/61/62
+(ya existen, evitar duplicados por idempotencia de summary); solo falta
+crear los dos issues pendientes y transicionar los ocho issues (6 tareas +
+2 épicas) a "Listo".

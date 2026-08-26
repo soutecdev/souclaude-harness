@@ -1,5 +1,5 @@
 {
-  "harnessVersion": "3.6.0",
+  "harnessVersion": "3.7.0",
   "vault": {
     "repo": "https://github.com/ialvarezsoutec/soubunker-vault.git"
   },
@@ -110,6 +110,18 @@
       "id": "workflow-reglas-pr",
       "src": "base/github/workflows/reglas-pr.yml",
       "dest": ".github/workflows/reglas-pr.yml",
+      "policy": "managed"
+    },
+    {
+      "id": "tag-release",
+      "src": "base/scripts/tag-release.mjs",
+      "dest": "scripts/tag-release.mjs",
+      "policy": "managed"
+    },
+    {
+      "id": "workflow-tag-release",
+      "src": "base/github/workflows/tag-release.yml",
+      "dest": ".github/workflows/tag-release.yml",
       "policy": "managed"
     },
     {
