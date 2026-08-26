@@ -4,6 +4,7 @@ import { computePlan, writeActions, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/p
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
 import { protegeBranchMain } from '../core/github-protect.js'
+import { instalarCliGlobal } from '../core/cli-global.js'
 
 // execFile con args en array: nunca pasa por el shell, asi que las rutas con
 // espacios (todo OneDrive) dejan de ser un problema.
@@ -180,6 +181,19 @@ export function githubProtectionStep({ code, cwd, flags }) {
   if (code !== 0) return code
   if (flags['dry-run']) return code
   protegeBranchMain({ cwd })
+  return code
+}
+
+// SHS-M21: el monitor en produccion para el equipo. Ofrece dejar el CLI
+// global instalado (npm install -g desde GitHub) para que `souclaude monitor`
+// funcione desde cualquier terminal, no solo via npx con la URL larga. Igual
+// que los otros pasos post-plan: nunca corre en --dry-run, nunca bloquea la
+// instalacion si falla, y en modo no interactivo exige --cli-global.
+export async function cliGlobalStep({ code, flags, manifest }) {
+  if (code !== 0) return code
+  if (flags['dry-run']) return code
+  const yes = Boolean(flags.yes) || ui.isCI()
+  await instalarCliGlobal({ manifest, flags, yes })
   return code
 }
 

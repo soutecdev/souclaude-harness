@@ -70,6 +70,24 @@ node bin/cli.mjs monitor              # panel en vivo (con TTY)
 node bin/cli.mjs monitor --once       # un snapshot en texto plano y sale
 ```
 
+### El monitor en cualquier terminal (equipo)
+
+Para el equipo, el monitor se usa como **CLI global instalado desde GitHub** — sin
+npx ni la URL larga:
+
+```bash
+npm install -g github:ialvarezsoutec/souclaude-harness#v3   # una vez por máquina
+souclaude monitor                                           # desde cualquier carpeta
+```
+
+`souclaude init`/`upgrade` lo ofrecen solos al final (pregunta con TTY; en modo no
+interactivo solo con `--cli-global`), y es idempotente: si el global ya está en la
+versión del harness, no hace nada. El panel funciona desde cualquier carpeta; las
+vistas de equipo (`--usage`, publicación de sesiones) necesitan correrlo **dentro de
+un repo con el harness instalado** (leen `.claude/vault.local.json`). Al publicarse
+un release, repetir el `npm install -g` (o aceptar la oferta de `souclaude upgrade`)
+actualiza el global al tag `v3` vigente.
+
 Cuatro modos, excluyentes entre sí:
 
 - **En vivo** (default, con TTY): panel que se repinta solo, alternate buffer,
