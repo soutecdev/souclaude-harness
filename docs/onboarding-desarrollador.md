@@ -72,6 +72,24 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
 - El proyecto Jira destino está en `.claude/jira.json` (commiteado). Convención:
   **un proyecto del Vault = un proyecto Jira**, con la clave igual al prefijo
   (`Project-SHS` → `SHS`).
+- **CLI global `souclaude`** (una vez por máquina): al final, `init`/`upgrade`
+  ofrecen instalarlo (`npm install -g github:ialvarezsoutec/souclaude-harness#v3`).
+  Acéptalo: te deja el **monitor de tokens** a un comando de distancia en
+  cualquier terminal —
+
+  ```bash
+  souclaude monitor          # panel en vivo: límites, sesiones, proyectos
+  souclaude monitor --once   # un snapshot y sale
+  souclaude monitor --usage  # consumo de TODO el equipo (córrelo dentro del repo)
+  ```
+
+  Funciona desde **cualquier carpeta**: al conectar el Vault, `init`/`upgrade`
+  dejan también una config a nivel máquina (`~/.claude/souclaude/vault.json`),
+  así el monitor publica tu consumo al Vault y ve las sesiones del resto del
+  equipo estés donde estés. Solo la línea de tu sesión en `sessions.md` del
+  proyecto requiere correrlo dentro del repo (fuera de un repo no se sabe a qué
+  proyecto atribuirla). El global se actualiza aceptando la misma oferta en el
+  próximo `souclaude upgrade`.
 
 ## 3. La regla central: trazabilidad por milestone
 
