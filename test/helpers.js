@@ -9,6 +9,15 @@ import { computePlan } from '../src/core/plan.js'
 
 process.env.CI = 'true'
 
+// SHS-M21-T002: los tests que corren init/upgrade en proceso no deben leer ni
+// escribir la config de maquina REAL (~/.claude/souclaude/vault.json):
+// ensureVault la espeja al conectar y el fallback de readVaultConfig la
+// leeria, volviendo los tests dependientes de lo instalado en la maquina del
+// dev. Home redirigido a un temp por proceso de test.
+if (!process.env.SOUCLAUDE_CLAUDE_HOME) {
+  process.env.SOUCLAUDE_CLAUDE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
+}
+
 // El directorio temporal lleva un espacio a proposito: el repo real del usuario vive
 // en "...\Soutec Ignacio Alvarez\..." bajo OneDrive. Si el CLI se rompe con espacios
 // en la ruta, se tiene que romper acá y no en la máquina de un dev.

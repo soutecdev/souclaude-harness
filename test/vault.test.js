@@ -1,4 +1,4 @@
-import { test } from 'node:test'
+import { test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -10,6 +10,8 @@ import {
   cloneVault,
   looksLikeVault,
   readVaultConfig,
+  machineConfigPath,
+  writeMachineVaultConfig,
   writeVaultConfig,
   VAULT_CONFIG,
   harnessDocsUrl,
@@ -19,6 +21,13 @@ import {
   leerRegistroDePrefijos,
 } from '../src/core/vault.js'
 import { loadManifest } from '../src/core/manifest.js'
+
+// SHS-M21-T002: ensureVault espeja la conexion a nivel maquina como efecto
+// secundario, y readVaultConfig la usa de fallback -- sin esta limpieza, el
+// primer test que conecta un Vault autoconectaria a todos los que le siguen.
+beforeEach(() => {
+  fs.rmSync(machineConfigPath(), { force: true })
+})
 
 // helpers.js pone CI=true, asi que todo lo que pasa por main() corre en modo
 // no interactivo: es justo el camino que hay que blindar (nunca clonar solo).
@@ -852,4 +861,83 @@ test('writeVaultConfig preserva project y quien al reescribir (upgrade no borra 
   config = readVaultConfig(cwd)
   assert.equal(config.quien, 'nacho')
   assert.equal(config.project, 'Project-SHS')
+})
+
+// --- SHS-M21-T002: config de maquina como fallback -------------------------
+
+// El home ya esta redirigido a un temp por helpers.js; estos tests ademas
+// limpian el archivo entre casos para no depender del orden.
+function sinConfigDeMaquina() {
+  fs.rmSync(machineConfigPath(), { force: true })
+}
+
+test('readVaultConfig: la config del repo gana sobre la de maquina', () => {
+  sinConfigDeMaquina()
+  const vaultRepo = mkVault()
+  const vaultMaquina = mkVault()
+  writeMachineVaultConfig({ path: vaultMaquina, repo: null, quien: 'ana' })
+  const cwd = mkRepo()
+  writeVaultConfig(cwd, { path: vaultRepo, repo: null })
+  const config = readVaultConfig(cwd)
+  assert.equal(config.path, vaultRepo.split(path.sep).join('/'))
+  assert.equal(config.origen, 'repo')
+  sinConfigDeMaquina()
+})
+
+test('readVaultConfig: sin config en el repo cae a la de maquina, con origen y quien', () => {
+  sinConfigDeMaquina()
+  const vault = mkVault()
+  writeMachineVaultConfig({ path: vault, repo: 'https://example.com/vault.git', quien: 'ana' })
+  const cwd = mkRepo()
+  const config = readVaultConfig(cwd)
+  assert.equal(config.path, vault.split(path.sep).join('/'))
+  assert.equal(config.origen, 'maquina')
+  assert.equal(config.quien, 'ana')
+  assert.equal(config.project, undefined, 'la config de maquina no debe declarar proyecto')
+  sinConfigDeMaquina()
+})
+
+test('readVaultConfig: la config de maquina con ruta inexistente se ignora', () => {
+  sinConfigDeMaquina()
+  writeMachineVaultConfig({ path: path.join(os.tmpdir(), 'no-existe-' + Date.now()), repo: null })
+  const cwd = mkRepo()
+  assert.equal(readVaultConfig(cwd), null)
+  sinConfigDeMaquina()
+})
+
+test('writeMachineVaultConfig: preserva quien y repo previos al reescribir', () => {
+  sinConfigDeMaquina()
+  const v1 = mkVault()
+  const v2 = mkVault()
+  writeMachineVaultConfig({ path: v1, repo: 'https://example.com/vault.git', quien: 'ana' })
+  writeMachineVaultConfig({ path: v2 })
+  const config = JSON.parse(fs.readFileSync(machineConfigPath(), 'utf8'))
+  assert.equal(config.path, v2.split(path.sep).join('/'))
+  assert.equal(config.repo, 'https://example.com/vault.git')
+  assert.equal(config.quien, 'ana')
+  sinConfigDeMaquina()
+})
+
+test('ensureVault: al conectar el Vault espeja la config a nivel maquina', async () => {
+  sinConfigDeMaquina()
+  const vault = mkVault(['Project-ABC'], [['ABC', 'acme']])
+  const cwd = mkRepo()
+  writeVaultConfig(cwd, { path: vault, repo: null, quien: 'ana' })
+  await ensureVault({ cwd, flags: {}, manifest: loadManifest(), lock: null, yes: true })
+  const maquina = JSON.parse(fs.readFileSync(machineConfigPath(), 'utf8'))
+  assert.equal(maquina.path, vault.split(path.sep).join('/'))
+  assert.equal(maquina.quien, 'ana')
+  sinConfigDeMaquina()
+})
+
+test('ensureVault: un repo nuevo se autoconecta desde la config de maquina', async () => {
+  sinConfigDeMaquina()
+  const vault = mkVault(['Project-ABC'], [['ABC', 'acme']])
+  writeMachineVaultConfig({ path: vault, repo: null, quien: 'ana' })
+  const cwd = mkIsolatedRepo()
+  await ensureVault({ cwd, flags: {}, manifest: loadManifest(), lock: null, yes: true })
+  const config = readVaultConfig(cwd)
+  assert.equal(config.origen, 'repo', 'la autoconexion debe persistir vault.local.json en el repo')
+  assert.equal(config.path, vault.split(path.sep).join('/'))
+  sinConfigDeMaquina()
 })
