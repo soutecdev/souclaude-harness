@@ -4,6 +4,32 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.8.0] — 2026-08-27
+
+### Agregado
+
+- **Instalación global del CLI desde `init`/`upgrade`** (SHS-M21-T001). Al instalar
+  o actualizar el harness, el CLI ofrece dejar `souclaude` instalado globalmente
+  desde GitHub (`npm install -g <repo>#v3`), de modo que `souclaude monitor` corra
+  en cualquier terminal y no solo vía `npx` dentro del repo. Es idempotente —si ya
+  está instalado en la misma versión no reinstala— y tiene bandera para el modo no
+  interactivo. Documentado en el README y en la guía de onboarding.
+
+- **Config del Vault a nivel máquina como fallback** (SHS-M21-T002).
+  `~/.claude/souclaude/vault.json` —lo escribe `init`/`upgrade` al conectar el
+  Vault— actúa como respaldo de `.claude/vault.local.json`. Así el CLI global
+  publica snapshot y consumo, y lee al equipo, desde cualquier terminal aunque no
+  esté parado sobre un repo consumidor. La línea de `sessions.md` sigue
+  escribiéndose solo cuando hay `project` declarado.
+
+### Corregido
+
+- **Resolución de `npm` sin depender del directorio actual** (CWE-427). Las llamadas
+  a `npm` de la instalación global se ejecutan con `cwd` explícito en el home del
+  usuario, para no resolver binarios ni `node_modules` desde un directorio de
+  trabajo que podría no ser confiable.
+
+
 ## [3.7.0] — 2026-08-26
 
 ### Agregado
