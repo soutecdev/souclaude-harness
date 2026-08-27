@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import os from 'node:os'
 import * as ui from './../ui.js'
 
 // SHS-M21: el monitor "en produccion" para el equipo es el CLI instalado
@@ -16,9 +17,12 @@ export function specGlobal(manifest) {
 
 // npm va por execSync con comando constante (nada del usuario entra al
 // string): en Windows npm es npm.cmd y execFileSync sin shell lo rechaza
-// (EINVAL, fix de CVE-2024-27980).
+// (EINVAL, fix de CVE-2024-27980). El cwd va explicito al home (CWE-427):
+// cmd.exe resuelve "npm" buscando PRIMERO en el directorio actual, y el
+// actual seria el repo consumidor — un npm.cmd commiteado ahi se ejecutaria.
+// Ningun npm -g depende del cwd, asi que no se pierde nada.
 function runNpm(cmd) {
-  return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  return execSync(cmd, { cwd: os.homedir(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
 // npm ls -g sale con codigo != 0 si el paquete no esta: el catch es el caso
