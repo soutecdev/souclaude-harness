@@ -136,12 +136,26 @@ Antes de pedir revisión:
 - El README está actualizado si aplica.
 - El PR indica si requiere versión/release.
 
-**Antes de abrir el PR, correr la skill nativa `/security-review`** sobre el cambio y
-documentar los hallazgos en la sección "Security review" de la plantilla del PR. Si
-`/security-review` encuentra vulnerabilidades: **parar y preguntar al usuario** si
-quiere remediarlas antes de continuar con el PR. No abrir el PR con hallazgos sin
-remediar salvo que el usuario decida explícitamente continuar así — en ese caso,
-dejarlo registrado en el PR.
+**Antes de abrir el PR, delegar el security review a un subagente** (`Agent`, tipo
+`general-purpose`) en vez de correr `/security-review` inline. Instrúyelo a fondo:
+que corra `/security-review` sobre el diff de la rama y devuelva los hallazgos
+(o la ausencia de ellos) en un resumen claro. Mientras corre, el agente principal
+puede seguir armando el resto del PR (plantilla, checklist).
+
+Esto no es un capricho de estilo: correr el review en el mismo hilo hace que, tras
+un volcado largo de resultados, el agente principal pierda el hilo y no retome el
+PR. Delegarlo a un subagente convierte el resultado en un tool-result concreto que
+exige una reacción explícita — no una instrucción de prosa que se puede diluir.
+
+Al recibir el resultado del subagente:
+- **Documentar** los hallazgos (o su ausencia) en la sección "Security review" de
+  la plantilla del PR.
+- **Sin hallazgos bloqueantes**: seguir directo con push/PR. El security review es
+  un paso intermedio del mismo pedido, no un punto de checkpoint.
+- **Con hallazgos bloqueantes**: parar y preguntar al usuario si quiere remediarlos
+  antes de continuar. No abrir el PR con hallazgos sin remediar salvo que el
+  usuario decida explícitamente continuar así — en ese caso, dejarlo registrado
+  en el PR.
 
 **Completa `.github/pull_request_template.md` de verdad.** Checkboxes tildadas porque
 se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, se
