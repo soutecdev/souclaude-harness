@@ -4,6 +4,21 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.9.0] — 2026-08-31
+
+### Agregado
+
+- **Siembra de `OBSERVATORIO.md` desde la plantilla canónica del Vault** (SHS-M24).
+  Al instalar el harness, la ficha del proyecto se siembra desde
+  `00-System/templates/OBSERVATORIO.md` del Vault, rellenando
+  `{Nombre del Proyecto}` con el nombre completo de `id-registry.md` y, si hay
+  contexto del proyecto disponible durante la instalación, completando la ficha en
+  ese mismo momento en lugar de dejarla vacía.
+
+### Cambiado
+
+- **Semilla `OBSERVATORIO.md` alineada al formato oficial nuevo** (SHS-M23).
+
 ## [3.8.1] — 2026-08-31
 
 ### Corregido
