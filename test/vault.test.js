@@ -666,6 +666,33 @@ test('la semilla respeta el formato de tablero del protocolo', async () => {
   assert.ok(!milestones.includes('## En review'))
 })
 
+// SHS-M24: la plantilla canonica de la ficha vive en el Vault; la constante
+// embebida es solo el fallback para un Vault que todavia no la tiene.
+test('la ficha OBSERVATORIO.md se siembra desde la plantilla del Vault, con el nombre rellenado', async () => {
+  const dir = mkRepo({ 'package.json': JSON.stringify({ name: 'souclaude-harness' }) })
+  const vault = mkVault([], [['SHS', 'souclaude-harness']])
+  fs.writeFileSync(
+    path.join(vault, '00-System', 'templates', 'OBSERVATORIO.md'),
+    '# Ficha para el Observatorio - {Nombre del Proyecto}\n\n## Tagline personalizada\n',
+    'utf8'
+  )
+
+  await main(['init', ...YES, '--vault-path', vault, '--vault-seed'], dir)
+
+  const ficha = read(vault, 'Project-SHS/OBSERVATORIO.md')
+  assert.ok(ficha.startsWith('# Ficha para el Observatorio - Project-SHS'), 'no se rellano {Nombre del Proyecto}')
+  assert.ok(ficha.includes('## Tagline personalizada'), 'no se uso la plantilla del Vault')
+})
+
+test('sin plantilla en el Vault, la ficha cae a la semilla embebida', async () => {
+  const dir = mkRepo({ 'package.json': JSON.stringify({ name: 'souclaude-harness' }) })
+  const vault = mkVault([], [['SHS', 'souclaude-harness']])
+
+  await main(['init', ...YES, '--vault-path', vault, '--vault-seed'], dir)
+
+  assert.ok(read(vault, 'Project-SHS/OBSERVATORIO.md').includes('# Ficha para el Observatorio'))
+})
+
 // Escribir en el Vault de la organizacion desde una corrida desatendida seria
 // una escritura por cada build de CI. Sin el flag explicito, no se toca.
 test('desatendido sin --vault-seed: el Vault no se toca y queda el aviso', async () => {

@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { exists, readIfExists, writeFileLF, toPosix } from './fsx.js'
 import { pushSeguro, gitReal } from './vault-sync.js'
-import { SEMILLAS_PROYECTO, renderSemilla } from './vault-seeds.js'
+import { SEMILLAS_PROYECTO, renderSemilla, PLANTILLA_OBSERVATORIO } from './vault-seeds.js'
 
 const PACKAGE_JSON = fileURLToPath(new URL('../../package.json', import.meta.url))
 
@@ -522,11 +522,16 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
 // pushear es responsabilidad de quien llama, con su propio mensaje de commit.
 function escribirSemillasFaltantes(vaultPath, carpeta) {
   const raiz = path.join(vaultPath, carpeta)
+  // La ficha del Observatorio se siembra desde la plantilla canonica del Vault
+  // si existe (editable ahi sin release del harness); la constante embebida es
+  // solo el fallback para un Vault que todavia no la tiene (SHS-M24).
+  const plantillaFicha = readIfExists(path.join(vaultPath, ...PLANTILLA_OBSERVATORIO.split('/')))
   const escritos = []
   for (const [rel, contenido] of Object.entries(SEMILLAS_PROYECTO)) {
     const abs = path.join(raiz, ...rel.split('/'))
     if (exists(abs)) continue
-    writeFileLF(abs, renderSemilla(contenido, carpeta))
+    const fuente = rel === 'OBSERVATORIO.md' && plantillaFicha !== null ? plantillaFicha : contenido
+    writeFileLF(abs, renderSemilla(fuente, carpeta))
     escritos.push(rel)
   }
   return escritos
