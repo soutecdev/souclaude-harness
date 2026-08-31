@@ -189,9 +189,12 @@ con push directo al Vault en el mismo momento del tag (sin PR — ver
 `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del tag y resumen
 tomado del cambio principal — CHANGELOG o descripción del PR de release). El hito
 **no es opcional**: todo tag publicado tiene su línea en "Hitos", también los
-releases menores. Además revisa si otra sección — tagline, plataforma, resumen,
-próximos pasos — cambió de forma relevante con el release; esas sí se tocan solo
-cuando hubo cambios importantes. (Aplica solo con Vault conectado —
+releases menores. Además, cuando detectes un cambio importante del proyecto — en
+un release o en cualquier otro momento: alcance, plataforma, resumen, por qué
+importa, equipo o próximos pasos que ya no reflejan la realidad — actualiza la
+sección afectada y pushea al Vault en el momento; la ficha se mantiene al día
+cuando el proyecto cambia de verdad, no solo al taggear. Los cambios menores sin
+impacto en la ficha no requieren tocarla. (Aplica solo con Vault conectado —
 `.claude/vault.local.json`; sin Vault no hay ficha.)
 
 La misma ficha nace al instalar el harness (`npx souclaude` la siembra desde

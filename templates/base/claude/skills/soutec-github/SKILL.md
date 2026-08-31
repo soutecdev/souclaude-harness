@@ -204,7 +204,7 @@ GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 ficha y no hay nada que mantener.
 
 `npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
-plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Dos reglas sobre ella:
+plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre ella:
 
 - **Al instalar el harness**: si ya tienes contexto del proyecto — por la
   conversación, el README o el propio código — **rellena la ficha en ese mismo
@@ -217,9 +217,13 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Dos reglas sobre el
   `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del tag y resumen
   tomado del cambio principal — CHANGELOG o descripción del PR de release). El
   hito **no es opcional**: todo tag publicado tiene su línea en "Hitos", también
-  los releases menores. Además revisa si otra sección — tagline, plataforma,
-  resumen, próximos pasos — cambió de forma relevante con el release; esas sí se
-  tocan solo cuando hubo cambios importantes.
+  los releases menores.
+- **Cuando detectes un cambio importante del proyecto** — en un release o en
+  cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
+  próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y
+  pushea al Vault en el momento. La ficha no se revisa solo al taggear: se
+  mantiene al día cuando el proyecto cambia de verdad. Los cambios menores sin
+  impacto en la ficha no requieren tocarla.
 
 ## Secretos
 
