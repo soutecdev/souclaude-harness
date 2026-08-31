@@ -199,6 +199,10 @@ GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 
 ## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
 
+**Esta sección aplica solo si el repo tiene el Vault conectado**
+(`.claude/vault.local.json` existe y apunta a un Vault válido). Sin Vault no hay
+ficha y no hay nada que mantener.
+
 `npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
 plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Dos reglas sobre ella:
 
@@ -207,10 +211,15 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Dos reglas sobre el
   momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
   Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
   complete; solo queda vacía cuando de verdad no hay información.
-- **Tras cada release `dev` → `main`**: revisa si necesita actualizarse — tagline,
-  plataforma, resumen, hitos u otra sección que el release cambie de forma
-  relevante. Solo si hubo cambios importantes: editarla y pushear al Vault en el
-  momento. Un release menor sin impacto en la ficha no requiere tocarla.
+- **Tras cada release `dev` → `main` con tag nuevo**: **agrega siempre el hito**
+  del release en la sección "Hitos" de la ficha, con push directo al Vault en el
+  mismo momento del tag. Formato de la línea:
+  `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del tag y resumen
+  tomado del cambio principal — CHANGELOG o descripción del PR de release). El
+  hito **no es opcional**: todo tag publicado tiene su línea en "Hitos", también
+  los releases menores. Además revisa si otra sección — tagline, plataforma,
+  resumen, próximos pasos — cambió de forma relevante con el release; esas sí se
+  tocan solo cuando hubo cambios importantes.
 
 ## Secretos
 

@@ -182,11 +182,17 @@ tag móvil de la serie (`v3`) — es idempotente: si el tag ya existe, no falla 
 duplica. Los releases de GitHub siguen siendo del coordinador; el workflow no los
 crea.
 
-Tras el release, revisa si `Project-<PREFIJO>/OBSERVATORIO.md` del Vault necesita
-actualizarse — tagline, plataforma, resumen, hitos u otra sección que el release
-cambie de forma relevante. Solo si hubo cambios importantes: editarla y pushear al
-Vault en el momento (push directo, sin PR — ver `progress/README.md`). Un release
-menor sin impacto en la ficha no requiere tocarla.
+Tras cada release `dev` → `main` con tag nuevo, **agrega siempre el hito** del
+release en la sección "Hitos" de `Project-<PREFIJO>/OBSERVATORIO.md` del Vault,
+con push directo al Vault en el mismo momento del tag (sin PR — ver
+`progress/README.md`). Formato de la línea:
+`- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del tag y resumen
+tomado del cambio principal — CHANGELOG o descripción del PR de release). El hito
+**no es opcional**: todo tag publicado tiene su línea en "Hitos", también los
+releases menores. Además revisa si otra sección — tagline, plataforma, resumen,
+próximos pasos — cambió de forma relevante con el release; esas sí se tocan solo
+cuando hubo cambios importantes. (Aplica solo con Vault conectado —
+`.claude/vault.local.json`; sin Vault no hay ficha.)
 
 La misma ficha nace al instalar el harness (`npx souclaude` la siembra desde
 `00-System/templates/OBSERVATORIO.md` del Vault). Si al instalar ya tienes contexto
