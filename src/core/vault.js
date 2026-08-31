@@ -520,6 +520,16 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
 // harness no le escribio un archivo que SEMILLAS_PROYECTO agrego despues
 // (ej. OBSERVATORIO.md, progress/history.md, SHS-M18). Solo escribe en disco:
 // pushear es responsabilidad de quien llama, con su propio mensaje de commit.
+// La ficha se siembra con la estructura pero sin contenido. El aviso apunta al
+// AGENTE que corre el CLI: si la sesion ya tiene contexto del proyecto, la regla
+// de la skill soutec-github es completarla en el momento, no dejarla vacia.
+function avisarFichaSembrada(carpeta, escritos) {
+  if (!escritos.includes('OBSERVATORIO.md')) return
+  ui.log.info(
+    `${carpeta}/OBSERVATORIO.md quedo sembrada sin contenido: si ya conoces el proyecto, completala ahora y pushea el Vault — no esperes a que el equipo la rellene.`
+  )
+}
+
 function escribirSemillasFaltantes(vaultPath, carpeta) {
   const raiz = path.join(vaultPath, carpeta)
   // La ficha del Observatorio se siembra desde la plantilla canonica del Vault
@@ -564,6 +574,7 @@ async function completarProyectoDeclarado(vaultPath, carpeta, { git = gitReal } 
 
   if (push.ok) {
     ui.log.success(`${carpeta}: se completaron archivos base que faltaban en el Vault (${escritos.join(', ')}).`)
+    avisarFichaSembrada(carpeta, escritos)
   } else {
     ui.log.warn(
       `${carpeta}: se completaron archivos base en el clon local del Vault pero no se pudo publicar (${push.motivo}). Pushea el Vault a mano.`
@@ -606,6 +617,7 @@ async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, g
 
   if (push.ok) {
     ui.log.success(`${carpeta} sembrada en el Vault y pusheada (${escritos.join(', ')}).`)
+    avisarFichaSembrada(carpeta, escritos)
   } else {
     // Los archivos ya estan en el clon local: el proximo push del Vault los
     // empuja. Avisar es obligatorio -- el tablero todavia no lo ve nadie mas.
