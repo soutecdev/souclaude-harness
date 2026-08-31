@@ -65,7 +65,7 @@ const GITKEEP = ''
 // completa y actualiza (release con cambios importantes). No confundir con el
 // README del repo tecnico -- OBS-M6 sincroniza secciones del README hacia el
 // portal, esta ficha es aparte y vive solo en el Vault.
-const OBSERVATORIO = `# Ficha para el Observatorio
+const OBSERVATORIO = `# Ficha para el Observatorio - <PROYECTO>
 
 ## Tagline
 <!-- Una frase: qué es y para quién. Entre 20 y 200 caracteres. -->
@@ -80,21 +80,22 @@ const OBSERVATORIO = `# Ficha para el Observatorio
 <!-- Una razón por viñeta, una frase cada una (3 a 5). -->
 -
 -
+-
 
 ## Próximos pasos
 <!-- Un paso por viñeta. Si el repo usa Milestones de GitHub con fecha, dejar vacío. -->
 -
 -
+-
 
 ## Equipo
-<!-- Una línea por persona: @usuario-github · Rol -->
-- @ ·
+<!-- Una línea por persona -->
+- Nombre Apellido · @usuario-github · Rol
 
 ## Hitos
-<!-- Una línea por hito: AAAA-MM-DD · Versión o título · Descripción -->
+<!-- Una línea por hito -->
 <!-- Si la versión coincide con un release de GitHub, manda esta fecha y descripción. -->
-- AAAA-MM-DD · v0.0.0 ·
-- AAAA-MM-DD · Título ·
+- AAAA-MM-DD · versión/release · Título/Descripción
 `
 
 // Ruta relativa a Project-<PREFIJO>/ -> contenido. El orden es el de la
