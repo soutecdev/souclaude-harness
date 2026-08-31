@@ -7,15 +7,28 @@
 // tiene por que traerlas, y un fallback embebido seria este mismo archivo con
 // un segundo camino que mantener.
 //
+// Excepcion (SHS-M24): OBSERVATORIO.md. Es contenido editorial, no contrato de
+// protocolo, asi que su plantilla canonica SI vive en el Vault
+// (PLANTILLA_OBSERVATORIO) para poder cambiarla sin release del harness; la
+// constante embebida queda solo como fallback para un Vault sin plantilla.
+//
 // Lo que estas constantes fijan no es "contenido de ejemplo" sino el CONTRATO
 // DE FORMATO que el resto del harness ya asume: el frontmatter `kanban-plugin:
 // board` y los NOMBRES EXACTOS de las columnas que leen el hook
 // declarar-milestone.mjs y la skill vault-milestones. Cambiar una columna aca
 // es cambiar el protocolo, no una plantilla.
 //
-// `<PROYECTO>` se reemplaza por el nombre de la carpeta (Project-SHS).
+// `<PROYECTO>` se reemplaza por el nombre de la carpeta (Project-SHS);
+// `{Nombre del Proyecto}` (el marcador de la plantilla canonica del Vault), por
+// el nombre completo del proyecto segun id-registry.md (souclaude-harness).
 
 const MARCA_PROYECTO = /<PROYECTO>/g
+const MARCA_NOMBRE = /\{Nombre del Proyecto\}/g
+
+// Ruta, relativa a la raiz del Vault, de la plantilla canonica de la ficha del
+// Observatorio. La siembra la lee de aca (vault.js) y solo si no existe cae a
+// la constante OBSERVATORIO embebida.
+export const PLANTILLA_OBSERVATORIO = '00-System/templates/OBSERVATORIO.md'
 
 // milestones.md: Backlog / En curso / Hecho. kanban.md agrega En review, que es
 // la unica diferencia entre los dos tableros (docs/vault-guide.md §6).
@@ -65,7 +78,9 @@ const GITKEEP = ''
 // completa y actualiza (release con cambios importantes). No confundir con el
 // README del repo tecnico -- OBS-M6 sincroniza secciones del README hacia el
 // portal, esta ficha es aparte y vive solo en el Vault.
-const OBSERVATORIO = `# Ficha para el Observatorio
+// FALLBACK: la fuente de verdad del formato es PLANTILLA_OBSERVATORIO en el
+// Vault; esta copia solo se usa si el Vault no la tiene (SHS-M24).
+const OBSERVATORIO = `# Ficha para el Observatorio - <PROYECTO>
 
 ## Tagline
 <!-- Una frase: qué es y para quién. Entre 20 y 200 caracteres. -->
@@ -80,21 +95,22 @@ const OBSERVATORIO = `# Ficha para el Observatorio
 <!-- Una razón por viñeta, una frase cada una (3 a 5). -->
 -
 -
+-
 
 ## Próximos pasos
 <!-- Un paso por viñeta. Si el repo usa Milestones de GitHub con fecha, dejar vacío. -->
 -
 -
+-
 
 ## Equipo
-<!-- Una línea por persona: @usuario-github · Rol -->
-- @ ·
+<!-- Una línea por persona -->
+- Nombre Apellido · @usuario-github · Rol
 
 ## Hitos
-<!-- Una línea por hito: AAAA-MM-DD · Versión o título · Descripción -->
+<!-- Una línea por hito -->
 <!-- Si la versión coincide con un release de GitHub, manda esta fecha y descripción. -->
-- AAAA-MM-DD · v0.0.0 ·
-- AAAA-MM-DD · Título ·
+- AAAA-MM-DD · versión/release · Título/Descripción
 `
 
 // Ruta relativa a Project-<PREFIJO>/ -> contenido. El orden es el de la
@@ -108,6 +124,6 @@ export const SEMILLAS_PROYECTO = {
   'OBSERVATORIO.md': OBSERVATORIO,
 }
 
-export function renderSemilla(contenido, proyecto) {
-  return contenido.replace(MARCA_PROYECTO, proyecto)
+export function renderSemilla(contenido, proyecto, nombre = proyecto) {
+  return contenido.replace(MARCA_PROYECTO, proyecto).replace(MARCA_NOMBRE, nombre)
 }
