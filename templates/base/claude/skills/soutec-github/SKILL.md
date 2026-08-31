@@ -197,6 +197,21 @@ idempotente: si el tag ya existe, no falla ni duplica. En repos sin el workflow,
 el agente puede crearlos y pushearlos a mano en el mismo momento. Los releases de
 GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 
+## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
+
+`npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
+plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Dos reglas sobre ella:
+
+- **Al instalar el harness**: si ya tienes contexto del proyecto — por la
+  conversación, el README o el propio código — **rellena la ficha en ese mismo
+  momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
+  Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
+  complete; solo queda vacía cuando de verdad no hay información.
+- **Tras cada release `dev` → `main`**: revisa si necesita actualizarse — tagline,
+  plataforma, resumen, hitos u otra sección que el release cambie de forma
+  relevante. Solo si hubo cambios importantes: editarla y pushear al Vault en el
+  momento. Un release menor sin impacto en la ficha no requiere tocarla.
+
 ## Secretos
 
 Nunca en el repo. `.env.example` sin valores. Si una credencial se expone por accidente:

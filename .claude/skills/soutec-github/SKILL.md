@@ -188,6 +188,13 @@ cambie de forma relevante. Solo si hubo cambios importantes: editarla y pushear 
 Vault en el momento (push directo, sin PR — ver `progress/README.md`). Un release
 menor sin impacto en la ficha no requiere tocarla.
 
+La misma ficha nace al instalar el harness (`npx souclaude` la siembra desde
+`00-System/templates/OBSERVATORIO.md` del Vault). Si al instalar ya tienes contexto
+del proyecto — por la conversación, el README o el propio código — **rellénala en
+ese mismo momento** (tagline, plataforma, resumen, por qué importa, equipo) y
+pushéala al Vault; no la dejes vacía esperando a que el equipo la complete. Solo
+queda vacía cuando de verdad no hay información.
+
 ## Secretos
 
 Nunca en el repo. `.env.example` sin valores. Si una credencial se expone por accidente:
