@@ -100,3 +100,13 @@ git -C "<vault>" pull --rebase && git -C "<vault>" push
   borres la de otro.
 - Si el `pull --rebase` falla dos veces: no insistas — anota
   `vault_skip · motivo` en `history.md` del repo y repórtalo.
+
+## 5. La ficha del Observatorio en los releases
+
+En el Vault también vive `Project-<PREFIJO>/OBSERVATORIO.md`, la ficha pública
+del proyecto. **Tras cada release `dev` → `main` con tag nuevo, el hito del
+release se agrega siempre a su sección "Hitos"** (formato
+`- YYYY-MM-DD · vX.Y.Z · resumen breve`), con push directo al Vault en el
+momento. La regla completa está en la skill `soutec-github` (sección "Ficha del
+Observatorio") — si estás cerrando un milestone que termina en release, verifica
+que el hito haya quedado registrado.
