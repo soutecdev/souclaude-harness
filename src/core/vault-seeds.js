@@ -18,8 +18,9 @@
 // declarar-milestone.mjs y la skill vault-milestones. Cambiar una columna aca
 // es cambiar el protocolo, no una plantilla.
 //
-// `<PROYECTO>` y `{Nombre del Proyecto}` (el marcador de la plantilla canonica
-// del Vault) se reemplazan por el nombre de la carpeta (Project-SHS).
+// `<PROYECTO>` se reemplaza por el nombre de la carpeta (Project-SHS);
+// `{Nombre del Proyecto}` (el marcador de la plantilla canonica del Vault), por
+// el nombre completo del proyecto segun id-registry.md (souclaude-harness).
 
 const MARCA_PROYECTO = /<PROYECTO>/g
 const MARCA_NOMBRE = /\{Nombre del Proyecto\}/g
@@ -122,6 +123,6 @@ export const SEMILLAS_PROYECTO = {
   'OBSERVATORIO.md': OBSERVATORIO,
 }
 
-export function renderSemilla(contenido, proyecto) {
-  return contenido.replace(MARCA_PROYECTO, proyecto).replace(MARCA_NOMBRE, proyecto)
+export function renderSemilla(contenido, proyecto, nombre = proyecto) {
+  return contenido.replace(MARCA_PROYECTO, proyecto).replace(MARCA_NOMBRE, nombre)
 }

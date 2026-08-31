@@ -526,12 +526,18 @@ function escribirSemillasFaltantes(vaultPath, carpeta) {
   // si existe (editable ahi sin release del harness); la constante embebida es
   // solo el fallback para un Vault que todavia no la tiene (SHS-M24).
   const plantillaFicha = readIfExists(path.join(vaultPath, ...PLANTILLA_OBSERVATORIO.split('/')))
+  // {Nombre del Proyecto} se rellena con el nombre completo del registro de
+  // prefijos; si el prefijo no figura (registro ausente o a medio migrar), la
+  // carpeta es el unico nombre disponible.
+  const prefijo = carpeta.slice(PREFIJO_PROYECTO.length).toUpperCase()
+  const nombre =
+    leerRegistroDePrefijos(vaultPath).find((f) => f.prefijo.toUpperCase() === prefijo)?.proyecto ?? carpeta
   const escritos = []
   for (const [rel, contenido] of Object.entries(SEMILLAS_PROYECTO)) {
     const abs = path.join(raiz, ...rel.split('/'))
     if (exists(abs)) continue
     const fuente = rel === 'OBSERVATORIO.md' && plantillaFicha !== null ? plantillaFicha : contenido
-    writeFileLF(abs, renderSemilla(fuente, carpeta))
+    writeFileLF(abs, renderSemilla(fuente, carpeta, nombre))
     escritos.push(rel)
   }
   return escritos

@@ -680,7 +680,8 @@ test('la ficha OBSERVATORIO.md se siembra desde la plantilla del Vault, con el n
   await main(['init', ...YES, '--vault-path', vault, '--vault-seed'], dir)
 
   const ficha = read(vault, 'Project-SHS/OBSERVATORIO.md')
-  assert.ok(ficha.startsWith('# Ficha para el Observatorio - Project-SHS'), 'no se rellano {Nombre del Proyecto}')
+  // El nombre completo sale del registro de prefijos, no de la carpeta.
+  assert.ok(ficha.startsWith('# Ficha para el Observatorio - souclaude-harness'), 'no se rellano {Nombre del Proyecto}')
   assert.ok(ficha.includes('## Tagline personalizada'), 'no se uso la plantilla del Vault')
 })
 
