@@ -4,6 +4,17 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.9.1] — 2026-08-31
+
+### Cambiado
+
+- **Hito de release obligatorio en la ficha `OBSERVATORIO.md` del Vault** (SHS-M24).
+  La skill `soutec-github` ahora exige agregar el hito (`- YYYY-MM-DD · vX.Y.Z ·
+  resumen`) en la sección "Hitos" tras cada merge de release `dev` → `main` con tag
+  nuevo, y actualizar el resto de la ficha cuando se detecte un cambio importante
+  del proyecto, en cualquier momento. La sección queda condicionada a Vault
+  conectado, y `vault-milestones` gana un puente (§5) hacia la regla.
+
 ## [3.9.0] — 2026-08-31
 
 ### Agregado
