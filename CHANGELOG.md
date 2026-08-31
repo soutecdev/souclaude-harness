@@ -4,6 +4,15 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.8.1] — 2026-08-31
+
+### Corregido
+
+- **Security review del PR delegado a un subagente en `soutec-github`** (SHS-M22).
+  La skill ya no corre el security review inline: lo delega a un subagente cuyo
+  resultado vuelve como tool-result explícito, de modo que el agente principal no
+  pierde el hilo y continúa con el push/PR si no hay hallazgos bloqueantes.
+
 ## [3.8.0] — 2026-08-27
 
 ### Agregado
