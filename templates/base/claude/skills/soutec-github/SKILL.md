@@ -211,13 +211,18 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre e
   momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
   Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
   complete; solo queda vacía cuando de verdad no hay información.
-- **Tras cada release `dev` → `main` con tag nuevo**: **agrega siempre el hito**
-  del release en la sección "Hitos" de la ficha, con push directo al Vault en el
-  mismo momento del tag. Formato de la línea:
-  `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del tag y resumen
-  tomado del cambio principal — CHANGELOG o descripción del PR de release). El
-  hito **no es opcional**: todo tag publicado tiene su línea en "Hitos", también
-  los releases menores.
+- **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
+  en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
+  Vault — no esperes al merge: el coordinador mergea en un momento que no
+  controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
+  la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
+  versión propuesta en `package.json` y resumen del cambio principal —
+  CHANGELOG o descripción del PR de release).
+- **Al confirmarse el merge y el tag**: verifica el hito y corrige fecha o
+  resumen si difieren de lo publicado. Si el PR de release se rechaza o se
+  descarta, elimina el hito en la sesión que lo detecte. El hito **no es
+  opcional**: todo tag publicado tiene su línea en "Hitos", también los
+  releases menores.
 - **Cuando detectes un cambio importante del proyecto** — en un release o en
   cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
   próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y
