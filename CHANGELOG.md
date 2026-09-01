@@ -4,6 +4,16 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+### Cambiado
+
+- **El hito de release en `OBSERVATORIO.md` se escribe al abrir el PR de release**
+  (SHS-M24). La skill `soutec-github` (copia local y distribuida) pasa a un esquema
+  en dos toques: el hito se agrega al abrir el PR `dev` → `main` (fecha del día +
+  versión propuesta en `package.json`) y se verifica/corrige al confirmarse el
+  merge y el tag, eliminándolo si el PR se descarta. Escribirlo solo tras el merge
+  dependía de que la sesión siguiera viva cuando el coordinador mergeara. El
+  puente de `vault-milestones` (§5) se alinea al nuevo momento.
+
 ## [3.9.1] — 2026-08-31
 
 ### Cambiado
