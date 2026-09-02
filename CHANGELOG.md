@@ -4,6 +4,8 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.9.2] — 2026-09-02
+
 ### Cambiado
 
 - **El hito de release en `OBSERVATORIO.md` se escribe al abrir el PR de release**
