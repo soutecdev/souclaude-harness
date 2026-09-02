@@ -1,5 +1,5 @@
 {
-  "harnessVersion": "3.9.1",
+  "harnessVersion": "3.9.2",
   "vault": {
     "repo": "https://github.com/ialvarezsoutec/soubunker-vault.git"
   },
