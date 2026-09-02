@@ -1,6 +1,6 @@
 {
   "name": "souclaude-harness",
-  "version": "3.9.1",
+  "version": "3.9.2",
   "description": "CLI para inicializar y migrar el harness de Claude Code de SOUTEC",
   "type": "module",
   "bin": {
