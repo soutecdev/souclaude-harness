@@ -171,6 +171,13 @@ guía intacto, casilla de versión sin marcar): la descripción queda bien desde
 Si piden correcciones: **pushear a la misma rama.** El PR se actualiza solo. Crear un
 PR nuevo por cada corrección rompe la trazabilidad y duplica el ruido.
 
+**Al editar el body de un PR a pedido del usuario, re-lanza en el mismo paso los jobs
+de CI fallidos de ese PR.** Cambiar la descripción no re-dispara CI, y un PR suele
+arrastrar checks en rojo por fallos transitorios que conviene reintentar. Detecta los
+fallidos con `gh pr checks <pr>` y relánzalos con `gh run rerun <run-id> --failed` —
+solo los jobs en estado `failure`, no el run completo. Si no hay jobs fallidos, edita
+el body y no hagas nada más: no re-corras lo que ya está en verde ni informes de sobra.
+
 Integración: **squash & merge**, y la hace el coordinador. Para un `refactor/` grande o
 una migración, el coordinador puede optar por merge commit y lo registra en el PR.
 
