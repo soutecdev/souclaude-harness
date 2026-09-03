@@ -30,9 +30,9 @@ Estas no se negocian, ni siquiera en un hotfix.
   `feature/REA-123-captura-lead`); si no lo hay, el slug solo. **No inventes IDs.**
 - **Nunca crear repositorios.** Eso es del coordinador. Los **tags de versión**
   (`vX.Y.Z` y el tag móvil por major) los crea el workflow `tag-release.yml` al
-  mergear el PR de release `dev` → `main` (SHS-M19); si el repo no tiene ese
-  workflow instalado, el agente puede crearlos a mano en su lugar, únicamente al
-  publicar y después del merge.
+  mergear el PR de release `dev` → `main`; en repos sin ese workflow instalado, el
+  agente puede crearlos a mano en su lugar, únicamente al publicar y después del
+  merge.
 - **Un hotfix NO es un bypass.** Aun en máxima criticidad: rama + Pull Request.
 
 ## Antes de tocar código
@@ -136,12 +136,26 @@ Antes de pedir revisión:
 - El README está actualizado si aplica.
 - El PR indica si requiere versión/release.
 
-**Antes de abrir el PR, correr la skill nativa `/security-review`** sobre el cambio y
-documentar los hallazgos en la sección "Security review" de la plantilla del PR. Si
-`/security-review` encuentra vulnerabilidades: **parar y preguntar al usuario** si
-quiere remediarlas antes de continuar con el PR. No abrir el PR con hallazgos sin
-remediar salvo que el usuario decida explícitamente continuar así — en ese caso,
-dejarlo registrado en el PR.
+**Antes de abrir el PR, delegar el security review a un subagente** (`Agent`, tipo
+`general-purpose`) en vez de correr `/security-review` inline. Instrúyelo a fondo:
+que corra `/security-review` sobre el diff de la rama y devuelva los hallazgos
+(o la ausencia de ellos) en un resumen claro. Mientras corre, el agente principal
+puede seguir armando el resto del PR (plantilla, checklist).
+
+Esto no es un capricho de estilo: correr el review en el mismo hilo hace que, tras
+un volcado largo de resultados, el agente principal pierda el hilo y no retome el
+PR. Delegarlo a un subagente convierte el resultado en un tool-result concreto que
+exige una reacción explícita — no una instrucción de prosa que se puede diluir.
+
+Al recibir el resultado del subagente:
+- **Documentar** los hallazgos (o su ausencia) en la sección "Security review" de
+  la plantilla del PR.
+- **Sin hallazgos bloqueantes**: seguir directo con push/PR. El security review es
+  un paso intermedio del mismo pedido, no un punto de checkpoint.
+- **Con hallazgos bloqueantes**: parar y preguntar al usuario si quiere remediarlos
+  antes de continuar. No abrir el PR con hallazgos sin remediar salvo que el
+  usuario decida explícitamente continuar así — en ese caso, dejarlo registrado
+  en el PR.
 
 **Completa `.github/pull_request_template.md` de verdad.** Checkboxes tildadas porque
 se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, se
@@ -150,12 +164,19 @@ se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, s
 **La plantilla no se aplica sola al abrir el PR por CLI.** Solo la web de GitHub la
 precarga; `gh pr create` deja el cuerpo que le pases y nada más. El flujo correcto:
 escribir la plantilla ya completada en un archivo temporal y abrir el PR con
-`gh pr create --body-file <archivo>`. Un PR con la plantilla cruda o incompleta
-**falla el check `reglas-pr` de CI** (secciones con el texto guía intacto, casilla
-de versión sin marcar), así que la descripción tiene que quedar bien desde el alta.
+`gh pr create --body-file <archivo>`. En repos con el check `reglas-pr` en CI, un
+PR con la plantilla cruda o incompleta **falla el check** (secciones con el texto
+guía intacto, casilla de versión sin marcar): la descripción queda bien desde el alta.
 
 Si piden correcciones: **pushear a la misma rama.** El PR se actualiza solo. Crear un
 PR nuevo por cada corrección rompe la trazabilidad y duplica el ruido.
+
+**Al editar el body de un PR a pedido del usuario, re-lanza en el mismo paso los jobs
+de CI fallidos de ese PR.** Cambiar la descripción no re-dispara CI, y un PR suele
+arrastrar checks en rojo por fallos transitorios que conviene reintentar. Detecta los
+fallidos con `gh pr checks <pr>` y relánzalos con `gh run rerun <run-id> --failed` —
+solo los jobs en estado `failure`, no el run completo. Si no hay jobs fallidos, edita
+el body y no hagas nada más: no re-corras lo que ya está en verde ni informes de sobra.
 
 Integración: **squash & merge**, y la hace el coordinador. Para un `refactor/` grande o
 una migración, el coordinador puede optar por merge commit y lo registra en el PR.
@@ -176,43 +197,45 @@ SemVer con prefijo `v`: `v1.2.3`.
 | Cambio incompatible | MAJOR · `v1.1.0 → v2.0.0` |
 
 El desarrollador **propone** la versión editando `version` en `package.json` como
-parte del PR de release. Tras el merge `dev` → `main`, el workflow `tag-release.yml`
-lee esa versión del commit de merge y crea/pushea el tag inmutable `vX.Y.Z` y el
-tag móvil de la serie (`v3`) — es idempotente: si el tag ya existe, no falla ni
-duplica. Los releases de GitHub siguen siendo del coordinador; el workflow no los
-crea.
+parte del PR de release. Tras el merge `dev` → `main`, en repos con el workflow
+`tag-release.yml` instalado, este lee esa versión del commit de merge y
+crea/pushea el tag inmutable `vX.Y.Z` y el tag móvil de la serie (`v3`) — es
+idempotente: si el tag ya existe, no falla ni duplica. En repos sin el workflow,
+el agente puede crearlos y pushearlos a mano en el mismo momento. Los releases de
+GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 
-El hito de release en la sección "Hitos" de `Project-<PREFIJO>/OBSERVATORIO.md`
-del Vault se maneja en dos toques, con push directo al Vault en cada uno (sin
-PR — ver `progress/README.md`):
+## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
 
-1. **Al abrir el PR de release `dev` → `main`, agrega el hito en ese mismo
-   momento** — no esperes al merge: el coordinador mergea en un momento que no
-   controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
-   la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
-   versión propuesta en `package.json` y resumen del cambio principal —
-   CHANGELOG o descripción del PR de release).
-2. **Al confirmarse el merge y el tag**, verifica el hito y corrige fecha o
-   resumen si difieren de lo publicado. Si el PR de release se rechaza o se
-   descarta, elimina el hito en la sesión que lo detecte.
+**Esta sección aplica solo si el repo tiene el Vault conectado**
+(`.claude/vault.local.json` existe y apunta a un Vault válido). Sin Vault no hay
+ficha y no hay nada que mantener.
 
-El hito **no es opcional**: todo tag publicado tiene su línea en "Hitos", también
-los releases menores.
+`npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
+plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre ella:
 
-Además, cuando detectes un cambio importante del proyecto — en
-un release o en cualquier otro momento: alcance, plataforma, resumen, por qué
-importa, equipo o próximos pasos que ya no reflejan la realidad — actualiza la
-sección afectada y pushea al Vault en el momento; la ficha se mantiene al día
-cuando el proyecto cambia de verdad, no solo al taggear. Los cambios menores sin
-impacto en la ficha no requieren tocarla. (Aplica solo con Vault conectado —
-`.claude/vault.local.json`; sin Vault no hay ficha.)
-
-La misma ficha nace al instalar el harness (`npx souclaude` la siembra desde
-`00-System/templates/OBSERVATORIO.md` del Vault). Si al instalar ya tienes contexto
-del proyecto — por la conversación, el README o el propio código — **rellénala en
-ese mismo momento** (tagline, plataforma, resumen, por qué importa, equipo) y
-pushéala al Vault; no la dejes vacía esperando a que el equipo la complete. Solo
-queda vacía cuando de verdad no hay información.
+- **Al instalar el harness**: si ya tienes contexto del proyecto — por la
+  conversación, el README o el propio código — **rellena la ficha en ese mismo
+  momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
+  Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
+  complete; solo queda vacía cuando de verdad no hay información.
+- **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
+  en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
+  Vault — no esperes al merge: el coordinador mergea en un momento que no
+  controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
+  la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
+  versión propuesta en `package.json` y resumen del cambio principal —
+  CHANGELOG o descripción del PR de release).
+- **Al confirmarse el merge y el tag**: verifica el hito y corrige fecha o
+  resumen si difieren de lo publicado. Si el PR de release se rechaza o se
+  descarta, elimina el hito en la sesión que lo detecte. El hito **no es
+  opcional**: todo tag publicado tiene su línea en "Hitos", también los
+  releases menores.
+- **Cuando detectes un cambio importante del proyecto** — en un release o en
+  cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
+  próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y
+  pushea al Vault en el momento. La ficha no se revisa solo al taggear: se
+  mantiene al día cuando el proyecto cambia de verdad. Los cambios menores sin
+  impacto en la ficha no requieren tocarla.
 
 ## Secretos
 
