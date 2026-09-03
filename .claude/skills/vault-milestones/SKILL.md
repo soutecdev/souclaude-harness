@@ -26,6 +26,32 @@ alcance de la tarjeta.
 3. Lee `Project-<PREFIJO>/milestones.md`, `kanban.md`, `plans/` y `sessions.md`.
    El milestone dice el claim; el kanban y las sesiones dicen la verdad.
 
+## 0-bis. Pedido "milestones pendientes" — reconciliar y responder corto
+
+Cuando el usuario pida los **milestones pendientes** (o "qué falta", "qué sigue",
+"qué hay abierto"), el flujo por defecto es:
+
+1. **Reconciliar primero**: revisa cuáles ya están cerrados —tareas con PR
+   mergeado o entregable a la vista— y muévelos a **Hecho** en `kanban.md` y
+   `milestones.md`, con push al Vault en el momento (§4) y espejo en Jira. Cerrar
+   lo terminado es parte del pedido, no un paso opcional. Respeta la regla dura:
+   una tarjeta En curso de **otro dueño u otra máquina** no se cierra sin
+   preguntar.
+2. **Responder corto**: devuelve solo **Backlog (sin iniciar)** y **En curso**,
+   una línea por milestone (`<ID>: descripción breve`). Nada de Hecho, tablas ni
+   diagnóstico salvo que el usuario lo pida. Formato:
+
+   ```
+   Backlog (sin iniciar):
+   <ID>: descripción
+
+   En curso:
+   <ID>: descripción
+   ```
+
+El análisis completo de §1 queda para cuando el usuario pida "analizar",
+"auditar" o "revisar a fondo" el tablero.
+
 ## 1. Análisis — qué mirar
 
 Reporta el estado en tres capas, de la foto al diagnóstico:
