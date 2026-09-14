@@ -1,6 +1,6 @@
 ---
 name: soutec-github
-description: Flujo Git/GitHub obligatorio de SOUTEC (Guía Operativa v2.0). Aplicar SIEMPRE antes de crear una rama, commitear, pushear o abrir un Pull Request en un repo de SOUTEC. Cubre nombres de rama tipo/ID-tarea, commits Conventional Commits, la plantilla obligatoria de PR, squash & merge, semver vX.Y.Z y las reglas de secretos.
+description: Flujo Git/GitHub obligatorio de SOUTEC (Guía Operativa v2.0). Aplicar SIEMPRE antes de crear una rama, commitear, pushear o abrir un Pull Request en un repo de SOUTEC. Cubre nombres de rama tipo/ID-milestone (una rama por milestone, no por tarea), commits Conventional Commits, la plantilla obligatoria de PR, squash & merge, semver vX.Y.Z y las reglas de secretos.
 ---
 
 # SOUTEC — Git & GitHub
@@ -25,9 +25,12 @@ Estas no se negocian, ni siquiera en un hotfix.
 - **Nunca commitear secretos**: `.env`, `*.pem`, `*.key`, `*.pfx`, `credentials.json`,
   `secrets.json`, tokens, contraseñas, llaves privadas.
 - **Nunca crear una rama sin nombre descriptivo.** Formato `tipo/descripcion-corta`. Si
-  el trabajo tiene un ID rastreable — tarea o milestone del Vault, o tarea de un
-  tracker externo — va como prefijo del slug (`feature/SHS-M7-T006-playbook-adopcion`,
+  el trabajo tiene un ID rastreable — milestone del Vault, o tarea de un tracker
+  externo — va como prefijo del slug (`feature/M7-playbook-adopcion`,
   `feature/REA-123-captura-lead`); si no lo hay, el slug solo. **No inventes IDs.**
+- **Una rama por milestone, no por tarea.** Las tareas del kanban del Vault son
+  commits en la rama de su milestone; el ID `-T<nnn>` nunca va en el nombre de la
+  rama. Ver "Ciclo de vida de la rama del milestone".
 - **Nunca crear repositorios.** Eso es del coordinador. Los **tags de versión**
   (`vX.Y.Z` y el tag móvil por major) los crea el workflow `tag-release.yml` al
   mergear el PR de release `dev` → `main`; en repos sin ese workflow instalado, el
@@ -51,12 +54,43 @@ Chequeo previo: ¿leíste el README? ¿tienes el `.env` local configurado?
 tipo/descripcion-corta          # o tipo/ID-descripcion-corta si hay ID rastreable
 ```
 
-El **ID** va en mayúsculas como prefijo del slug y puede ser cualquiera de estos
-(en orden de preferencia — usa el más específico que exista, y **no inventes IDs**):
+El **ID** va en mayúsculas como prefijo del slug y es uno de estos (**no inventes
+IDs**):
 
-- **Tarea del Vault**: `feature/SHS-M7-T006-playbook-adopcion`
-- **Milestone del Vault** (si aún no hay tarea desglosada): `fix/SHS-M10-chequeo-gh`
-- **Tracker externo**: `feature/REA-123-captura-lead`
+- **Milestone del Vault** (el caso normal con Vault conectado):
+  `feature/M7-playbook-adopcion`. **Una rama por milestone**; las tareas del
+  milestone (`SHS-M7-T001`, `T002`, ...) se hacen como commits en esa rama. El ID
+  de tarea `-T<nnn>` **nunca** va en el nombre de la rama. La **clave del proyecto
+  tampoco** (`M7-`, no `SHS-M7-`): el repo ya pertenece a un solo proyecto del
+  Vault (`project` en `.claude/vault.local.json`), y el monitor la completa solo
+  al inferir el milestone. El número de milestone va en mayúscula (`M7`).
+- **Tracker externo** (sin Vault): `feature/REA-123-captura-lead`
+- **Sin ID rastreable**: `feature/captura-lead`
+
+## Ciclo de vida de la rama del milestone
+
+Con Vault conectado, la rama y el milestone viven juntos:
+
+1. **Nace de `dev` al tomar el milestone** (tarjeta a En curso en `milestones.md`),
+   con el nombre `tipo/M<n>-slug`. Anota la rama en la tarjeta del
+   milestone.
+2. **Cada tarea terminada son commits pusheados a esa rama.** Al pushear, la
+   tarjeta de la tarea pasa a **Hecho** en `kanban.md` en ese momento (push
+   inmediato al Vault, espejo en la skill de sincronización instalada). No hace
+   falta esperar a que el PR se mergee. `En review` queda para las tareas que el
+   usuario quiera dejar gateadas por un PR concreto (ahí sí se anota `PR #N`).
+3. **PRs parciales admitidos.** Desde la misma rama se abren tantos PRs a `dev`
+   como el usuario pida (uno abierto a la vez); cada PR lista en su descripción las
+   tareas que cubre. Tras el squash & merge de un PR parcial, **se sigue en la misma
+   rama**: `git fetch origin && git merge origin/dev` (mergea limpio: los cambios
+   ya integrados son idénticos a ambos lados) y a continuar. Nunca borres ni
+   recrees la rama entre PRs parciales, y nunca `push --force`.
+4. **El milestone se cierra** cuando todas sus tareas están en Hecho y el último PR
+   está mergeado: tarjeta a Hecho en `milestones.md` y recién ahí se borra la rama
+   (`git branch -d`).
+
+Si un milestone resulta demasiado grande para una rama, la solución es dividir el
+milestone (skill `vault-milestones`), no abrir ramas por tarea.
 
 | Tipo | Uso |
 |---|---|
@@ -85,8 +119,10 @@ una persona.
 tipo: descripción breve del cambio
 ```
 
-Sin scope. Sin ID de tarea en el mensaje (el ID va en la rama y en el PR).
-Descripciones en español.
+Sin scope. Sin ID en el título del commit (el ID del milestone va en la rama y en
+el PR). Si quieres dejar rastro de qué tarea del kanban cierra un commit, ponlo en
+el **cuerpo** del mensaje (`Cierra SHS-M7-T003`), nunca en el título. Descripciones
+en español.
 
 | | | |
 |---|---|---|
@@ -157,7 +193,9 @@ Al recibir el resultado del subagente:
   usuario decida explícitamente continuar así — en ese caso, dejarlo registrado
   en el PR.
 
-**Completa `.github/pull_request_template.md` de verdad.** Checkboxes tildadas porque
+**Completa `.github/pull_request_template.md` de verdad.** Un PR cubre una o varias
+tareas del milestone de la rama: en "Milestone y tareas relacionadas" van el ID del
+milestone y la lista de tareas que este PR integra. Checkboxes tildadas porque
 se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, se
 **omite entera** (título incluido), no se deja con "N/A" ni vacía.
 
@@ -181,7 +219,13 @@ el body y no hagas nada más: no re-corras lo que ya está en verde ni informes 
 Integración: **squash & merge**, y la hace el coordinador. Para un `refactor/` grande o
 una migración, el coordinador puede optar por merge commit y lo registra en el PR.
 
-Después del merge (esto sí lo puedes hacer):
+Después del merge de un **PR parcial** (el milestone sigue abierto), quédate en la
+rama y sincronízala:
+```bash
+git fetch origin && git merge origin/dev
+```
+
+Después del merge del **último PR** del milestone (esto sí lo puedes hacer):
 ```bash
 git checkout dev && git pull origin dev && git branch -d <tu-rama>
 ```
@@ -199,12 +243,12 @@ SemVer con prefijo `v`: `v1.2.3`.
 El desarrollador **propone** la versión editando `version` en `package.json` como
 parte del PR de release. Ese bump se commitea **directo en `dev`** — nunca en una
 rama `chore` aparte solo para el bump; el PR de release `dev` → `main` ya lo lleva.
-Tras el merge `dev` → `main`, en repos con el workflow `tag-release.yml` instalado,
-este lee esa versión del commit de merge y crea/pushea el tag inmutable `vX.Y.Z` y
-el tag móvil de la serie (`v3`) — es idempotente: si el tag ya existe, no falla ni
-duplica. En repos sin el workflow, el agente puede crearlos y pushearlos a mano en
-el mismo momento. Los releases de GitHub siguen siendo del coordinador; ni el
-workflow ni el agente los crean.
+Tras el merge `dev` → `main`, en repos con el workflow
+`tag-release.yml` instalado, este lee esa versión del commit de merge y
+crea/pushea el tag inmutable `vX.Y.Z` y el tag móvil de la serie (`v3`) — es
+idempotente: si el tag ya existe, no falla ni duplica. En repos sin el workflow,
+el agente puede crearlos y pushearlos a mano en el mismo momento. Los releases de
+GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 
 ## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
 

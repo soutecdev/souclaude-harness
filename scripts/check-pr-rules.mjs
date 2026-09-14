@@ -17,12 +17,15 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
-// El prefijo opcional en mayusculas es el ID de tarea del tracker que la skill
-// exige anteponer al slug (feature/REA-123-captura-lead, feature/SHS-M4-T001-...).
+// El prefijo opcional en mayusculas es el ID rastreable que la skill exige
+// anteponer al slug: milestone del Vault sin clave de proyecto (feature/M4-playbook,
+// una rama por milestone — la clave la aporta vault.local.json) o tarea de un
+// tracker externo (feature/REA-123-captura-lead). Las ramas viejas con clave
+// (feature/SHS-M4-...) y por tarea (feature/SHS-M4-T001-...) siguen validando.
 // El slug admite puntos ademas de [a-z0-9-]: un bump de version como
 // chore/bump-3.6.0 es un slug legitimo (precedente ya mergeado:
 // feature/SHS-M15-T001-bump-3.5.0) y la skill soutec-github no los prohibe.
-const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+-)?[a-z0-9.-]+$/
+const RAMA_REGEX = /^(feature|fix|hotfix|docs|chore|refactor|experiment)\/(?:(?:M\d+|[A-Z][A-Z0-9]{1,3}(?:-[A-Z0-9]+)+)-)?[a-z0-9.-]+$/
 const RAMA_LISTA_NEGRA = ['cambios', 'prueba', 'final', 'final-final', 'arreglo']
 const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style', 'build', 'ci', 'perf', 'revert']
 // La descripcion puede arrancar en mayuscula: una sigla legitima (PR, API, CI,

@@ -1,8 +1,9 @@
 ## Descripción del cambio
 Explica brevemente qué se cambió y por qué.
 
-## Tarea relacionada
-- ID de tarea o tarjeta del kanban (si aplica):
+## Milestone y tareas relacionadas
+- Milestone del Vault (el de la rama, si aplica):
+- Tareas del kanban que integra este PR:
 
 ## Tipo de cambio
 - [ ] Nueva funcionalidad

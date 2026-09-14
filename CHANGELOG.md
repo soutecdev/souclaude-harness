@@ -4,6 +4,33 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+## [3.12.0] — 2026-09-14
+
+### Cambiado
+
+- **Una rama Git por milestone, no por tarea** (SHS-M31-T001, T002, T003). La skill
+  `soutec-github`, `CLAUDE.md` (local y distribuido), `AGENTS.md`, `progress/README.md`,
+  la skill `vault-milestones` y la plantilla de PR prescriben `tipo/M<n>-slug`:
+  la rama nace de `dev` al tomar el milestone y vive hasta cerrarlo; las tareas del
+  kanban son commits en esa rama y pasan a Hecho al pushear, sin esperar el merge;
+  desde la misma rama se admiten PRs parciales a `dev` (tras cada merge, `git merge
+  origin/dev` y se sigue); `En review` queda opcional para tareas gateadas por un PR
+  concreto. La rama **no lleva la clave del proyecto** (`M31-`, no `SHS-M31-`): el
+  repo ya pertenece a un proyecto del Vault (SHS-M31-T005). `RAMA_REGEX` de
+  `check-pr-rules.mjs` acepta `M<n>-` (las ramas legadas con clave y por tarea siguen
+  validando) y `milestoneDeRama()` del monitor reconstruye `<PREFIJO>-M<n>` con el
+  `project` de `vault.local.json` para `sessions.md`. ADR
+  `docs/decisions/20260912-una-rama-por-milestone.md`.
+
+### Corregido
+
+- **Paridad de permisos git/gh entre la copia distribuida y la local** (SHS-M29-T001).
+  `templates/base/claude/settings.json` declara las mismas reglas `allow`/`ask`/`deny`
+  sobre `git push`/`git merge`/`gh pr merge`/`gh pr review`/`gh release` que
+  `.claude/settings.json` (hallazgo cerrado en 3.11.0). El security review del PR
+  detectó y cerró además un bypass de la protección de `main` por refspec
+  (`git push origin HEAD:main`) en ambas copias.
+
 ## [3.11.0] — 2026-09-08
 
 ### Agregado

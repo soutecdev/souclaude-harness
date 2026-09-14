@@ -8,6 +8,7 @@ import {
   createSessionsPublisher,
   construirLineaDeSesion,
   milestoneDeRama,
+  prefijoDeProyecto,
   sesionesPublicables,
 } from '../src/monitor/adapters/vault-sessions-publisher.js'
 
@@ -109,6 +110,23 @@ test('milestoneDeRama: infiere <PREFIJO>-M<n> y devuelve null sin patron', () =>
   assert.equal(milestoneDeRama('fix/TNP-M12-bug'), 'TNP-M12')
   assert.equal(milestoneDeRama('docs/onboarding'), null)
   assert.equal(milestoneDeRama(null), null)
+})
+
+test('milestoneDeRama: la forma corta M<n> (norma actual) se resuelve con el prefijo del proyecto', () => {
+  assert.equal(milestoneDeRama('feature/M31-rama-por-milestone', 'SHS'), 'SHS-M31')
+  assert.equal(milestoneDeRama('fix/M7-chequeo', 'TNP'), 'TNP-M7')
+  assert.equal(milestoneDeRama('feature/SHS-M1-x', 'TNP'), 'SHS-M1', 'la clave explicita de la rama manda')
+  assert.equal(milestoneDeRama('feature/M31-rama', null), null, 'sin prefijo no se atribuye a un proyecto')
+  assert.equal(milestoneDeRama('feature/m31-rama', 'SHS'), null, 'minusculas no es un ID')
+  assert.equal(milestoneDeRama('feature/M31x-rama', 'SHS'), null)
+  assert.equal(prefijoDeProyecto('Project-SHS'), 'SHS')
+  assert.equal(prefijoDeProyecto('otra-cosa'), null)
+})
+
+test('linea: con proyecto Project-SHS, la rama feature/M31-... publica milestone SHS-M31', () => {
+  const sesion = sesionEjemplo({ rama: 'feature/M31-rama-por-milestone' })
+  const linea = construirLineaDeSesion(sesion, { quien: 'ignacio', maquina: 'PC01', prefijo: 'SHS' })
+  assert.ok(linea.includes(' · feature/M31-rama-por-milestone · SHS-M31 · '), linea)
 })
 
 test('seleccion: sesiones vivas y terminadas del proyecto del cwd (grafias normalizadas), nunca de otro proyecto', () => {

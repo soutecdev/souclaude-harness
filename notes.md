@@ -196,3 +196,13 @@ Próxima sesión con el conector autorizado: NO recrear SHS-57/58/59/60/61/62
 (ya existen, evitar duplicados por idempotencia de summary); solo falta
 crear los dos issues pendientes y transicionar los ocho issues (6 tareas +
 2 épicas) a "Listo".
+
+## 2026-09-12 — SHS-M31: una rama por milestone
+
+La regla "una rama por tarea" no vivía en ningún validador: `RAMA_REGEX` de
+`check-pr-rules.mjs` ya aceptaba `feature/SHS-M7-slug` (el grupo del ID es `+`),
+`milestoneDeRama()` del monitor ya ignoraba el `-T<nnn>`, y el contrato de columnas
+de `vault-seeds.js` no cambió. Fue solo prosa en 4 copias (skill soutec-github,
+CLAUDE.md ×2, AGENTS.md) + progress/README.md + vault-milestones + PR template.
+Gotcha: el test de dogfood no compara contenido local vs templates/base (SHS-M26);
+verificar con `diff` a mano cada par antes de commitear.

@@ -34,9 +34,14 @@ nacen de `dev` y su PR apunta a `dev`; el paso `dev` → `main` es el release, t
 por PR.
 
 - Ramas: `tipo/<slug>` (`feature/captura-lead`). Tipos: `feature` `fix` `hotfix`
-  `docs` `chore` `refactor` `experiment`. Si hay un ID rastreable — tarea o
-  milestone del Vault (`feature/SHS-M7-T006-playbook-adopcion`) o tarea de un
-  tracker externo — va como prefijo del slug, pero **no inventes IDs**.
+  `docs` `chore` `refactor` `experiment`. Si hay un ID rastreable — milestone del
+  Vault (`feature/M7-playbook-adopcion`) o tarea de un tracker externo — va
+  como prefijo del slug, pero **no inventes IDs**.
+- **Una rama por milestone, no por tarea.** La rama nace de `dev` al tomar el
+  milestone y vive hasta cerrarlo; las tareas del kanban son commits en esa rama
+  (el ID `-T<nnn>` nunca va en el nombre de la rama). Desde la misma rama se
+  pueden abrir varios PRs a `dev`; tras cada merge, `git fetch origin && git merge
+  origin/dev` y se sigue en la misma rama.
 - Commits: `tipo: descripción breve` (español, sin scope). Tipos: `feat` `fix` `docs`
   `chore` `refactor` `test` `style` `build` `ci` `perf` `revert`. Un hotfix se commitea
   como `fix:`. Prohibidos: `update`, `cosas`, `ahora sí`.
@@ -79,8 +84,9 @@ La ruta local del Vault está en `.claude/vault.local.json` (la escribe `npx sou
 Antes de empezar a trabajar: `git -C "<vault>" pull --rebase` y lee
 `Project-<PREFIJO>/milestones.md` y `kanban.md`. Si el milestone o la tarea ya está
 **En curso** con otro dueño u otra máquina: **para y pregunta**. Al tomar o cerrar
-algo, mueve la tarjeta y pushea **en ese momento**; al cerrar la sesión, agrega tu
-línea (con tokens) a `sessions.md`. Protocolo completo en `progress/README.md`.
+algo, mueve la tarjeta y pushea **en ese momento**: una tarea pasa a **Hecho** al
+pushear su commit a la rama del milestone, sin esperar el merge del PR; al cerrar
+la sesión, agrega tu línea (con tokens) a `sessions.md`. Protocolo completo en `progress/README.md`.
 **Nunca `git push --force`, en ninguno de los dos.**
 
 ## Language

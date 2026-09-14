@@ -56,7 +56,10 @@ mantiene la capa de rocas, la opera un humano.
 | Sesión | línea en `sessions.md` | — | ¿Quién trabajó, cuándo, sobre qué milestone y cuántos tokens costó? |
 
 El **milestone** es la unidad de anti-solapamiento entre máquinas: su tarjeta lleva
-dueño **y máquina** (`@nacho · PC01`). La **tarea** es la unidad de trabajo del día.
+dueño **y máquina** (`@nacho · PC01`). Es también la **unidad de rama Git**: una rama
+`tipo/M<n>-slug` por milestone, desde la que salen uno o más PRs a `dev`.
+La **tarea** es la unidad de trabajo del día — uno o pocos commits en la rama de su
+milestone, nunca una rama propia — y pasa a Hecho al pushear su commit.
 La **sesión** es la unidad de consumo.
 
 ### `00-System/id-registry.md` — la autoridad de prefijos
@@ -113,7 +116,10 @@ en el `progress/README.md` de cada repo (lo instala el harness y lo mantiene
 
 **Formato de los tableros**: compatible con el plugin **Kanban de Obsidian** —
 frontmatter `kanban-plugin: board`, una tarjeta = una línea. `milestones.md` usa
-columnas Backlog / En curso / Hecho; `kanban.md` agrega En review.
+columnas Backlog / En curso / Hecho; `kanban.md` agrega En review, que es opcional:
+una tarea normal va de En curso a Hecho al pushear su commit a la rama del milestone,
+y En review se reserva para tareas que se quieran dejar gateadas por un PR concreto
+(anotando `PR #N` en la tarjeta).
 
 **Cómo llegan los agentes**: cada repo guarda la ruta local del Vault en
 `.claude/vault.local.json`, que escribe el instalador (`npx souclaude`) y está

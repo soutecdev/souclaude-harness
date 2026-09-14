@@ -31,8 +31,9 @@ alcance de la tarjeta.
 Cuando el usuario pida los **milestones pendientes** (o "qué falta", "qué sigue",
 "qué hay abierto"), el flujo por defecto es:
 
-1. **Reconciliar primero**: revisa cuáles ya están cerrados —tareas con PR
-   mergeado o entregable a la vista— y muévelos a **Hecho** en `kanban.md` y
+1. **Reconciliar primero**: revisa cuáles ya están cerrados —tareas con su
+   commit ya pusheado a la rama del milestone, PR mergeado o entregable a la
+   vista— y muévelos a **Hecho** en `kanban.md` y
    `milestones.md`, con push al Vault en el momento (§4) y espejo en Jira. Cerrar
    lo terminado es parte del pedido, no un paso opcional. Respeta la regla dura:
    una tarjeta En curso de **otro dueño u otra máquina** no se cierra sin
@@ -85,8 +86,13 @@ Cuando el usuario acepte cambios (o los pida directamente):
 - **Re-secuenciar** el Backlog: reordenar líneas dentro de la columna es libre —
   el orden del Backlog es la propuesta de secuencia.
 - **Cerrar**: un milestone pasa a Hecho solo si sus tareas en `kanban.md` están
-  cerradas y el resultado está a la vista (PR mergeado, entregable publicado).
-  Marca `[x]` y deja la tarjeta con su dueño final.
+  cerradas y el resultado está a la vista (el último PR de la rama del milestone
+  mergeado, entregable publicado). Marca `[x]` y deja la tarjeta con su dueño
+  final; recién entonces se borra la rama del milestone.
+- **Tomar**: al pasar un milestone a En curso se crea su rama
+  `tipo/M<n>-slug` desde `dev` (skill `soutec-github`) y se anota en la
+  tarjeta (`rama feature/...`); cada PR que salga de ella se suma a la tarjeta
+  (`PR #N`). Las tareas no tienen rama propia: son commits en la del milestone.
 - **Cambio de plan** (P1 fracasó → P2): el plan viejo **no se borra** de
   `plans/`; se espeja el nuevo y la tarjeta del milestone pasa a apuntar a él.
 - **Regla dura**: una tarjeta En curso con **otro dueño u otra máquina** no se

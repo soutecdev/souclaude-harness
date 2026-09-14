@@ -40,10 +40,28 @@ const RETENCION_REGISTRO_MS = 45 * 24 * 60 * 60_000
 
 const LARGO_MAX_RESULTADO = 80
 
-/** Milestone `<PREFIJO>-M<n>` inferido del nombre de la rama, o null. */
-export function milestoneDeRama(rama) {
+/**
+ * Milestone `<PREFIJO>-M<n>` inferido del nombre de la rama, o null.
+ *
+ * La norma (skill soutec-github) es `tipo/M<n>-slug`, SIN la clave del
+ * proyecto: el repo ya pertenece a un solo proyecto del Vault, asi que la clave
+ * la aporta `prefijo` (carpeta Project-<PREFIJO> declarada en vault.local.json).
+ * Las ramas viejas `tipo/<PREFIJO>-M<n>-...` siguen resolviendo sin prefijo.
+ * Sin prefijo, una rama corta `M<n>` no se puede atribuir a un proyecto: null.
+ */
+export function milestoneDeRama(rama, prefijo = null) {
   if (typeof rama !== 'string') return null
-  const m = rama.match(/([A-Z][A-Z0-9]*-M\d+)/)
+  const largo = rama.match(/([A-Z][A-Z0-9]*-M\d+)/)
+  if (largo) return largo[1]
+  if (typeof prefijo !== 'string' || prefijo === '') return null
+  const corto = rama.match(/(?:^|[/-])M(\d+)(?=-|$)/)
+  return corto ? `${prefijo}-M${corto[1]}` : null
+}
+
+/** `SHS` a partir de la carpeta `Project-SHS`; null si no tiene esa forma. */
+export function prefijoDeProyecto(proyecto) {
+  if (typeof proyecto !== 'string') return null
+  const m = proyecto.match(/^Project-([A-Z][A-Z0-9]*)$/)
   return m ? m[1] : null
 }
 
@@ -53,7 +71,7 @@ export function milestoneDeRama(rama) {
  *   - fecha · rama-o-sesion · milestone · @quien · maquina · in Xk / out Yk · resultado
  * null si la sesion no consumio nada: una linea de puro cero no registra trabajo.
  */
-export function construirLineaDeSesion(sesion, { quien, maquina } = {}) {
+export function construirLineaDeSesion(sesion, { quien, maquina, prefijo = null } = {}) {
   const consumo = sesion?.consumo ?? null
   if (!consumo) return null
   const tokensIn = (consumo.entrada ?? 0) + (consumo.cacheCreacion ?? 0) + (consumo.cacheLectura ?? 0)
@@ -62,7 +80,7 @@ export function construirLineaDeSesion(sesion, { quien, maquina } = {}) {
 
   const fecha = new Date(sesion.ultimoTs ?? Date.now()).toISOString().slice(0, 10)
   const rama = sanearCampo(sesion.rama) ?? (sesion.sessionId ? sesion.sessionId.slice(0, 8) : 'n/d')
-  const milestone = milestoneDeRama(rama) ?? 'n/d'
+  const milestone = milestoneDeRama(rama, prefijo) ?? 'n/d'
   const autor = sanearCampo(quien) ?? sanearCampo(sesion.cuentaAlias) ?? 'n/d'
   const resultado = sanearResultado(sesion.titulo)
 
@@ -137,6 +155,9 @@ export function createSessionsPublisher({
   hostname = null,
 } = {}) {
   const host = hostname ?? leerHostname()
+  // La rama de la norma es `tipo/M<n>-slug`, sin clave de proyecto: la clave
+  // sale de la carpeta Project-<PREFIJO> a la que este publisher escribe.
+  const prefijo = prefijoDeProyecto(proyecto)
 
   let enPublicacion = false
   let ultimoIntentoMs = null
@@ -192,7 +213,7 @@ export function createSessionsPublisher({
     secretoDetectado = false
 
     for (const sesion of sesionesPublicables(vista, cwdProyecto)) {
-      const linea = construirLineaDeSesion(sesion, { quien, maquina: host })
+      const linea = construirLineaDeSesion(sesion, { quien, maquina: host, prefijo })
       if (!linea) continue
 
       const previa = registro.sesiones[sesion.sessionId] ?? null

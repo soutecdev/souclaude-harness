@@ -215,7 +215,7 @@ verifica idempotencia antes de crear issues. Cierra con la línea de sesión en
 sessions.md.
 ```
 
-**Debe quedar:** milestone `{{PREFIJO}}-M1` En curso con plan `P1` y tareas `{{PREFIJO}}-M1-T00n`; los issues correspondientes en Jira con la etiqueta del milestone; y la línea de sesión registrada.
+**Debe quedar:** milestone `{{PREFIJO}}-M1` En curso con plan `P1`, su rama `feature/M1-<slug>` creada desde `dev` (una rama por milestone; las tareas son commits en ella) y tareas `{{PREFIJO}}-M1-T00n`; los issues correspondientes en Jira con la etiqueta del milestone; y la línea de sesión registrada.
 
 > **Cómo se ve el milestone en Jira.** Desde SHS-M7-T005, cada milestone tiene su **tarjeta madre**: un issue propio (labels `<PREFIJO>-M<n>` + `milestone`) con la descripción del milestone, y sus tareas vinculadas con "relates to". Un milestone sin tareas igualmente aparece en Jira como su tarjeta madre en To Do.
 

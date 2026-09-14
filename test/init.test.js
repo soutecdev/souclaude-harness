@@ -175,7 +175,7 @@ test('se emiten los archivos obligatorios de Fase 1 de la guia Git', async () =>
 
   assert.ok(has(dir, '.github/pull_request_template.md'))
   assert.ok(has(dir, '.github/CODEOWNERS'))
-  assert.ok(read(dir, '.github/pull_request_template.md').includes('ID de tarea'))
+  assert.ok(read(dir, '.github/pull_request_template.md').includes('Milestone y tareas relacionadas'))
 
   // La skill SOUTEC obligatoria.
   assert.ok(has(dir, '.claude/skills/soutec-github/SKILL.md'))

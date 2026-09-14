@@ -46,7 +46,10 @@ Project-<PREFIJO>/
 **Jerarquía**: un proyecto tiene una lista de **milestones** (`<PREFIJO>-M<n>`); cada
 milestone puede tener uno o más **planes** (`<PREFIJO>-M<n>-P<n>`) para llegar al
 objetivo; cada plan se ejecuta como **tareas** en el kanban. El milestone es la unidad
-de anti-solapamiento entre máquinas; la tarea es la unidad de trabajo del día.
+de anti-solapamiento entre máquinas **y la unidad de rama Git** (una rama
+`tipo/M<n>-slug` por milestone, desde la que salen uno o más PRs a `dev`);
+la tarea es la unidad de trabajo del día: uno o pocos commits en la rama del
+milestone, nunca una rama propia.
 
 **Formato de los tableros** (`milestones.md` y `kanban.md`, compatible con el plugin
 Kanban de Obsidian — una tarjeta = una línea):
@@ -70,9 +73,14 @@ kanban-plugin: board
 ```
 
 En `milestones.md` la tarjeta lleva **dueño y máquina** (`@quién · <máquina>`) y el
-plan activo si lo hay. En `kanban.md` las tarjetas son tareas
-(`TNP-M2-T004 · qué · @quién`) y usan las columnas Backlog / En curso / En review /
-Hecho.
+plan activo si lo hay, y conviene anotar la rama del milestone (`rama
+feature/M2-integracion-odoo`) y cada PR que salga de ella (`PR #18`). En
+`kanban.md` las tarjetas son tareas (`TNP-M2-T004 · qué · @quién`) y usan las
+columnas Backlog / En curso / En review / Hecho. Una tarea pasa a **Hecho al
+pushear su commit a la rama del milestone**, sin esperar el merge del PR. `En
+review` es opcional: se usa solo cuando el usuario quiere dejar una tarea gateada
+por un PR concreto — ahí la tarjeta anota `PR #N` y el hook de sesión del harness
+avisa cuando ese PR ya está mergeado y la tarjeta sigue sin cerrar.
 
 **Los planes** se espejan a `plans/` como archivos Markdown al momento de adoptarlos
 (qué se va a hacer, en qué orden, con qué criterio de éxito). No se editan en el
@@ -137,8 +145,10 @@ git -C "<vault>" pull --rebase && git -C "<vault>" push
 pull → push) de forma segura desde el CLI.
 
 **Durante el trabajo**, el flujo constante es: adoptar un plan → espejarlo a `plans/`
-y anotarlo en la tarjeta del milestone → mover tareas en `kanban.md` a medida que
-cambian de estado. Cada movimiento se pushea al momento. Si la skill `jira-sync`
+y anotarlo en la tarjeta del milestone → crear la rama del milestone desde `dev` →
+por cada tarea: commits en esa rama, push, y la tarjeta a Hecho en `kanban.md` →
+PR(s) a `dev` cuando el usuario lo pida (tras cada merge parcial, `git merge
+origin/dev` y se sigue en la misma rama). Cada movimiento se pushea al momento. Si la skill `jira-sync`
 está instalada, cada movimiento de tarjeta se espeja además en Jira **en ese mismo
 momento** (Vault primero, Jira después); sin conector autorizado, se reporta y el
 trabajo local sigue. Convención de commits del
@@ -151,7 +161,7 @@ Vault: `chore:` para movimientos de tableros, `docs:` para planes y espejos.
 línea al final** de `Project-<PREFIJO>/sessions.md`, append-only como `history.md`:
 
 ```
-- 2026-08-17 · feature/captura-lead · TNP-M2 · @nacho · PC01 · in 142k / out 9k · T003 y T004 cerradas
+- 2026-08-17 · feature/M2-integracion-odoo · TNP-M2 · @nacho · PC01 · in 142k / out 9k · T003 y T004 cerradas
 ```
 
 Campos: fecha · rama o sesión · milestone · quién · máquina · tokens (entrada/salida)

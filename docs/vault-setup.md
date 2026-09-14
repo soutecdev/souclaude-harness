@@ -204,4 +204,5 @@ un PR.
 - [ ] Obsidian abre la carpeta como vault y el plugin **Kanban** está habilitado.
 - [ ] Cada repo de código corrió `npx souclaude` y tiene su `.claude/vault.local.json`.
 - [ ] El `main` del Vault **no** exige revisión: los agentes pushean directo (§4).
-- [ ] Regla de oro anunciada: **sin ID del Vault no hay rama**.
+- [ ] Regla de oro anunciada: **sin milestone del Vault no hay rama, y una rama por
+      milestone** (las tareas son commits en esa rama, no ramas propias).

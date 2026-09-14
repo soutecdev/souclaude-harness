@@ -1,7 +1,9 @@
 # ADR: Milestones, planes y sesiones con consumo en el Vault
 
 **Fecha**: 2026-08-17
-**Status**: accepted
+**Status**: accepted — superseded parcialmente por
+`20260912-una-rama-por-milestone.md` (la rama Git es por milestone, no por tarea;
+`kanban.md` y el resto del modelo siguen vigentes)
 **Deciders**: Ignacio A
 
 ## Context

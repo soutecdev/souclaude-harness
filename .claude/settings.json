@@ -17,6 +17,7 @@
       "Read(~/.ssh/**)",
       "Bash(git push origin main*)",
       "Bash(git push * main)",
+      "Bash(git push * *:main*)",
       "Bash(gh pr merge:*)",
       "Bash(gh pr review:*)",
       "Bash(gh release:*)"

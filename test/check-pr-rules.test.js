@@ -6,7 +6,9 @@ import { evaluaRama, evaluaSeccionesCompletas, evaluaVersion } from '../scripts/
 
 // La norma de la skill soutec-github admite DOS formas de rama, y las dos son
 // contrato: tipo/descripcion-corta a secas, o tipo/ID-descripcion-corta donde
-// el ID en mayusculas es tarea del Vault, milestone del Vault o tracker externo.
+// el ID en mayusculas es milestone del Vault (una rama por milestone) o tracker
+// externo. Las ramas por tarea (-T<nnn>) ya no son la norma, pero siguen
+// validando para no romper ramas abiertas antes del cambio.
 
 test('evaluaRama: acepta la forma simple tipo/descripcion-corta', () => {
   const validas = [
@@ -32,10 +34,13 @@ test('evaluaRama: acepta puntos en el slug (bump de version)', () => {
 
 test('evaluaRama: acepta el prefijo de ID en sus tres variantes', () => {
   const validas = [
-    'feature/SHS-M7-T006-playbook-adopcion', // tarea del Vault
+    'feature/M7-playbook-adopcion', // milestone del Vault (la norma)
+    'fix/M10-chequeo-gh',
+    
+    'feature/M31-rama-por-milestone',
+    'feature/CSC-M1-alta-de-milestones', // con clave de proyecto, sigue validando
+    'feature/SHS-M7-T006-playbook-adopcion', // rama por tarea legada, sigue validando
     'fix/SHS-M7-T007-check-pr-reglas',
-    'fix/SHS-M10-chequeo-gh', // milestone del Vault, sin tarea desglosada
-    'feature/CSC-M1-alta-de-milestones',
     'feature/REA-123-captura-lead', // tracker externo
   ]
   for (const rama of validas) {
@@ -47,6 +52,7 @@ test('evaluaRama: rechaza lo que ninguna de las dos formas permite', () => {
   const invalidas = [
     'feature/Mayusculas-en-el-slug', // el slug sigue siendo minusculas
     'feature/SHS-M7-T006', // ID sin slug descriptivo
+    'feature/M7', // milestone sin slug descriptivo
     'cambios/algo', // tipo inexistente
     'feature/prueba', // slug prohibido
     'feature/final-final',
