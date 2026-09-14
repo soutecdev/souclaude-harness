@@ -9,7 +9,7 @@ organización.
 
 ## Harness
 
-Harness `3.0.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
+Harness `3.12.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
 viven en `.claude/skills/` y se aplican solas cuando el contexto lo amerita (en un
 proyecto consumidor se eligen al instalar con `npx souclaude`; `soutec-github` es
 obligatoria y siempre está):
