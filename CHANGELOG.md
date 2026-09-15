@@ -2,7 +2,7 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Unreleased]
+## [3.13.0] — 2026-09-15
 
 ### Agregado
 
@@ -35,6 +35,12 @@ El harness y el CLI se versionan juntos.
   solo el subconjunto de reglas de cada workflow. `github-protect.js` configura la branch
   protection de `main` con los dos checks required (`reglas-secretos`, `reglas-pr-metadata`)
   en vez del check único `reglas-pr`.
+
+### Corregido
+
+- **`COMMIT_REGEX` acepta letras acentuadas y ñ al inicio de la descripción del commit**
+  (SHS-M32). Un commit como `fix: ícono roto en el panel` ya no falla el check de
+  rama/commits, y el tipo `Revert` con mayúscula inicial también valida.
 
 ## [3.12.0] — 2026-09-14
 
