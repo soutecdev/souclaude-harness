@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { computePlan, writeActions, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { writeLockfile } from '../core/lockfile.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
 import { protegeBranchMain } from '../core/github-protect.js'
@@ -102,6 +103,31 @@ export async function resolveSkills({ flags, lock, manifest, yes }) {
   })
 }
 
+// Modo de trabajo del repo (SHS-M34). Prioridad: flag explicito > modo guardado
+// en el lockfile (sticky, como skills) > pregunta con default equipo. Un lockfile
+// sin campo modo (o con un valor invalido) cae a la pregunta: asi una instalacion
+// existente elige modo en su primer upgrade; en no interactivo el default es
+// equipo, para no cambiar el comportamiento de las automatizaciones.
+export const MODOS = ['equipo', 'solo']
+
+export async function resolveModo({ flags, lock, yes }) {
+  if (flags.solo && flags.equipo) {
+    throw new Error('--solo y --equipo son excluyentes: elige un solo modo')
+  }
+  if (flags.solo) return 'solo'
+  if (flags.equipo) return 'equipo'
+  if (MODOS.includes(lock?.modo)) return lock.modo
+  return ui.select({
+    message: 'Modo de trabajo del repo',
+    options: [
+      { value: 'equipo', label: 'equipo — metodologia completa: milestones, PRs y espejo del tablero' },
+      { value: 'solo', label: 'solo — single coder: Git fluido, sin validacion de PR, traza minima en el Vault' },
+    ],
+    initialValue: 'equipo',
+    yes,
+  })
+}
+
 // El nucleo compartido por init y upgrade: son el mismo code path. Lo unico que
 // cambia entre "repo vacio", "repo legacy" y "migrar del harness viejo" es que
 // encuentra computePlan en disco y en el lockfile.
@@ -109,7 +135,9 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   const force = Boolean(flags.force)
   const yes = Boolean(flags.yes) || ui.isCI()
   const skills = await resolveSkills({ flags, lock, manifest, yes })
-  const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills })
+  const modo = await resolveModo({ flags, lock, yes })
+  ui.log.info(`Modo de trabajo: ${modo}`)
+  const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills, modo })
 
   ui.renderPlan(plan, { verbose: Boolean(flags.verbose) })
 
@@ -117,6 +145,13 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   const obsolete = plan.actions.filter((a) => a.verdict === OBSOLETE)
 
   if (!pending.length && !obsolete.length) {
+    // Sin cambios de archivos, la decision del modo se persiste igual (salvo en
+    // --dry-run): si no, el upgrade de una instalacion existente ya al dia
+    // preguntaria el modo en cada corrida sin guardarlo jamas.
+    if (lock && plan.modo !== lock.modo && !flags['dry-run']) {
+      writeLockfile(cwd, { ...lock, modo: plan.modo })
+      ui.log.info(`Modo de trabajo persistido: ${plan.modo}`)
+    }
     ui.outro(`Ya estas en harness v${manifest.harnessVersion}. Nada que hacer.`)
     return 0
   }
