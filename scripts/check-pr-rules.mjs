@@ -32,7 +32,13 @@ const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style
 // ID) no tiene por que forzarse a minuscula (precedente: commit 9dbe36f,
 // "fix: PR a main solo puede venir de dev..." rechazado sin motivo real -- la
 // skill soutec-github nunca exigio minuscula, solo "descripcion breve").
-const COMMIT_REGEX = new RegExp(`^(${COMMIT_TIPOS.join('|')}): [a-zA-Z].*[^.]$`)
+// El primer caracter admite tildes y enie (fix: ícono, feat: ñoquis...): el
+// español los usa en palabras corrientes, no son un caso raro a excluir.
+// "revert" admite mayuscula inicial (Revert: ...): es el unico tipo cuyo
+// commit suele generarse a mano imitando el "Revert" de git, no tipeado
+// como los demas tipos en minuscula.
+const TIPOS_REGEX = COMMIT_TIPOS.map((t) => (t === 'revert' ? '[Rr]evert' : t)).join('|')
+const COMMIT_REGEX = new RegExp(`^(${TIPOS_REGEX}): [a-zA-ZÁÉÍÓÚÜÑáéíóúüñ].*[^.]$`)
 const COMMIT_MENSAJES_PROHIBIDOS = ['update', 'fix', 'cosas', 'ya', 'ahora si', 'ahora sí']
 const SECRETO_ARCHIVOS = [/(^|\/)\.env(\..+)?$/, /\.pem$/, /\.key$/, /\.pfx$/, /(^|\/)credentials\.json$/, /(^|\/)secrets\.json$/]
 
@@ -124,7 +130,7 @@ export function evaluaRama(nombre, baseRefName) {
   return { regla: 'rama-formato', cumple: true, detalle: nombre }
 }
 
-function evaluaCommits(commits) {
+export function evaluaCommits(commits) {
   if (commits.length === 0) {
     return [{ regla: 'commits-formato', cumple: null, detalle: 'sin commits nuevos contra la base' }]
   }
