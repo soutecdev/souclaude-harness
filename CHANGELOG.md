@@ -4,6 +4,16 @@ El harness y el CLI se versionan juntos.
 
 ## [Unreleased]
 
+### Cambiado
+
+- **`reglas-pr.yml` se separa en tres checks independientes** (SHS-M33): `reglas-rama-commits`
+  (formato de rama y de commits, ahora CI opcional — no bloquea el merge), `reglas-secretos`
+  y `reglas-pr-metadata` (base=`dev`, mergeable, versión/semver y secciones del PR
+  completas), ambos CI required. `check-pr-rules.mjs` gana el flag `--grupo` para correr
+  solo el subconjunto de reglas de cada workflow. `github-protect.js` configura la branch
+  protection de `main` con los dos checks required (`reglas-secretos`, `reglas-pr-metadata`)
+  en vez del check único `reglas-pr`.
+
 ## [3.12.0] — 2026-09-14
 
 ### Cambiado

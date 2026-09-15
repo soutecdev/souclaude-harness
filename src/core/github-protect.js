@@ -4,13 +4,16 @@ import * as ui from '../ui.js'
 // CLAUDE.md, regla dura: "main solo recibe merges desde dev", ningun push ni
 // merge directo. Esto la hace cumplir a nivel de GitHub (no solo en el check
 // de PR): sin esto, alguien con permiso de push igual podia pushear directo a
-// main saltandose reglas-pr.yml por completo.
+// main saltandose los checks de reglas-*.yml por completo.
 const RAMA_PROTEGIDA = 'main'
-// Nombre del check tal como lo reporta GitHub Actions: el job de
-// .github/workflows/reglas-pr.yml no declara "name:", asi que el check-run
-// queda con el id del job ("reglas-pr"). Si ese job se renombra, esto se
-// desincroniza y hay que actualizarlo a mano.
-const CHECK_REQUERIDO = 'reglas-pr'
+// Nombres de los checks tal como los reporta GitHub Actions: los jobs de
+// reglas-secretos.yml y reglas-pr-metadata.yml no declaran "name:", asi que
+// el check-run queda con el id del job. reglas-rama-commits.yml queda
+// deliberadamente afuera (SHS-M33): un formato de rama o de commit distinto
+// no debe trabar un merge, solo avisar -- lo que si bloquea es un secreto
+// filtrado o un PR que rompe el flujo de release. Si alguno de estos jobs se
+// renombra, esto se desincroniza y hay que actualizarlo a mano.
+const CHECKS_REQUERIDOS = ['reglas-secretos', 'reglas-pr-metadata']
 
 function sh(args, cwd, input) {
   return execFileSync(args[0], args.slice(1), {
@@ -50,11 +53,11 @@ function ramaExiste(cwd, repo) {
 // Exige PR para tocar main (bloquea push directo), sin aprobaciones
 // obligatorias -- la skill soutec-github ya dice "nadie aprueba lo suyo", asi
 // que pedir 1 approval seria una regla que el propio equipo no puede cumplir
-// -- con el check reglas-pr en verde, sin force-push ni borrado de la rama.
+// -- con los checks requeridos en verde, sin force-push ni borrado de la rama.
 // enforce_admins: true para que la regla alcance tambien a administradores.
 function cuerpoProteccion() {
   return JSON.stringify({
-    required_status_checks: { strict: true, checks: [{ context: CHECK_REQUERIDO }] },
+    required_status_checks: { strict: true, checks: CHECKS_REQUERIDOS.map((context) => ({ context })) },
     enforce_admins: true,
     required_pull_request_reviews: { required_approving_review_count: 0 },
     restrictions: null,
@@ -95,7 +98,7 @@ export function protegeBranchMain({ cwd }) {
       cwd,
       cuerpoProteccion()
     )
-    ui.log.success(`Branch protection de "${RAMA_PROTEGIDA}" en ${repo}: PR obligatorio + check "${CHECK_REQUERIDO}" en verde.`)
+    ui.log.success(`Branch protection de "${RAMA_PROTEGIDA}" en ${repo}: PR obligatorio + checks ${CHECKS_REQUERIDOS.map((c) => `"${c}"`).join(' y ')} en verde.`)
     return { aplicado: true }
   } catch (err) {
     ui.log.warn(

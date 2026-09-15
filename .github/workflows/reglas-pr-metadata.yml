@@ -1,0 +1,33 @@
+name: Reglas PR - metadata
+
+# Grupo "pr-metadata" (SHS-M33) de check-pr-rules.mjs: base=dev, sin
+# conflictos, version/semver y secciones del PR completas. CI required --
+# protege el flujo de release (dev -> main) y que la revision de seguridad
+# tenga con que trabajar. Solo corre en PR: el script necesita gh pr view
+# para leer el cuerpo del PR. Este workflow y scripts/check-pr-rules.mjs los
+# distribuye y actualiza el harness (npx souclaude upgrade); no los edites a
+# mano en el repo consumidor.
+
+on:
+  pull_request:
+
+jobs:
+  reglas-pr-metadata:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: verifica base, mergeable, version y secciones del PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/check-pr-rules.mjs --grupo pr-metadata --pr ${{ github.event.pull_request.number }}

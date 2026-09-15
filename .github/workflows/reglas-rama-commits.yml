@@ -1,8 +1,9 @@
-name: Reglas PR
+name: Reglas PR - rama y commits
 
-# Reglas deterministas de la skill soutec-github (rama, commits, secretos,
-# base=dev, mergeable, version, secciones de la plantilla). Solo corre en PR:
-# el script necesita gh pr view para leer el cuerpo del PR. Este workflow y
+# Grupo "rama-commits" (SHS-M33) de check-pr-rules.mjs: formato de rama y de
+# commits. CI opcional a proposito -- un nombre de rama o un commit con una
+# letra distinta no debe trabar un merge, solo avisar. github-protect.js NO
+# suma este check a required_status_checks. Este workflow y
 # scripts/check-pr-rules.mjs los distribuye y actualiza el harness (npx
 # souclaude upgrade); no los edites a mano en el repo consumidor.
 
@@ -10,11 +11,10 @@ on:
   pull_request:
 
 jobs:
-  reglas-pr:
+  reglas-rama-commits:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,8 +24,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: verifica reglas de PR
+      - name: verifica formato de rama y commits
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
-        run: node scripts/check-pr-rules.mjs --pr ${{ github.event.pull_request.number }}
+        run: node scripts/check-pr-rules.mjs --grupo rama-commits
