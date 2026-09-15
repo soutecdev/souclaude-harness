@@ -5,9 +5,21 @@
 // propio). #7 y #10 quedaron fuera por decision explicita (ver PR que agrego
 // este script): #7 no esta documentada en el skill, #10 no aplica a este repo.
 //
+// Las 7 reglas se agrupan en tres --grupo, cada uno con su propio workflow y
+// su propio check en GitHub (SHS-M33): un fallo de formato de commit no debe
+// verse igual de grave que un secreto filtrado. "CI opcional" abajo significa
+// que el check corre y puede quedar en rojo (visibilidad), pero
+// github-protect.js no lo suma a required_status_checks: no bloquea el merge.
+//
+//   rama-commits  -> #1 rama-formato, #2 commits-formato          (CI opcional)
+//   secretos      -> #3 sin-secretos                              (CI required)
+//   pr-metadata   -> #5 base=dev, #6 mergeable, #8 version,
+//                    #9 secciones-PR                              (CI required)
+//
 // Uso:
-//   node scripts/check-pr-rules.mjs                 # reglas locales (rama/commits/secretos)
-//   node scripts/check-pr-rules.mjs --pr <numero>    # suma las reglas que dependen del PR en GitHub
+//   node scripts/check-pr-rules.mjs --grupo rama-commits
+//   node scripts/check-pr-rules.mjs --grupo secretos
+//   node scripts/check-pr-rules.mjs --grupo pr-metadata --pr <numero>
 //
 // Sale con codigo 1 si alguna regla determinista en True/False dio False.
 // Las reglas en None (no medibles en este contexto) se reportan pero no rompen el build.
@@ -269,21 +281,33 @@ function resuelveRef(nombre) {
   }
 }
 
+const GRUPOS = ['rama-commits', 'secretos', 'pr-metadata']
+
 function main() {
-  const { values } = parseArgs({ options: { pr: { type: 'string' } } })
+  const { values } = parseArgs({ options: { pr: { type: 'string' }, grupo: { type: 'string' } } })
+  if (!GRUPOS.includes(values.grupo)) {
+    console.error(`--grupo debe ser uno de: ${GRUPOS.join(', ')}`)
+    process.exit(1)
+  }
   const baseLocal = resuelveRef(process.env.GITHUB_BASE_REF || 'dev')
 
   const pr = obtenerPR(values.pr)
   const baseRefName = pr?.baseRefName ?? (values.pr ? null : baseLocal)
 
   const resultados = []
-  resultados.push(evaluaRama(ramaActual(), pr?.baseRefName ?? null))
-  resultados.push(...evaluaCommits(commitsDeLaRama(baseLocal)))
-  resultados.push(evaluaSecretos(archivosAgregados(baseLocal)))
-  resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, ramaActual()))
-  resultados.push(evaluaMergeable(pr))
-  resultados.push(evaluaVersion(pr, baseRefName))
-  resultados.push(evaluaSeccionesCompletas(pr))
+  if (values.grupo === 'rama-commits') {
+    resultados.push(evaluaRama(ramaActual(), pr?.baseRefName ?? null))
+    resultados.push(...evaluaCommits(commitsDeLaRama(baseLocal)))
+  }
+  if (values.grupo === 'secretos') {
+    resultados.push(evaluaSecretos(archivosAgregados(baseLocal)))
+  }
+  if (values.grupo === 'pr-metadata') {
+    resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, ramaActual()))
+    resultados.push(evaluaMergeable(pr))
+    resultados.push(evaluaVersion(pr, baseRefName))
+    resultados.push(evaluaSeccionesCompletas(pr))
+  }
 
   let huboFalse = false
   for (const r of resultados) {

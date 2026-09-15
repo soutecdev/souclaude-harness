@@ -95,7 +95,9 @@ test('evaluaRama: contra base "main", ninguna rama de trabajo pasa, ni hotfix/*'
 test('las copias distribuidas en templates/base son identicas a las fuentes', () => {
   const espejos = [
     ['scripts/check-pr-rules.mjs', 'templates/base/scripts/check-pr-rules.mjs'],
-    ['.github/workflows/reglas-pr.yml', 'templates/base/github/workflows/reglas-pr.yml'],
+    ['.github/workflows/reglas-rama-commits.yml', 'templates/base/github/workflows/reglas-rama-commits.yml'],
+    ['.github/workflows/reglas-secretos.yml', 'templates/base/github/workflows/reglas-secretos.yml'],
+    ['.github/workflows/reglas-pr-metadata.yml', 'templates/base/github/workflows/reglas-pr-metadata.yml'],
   ]
   for (const [fuente, copia] of espejos) {
     assert.equal(readFileSync(copia, 'utf8'), readFileSync(fuente, 'utf8'), `${copia} difiere de ${fuente}`)
