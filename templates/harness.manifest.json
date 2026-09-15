@@ -7,7 +7,14 @@
     {
       "id": "soutec-github",
       "label": "soutec-github — flujo Git/GitHub de SOUTEC (obligatoria)",
-      "required": true
+      "required": true,
+      "modos": ["equipo"]
+    },
+    {
+      "id": "soutec-github-solo",
+      "label": "soutec-github-solo — flujo Git fluido del modo solo (obligatoria)",
+      "required": true,
+      "modos": ["solo"]
     },
     {
       "id": "it-security-review",
@@ -31,15 +38,18 @@
     },
     {
       "id": "vault-milestones",
-      "label": "vault-milestones — análisis e iteración de milestones en el Vault"
+      "label": "vault-milestones — análisis e iteración de milestones en el Vault",
+      "modos": ["equipo"]
     },
     {
       "id": "jira-sync",
-      "label": "jira-sync — espejo del tablero del Vault en Jira vía MCP de Atlassian"
+      "label": "jira-sync — espejo del tablero del Vault en Jira vía MCP de Atlassian",
+      "modos": ["equipo"]
     },
     {
       "id": "azdo-sync",
-      "label": "azdo-sync — espejo del tablero del Vault en Azure DevOps Boards vía MCP"
+      "label": "azdo-sync — espejo del tablero del Vault en Azure DevOps Boards vía MCP",
+      "modos": ["equipo"]
     }
   ],
   "files": [
@@ -166,6 +176,13 @@
       "dest": ".claude/skills/soutec-github/SKILL.md",
       "policy": "managed",
       "skill": "soutec-github"
+    },
+    {
+      "id": "skill-soutec-github-solo",
+      "src": "base/claude/skills/soutec-github-solo/SKILL.md",
+      "dest": ".claude/skills/soutec-github-solo/SKILL.md",
+      "policy": "managed",
+      "skill": "soutec-github-solo"
     },
     {
       "id": "skill-it-security-review",

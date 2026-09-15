@@ -76,9 +76,11 @@ export async function resolveVars({ flags, lock, detected, cwd, manifest }) {
 
 // Que skills se instalan. Prioridad: --skills explicito > seleccion guardada en
 // el lockfile (sticky, como las vars) > checkbox interactivo con todas marcadas.
-// Las required del catalogo (soutec-github) entran siempre, elija lo que elija.
-export async function resolveSkills({ flags, lock, manifest, yes }) {
-  const catalog = manifest.skills ?? []
+// Las required del catalogo del modo (soutec-github en equipo, soutec-github-solo
+// en solo) entran siempre, elija lo que elija. El catalogo se filtra por modo:
+// las skills del otro modo ni se ofrecen ni se aceptan por flag.
+export async function resolveSkills({ flags, lock, manifest, yes, modo = 'equipo' }) {
+  const catalog = (manifest.skills ?? []).filter((s) => !s.modos || s.modos.includes(modo))
   if (!catalog.length) return undefined
 
   if (flags.skills != null) {
@@ -132,9 +134,11 @@ export async function resolveModo({ flags, lock, yes }) {
 export async function planAndApply({ manifest, cwd, lock, vars, detected, flags, title }) {
   const force = Boolean(flags.force)
   const yes = Boolean(flags.yes) || ui.isCI()
-  const skills = await resolveSkills({ flags, lock, manifest, yes })
+  // El modo se resuelve ANTES que las skills: el catalogo que se ofrece y se
+  // valida es el del modo elegido.
   const modo = await resolveModo({ flags, lock, yes })
   ui.log.info(`Modo de trabajo: ${modo}`)
+  const skills = await resolveSkills({ flags, lock, manifest, yes, modo })
   const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills, modo })
 
   ui.renderPlan(plan, { verbose: Boolean(flags.verbose) })

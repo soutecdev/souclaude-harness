@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { main } from '../src/cli.js'
-import { mkRepo, read, replan } from './helpers.js'
-import { computePlan, NOOP } from '../src/core/plan.js'
+import { mkRepo, read, has, replan, verdicts } from './helpers.js'
+import { computePlan, NOOP, OBSOLETE } from '../src/core/plan.js'
 import { resolveDetected } from '../src/core/detect.js'
 import { resolveModo } from '../src/commands/_shared.js'
 
@@ -134,6 +134,50 @@ test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin can
   assert.equal(settings.permissions.ask, undefined, 'modo solo no gatea con ask')
   // El hook de milestones no se cablea en solo (la traza llega con su hook propio, T005).
   assert.equal(settings.hooks, undefined)
+})
+
+test('init --solo: catalogo de skills del modo (github-solo required, sin skills de equipo)', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  assert.equal(await main(['init', ...YES, '--solo'], dir), 0)
+
+  assert.ok(has(dir, '.claude/skills/soutec-github-solo/SKILL.md'), 'falta la skill Git del modo solo')
+  // Las de metodologia de equipo no se instalan en solo.
+  for (const s of ['soutec-github', 'vault-milestones', 'jira-sync', 'azdo-sync']) {
+    assert.ok(!has(dir, `.claude/skills/${s}/SKILL.md`), `se instalo la skill de equipo ${s}`)
+  }
+  // Las comunes a ambos modos siguen entrando.
+  for (const s of ['adr-new', 'harness-upgrade', 'soutec-md-a-pdf', 'it-security-review', 'security-report-standard']) {
+    assert.ok(has(dir, `.claude/skills/${s}/SKILL.md`), `falta la skill comun ${s}`)
+  }
+  const lock = JSON.parse(read(dir, '.claude/harness.json'))
+  assert.ok(lock.skills.includes('soutec-github-solo'))
+  assert.ok(!lock.skills.includes('soutec-github'))
+})
+
+test('--skills de otro modo corta con error claro', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  // jira-sync es de equipo: en el catalogo de solo es desconocida.
+  assert.equal(await main(['init', ...YES, '--solo', '--skills', 'jira-sync'], dir), 1)
+  assert.ok(!has(dir, '.claude/harness.json'), 'con error no se escribe nada')
+  // Y la skill de solo no existe en el catalogo de equipo.
+  assert.equal(await main(['init', ...YES, '--skills', 'soutec-github-solo'], dir), 1)
+})
+
+test('switch equipo -> solo: la skill de solo entra y las de equipo quedan obsoletas', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  await main(['init', ...YES], dir)
+  assert.ok(has(dir, '.claude/skills/soutec-github/SKILL.md'))
+
+  await main(['upgrade', ...YES, '--solo'], dir)
+
+  assert.ok(has(dir, '.claude/skills/soutec-github-solo/SKILL.md'), 'no entro la skill de solo')
+  // Los archivos de equipo siguen en disco (borrarlos exige --prune + doble
+  // confirmacion), pero el proximo plan ya los marca obsoletos.
+  const obsoletos = verdicts(replan(dir))[OBSOLETE] ?? []
+  assert.ok(obsoletos.includes('.claude/skills/soutec-github/SKILL.md'))
+  assert.ok(obsoletos.includes('.claude/skills/jira-sync/SKILL.md'))
+  const lock = JSON.parse(read(dir, '.claude/harness.json'))
+  assert.ok(!lock.skills.includes('jira-sync'), 'el lockfile arrastro una skill del modo anterior')
 })
 
 test('init equipo: la superficie de siempre queda intacta', async () => {

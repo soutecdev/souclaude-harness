@@ -29,14 +29,15 @@ export function computePlan({ manifest, cwd, lock, vars, detected, force = false
   const fromVersion = lock?.harnessVersion ?? '0.0.0'
   const seenDests = new Set()
 
-  // Seleccion de skills. Sin parametro explicito: lo que dice el lockfile; sin
-  // lockfile, todas las del catalogo (compatibilidad con repos pre-3.0 y tests).
-  const selected = resolveSkillSet({ manifest, lock, skills })
-
   // Modo de trabajo (SHS-M34). Sin parametro explicito: el persistido en el
   // lockfile; sin nada, equipo — el harness completo, como siempre fue (los
   // call sites viejos y los tests que no pasan modo conservan su comportamiento).
   const modoActivo = modo ?? lock?.modo ?? 'equipo'
+
+  // Seleccion de skills. Sin parametro explicito: lo que dice el lockfile; sin
+  // lockfile, todas las del catalogo del modo (compatibilidad con repos pre-3.0
+  // y tests).
+  const selected = resolveSkillSet({ manifest, lock, skills, modo: modoActivo })
 
   const emitted = manifest.files.filter((entry) => {
     if (entry.when === 'empty-repo' && !detected.isEmpty) return false
@@ -111,12 +112,18 @@ export function computePlan({ manifest, cwd, lock, vars, detected, force = false
   return { actions, dirs, fromVersion, toVersion: manifest.harnessVersion, skills: [...selected].sort(), modo: modoActivo, skippedByStack }
 }
 
-// Las required del catalogo entran SIEMPRE, se pidan o no: es la garantia de
-// que soutec-github no se puede desinstalar.
-export function resolveSkillSet({ manifest, lock, skills }) {
-  const catalog = manifest.skills ?? []
+// Las required del catalogo del modo entran SIEMPRE, se pidan o no: es la
+// garantia de que la skill de Git (soutec-github en equipo, soutec-github-solo
+// en solo) no se puede desinstalar. El catalogo se filtra por modo con la misma
+// semantica que los entries de files: una skill sin "modos" existe en ambos.
+// Lo elegido (flag o lockfile) se intersecta con el catalogo del modo: al
+// cambiar de modo, las skills del modo anterior salen del set y sus archivos
+// caen al barrido de OBSOLETE.
+export function resolveSkillSet({ manifest, lock, skills, modo = 'equipo' }) {
+  const catalog = (manifest.skills ?? []).filter((s) => !s.modos || s.modos.includes(modo))
   const required = catalog.filter((s) => s.required).map((s) => s.id)
-  const chosen = skills ?? lock?.skills ?? catalog.map((s) => s.id)
+  const ids = new Set(catalog.map((s) => s.id))
+  const chosen = (skills ?? lock?.skills ?? catalog.map((s) => s.id)).filter((id) => ids.has(id))
   return new Set([...required, ...chosen])
 }
 
