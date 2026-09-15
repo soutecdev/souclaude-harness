@@ -112,7 +112,15 @@
       "id": "hook-declarar-milestone",
       "src": "base/claude/hooks/declarar-milestone.mjs",
       "dest": ".claude/hooks/declarar-milestone.mjs",
-      "policy": "managed"
+      "policy": "managed",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "hook-worklog-solo",
+      "src": "base/claude/hooks/worklog-solo.mjs",
+      "dest": ".claude/hooks/worklog-solo.mjs",
+      "policy": "managed",
+      "modos": ["solo"]
     },
     {
       "id": "gitignore",
@@ -352,7 +360,8 @@
       "id": "progress-readme",
       "src": "base/progress/README.md",
       "dest": "progress/README.md",
-      "policy": "managed"
+      "policy": "managed",
+      "modos": ["equipo"]
     },
     {
       "id": "progress-history",

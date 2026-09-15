@@ -7,6 +7,7 @@ import { mkRepo, read, has, replan, verdicts } from './helpers.js'
 import { computePlan, NOOP, OBSOLETE } from '../src/core/plan.js'
 import { resolveDetected } from '../src/core/detect.js'
 import { resolveModo } from '../src/commands/_shared.js'
+import { semillasProyecto } from '../src/core/vault-seeds.js'
 
 const YES = ['--yes', '--name', 'acme', '--type', 'backend', '--lang', 'es']
 
@@ -132,8 +133,15 @@ test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin can
   assert.ok(!settings.permissions.deny.some((r) => r.startsWith('Bash(')), 'quedo un deny de Bash en modo solo')
   assert.ok(settings.permissions.allow.includes('Bash(gh pr merge:*)'))
   assert.equal(settings.permissions.ask, undefined, 'modo solo no gatea con ask')
-  // El hook de milestones no se cablea en solo (la traza llega con su hook propio, T005).
-  assert.equal(settings.hooks, undefined)
+
+  // La traza del modo solo: hook worklog cableado, sin el hook de milestones.
+  assert.ok(has(dir, '.claude/hooks/worklog-solo.mjs'), 'falta el hook worklog-solo')
+  assert.ok(!has(dir, '.claude/hooks/declarar-milestone.mjs'), 'se instalo el hook de milestones en solo')
+  const comandos = JSON.stringify(settings.hooks?.SessionStart ?? [])
+  assert.ok(comandos.includes('worklog-solo.mjs'), 'el hook worklog-solo no quedo cableado en settings')
+  assert.ok(!comandos.includes('declarar-milestone'), 'quedo cableado el hook de milestones')
+  // El protocolo de milestones (progress/README.md) es de equipo.
+  assert.ok(!has(dir, 'progress/README.md'), 'se emitio el protocolo de milestones en solo')
 })
 
 test('init --solo: catalogo de skills del modo (github-solo required, sin skills de equipo)', async () => {
@@ -176,8 +184,20 @@ test('switch equipo -> solo: la skill de solo entra y las de equipo quedan obsol
   const obsoletos = verdicts(replan(dir))[OBSOLETE] ?? []
   assert.ok(obsoletos.includes('.claude/skills/soutec-github/SKILL.md'))
   assert.ok(obsoletos.includes('.claude/skills/jira-sync/SKILL.md'))
+  assert.ok(obsoletos.includes('.claude/hooks/declarar-milestone.mjs'))
+  assert.ok(obsoletos.includes('progress/README.md'))
   const lock = JSON.parse(read(dir, '.claude/harness.json'))
   assert.ok(!lock.skills.includes('jira-sync'), 'el lockfile arrastro una skill del modo anterior')
+})
+
+test('semillasProyecto: worklog.md solo se siembra en modo solo', () => {
+  assert.ok(!('worklog.md' in semillasProyecto('equipo')))
+  assert.ok(!('worklog.md' in semillasProyecto()))
+  const solo = semillasProyecto('solo')
+  assert.ok('worklog.md' in solo)
+  // El set base se conserva: un proyecto solo puede volver a equipo sin resembrar.
+  assert.ok('milestones.md' in solo)
+  assert.ok('sessions.md' in solo)
 })
 
 test('init equipo: la superficie de siempre queda intacta', async () => {

@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { exists, readIfExists, writeFileLF, toPosix } from './fsx.js'
 import { pushSeguro, gitReal } from './vault-sync.js'
-import { SEMILLAS_PROYECTO, renderSemilla, PLANTILLA_OBSERVATORIO } from './vault-seeds.js'
+import { semillasProyecto, renderSemilla, PLANTILLA_OBSERVATORIO } from './vault-seeds.js'
 
 const PACKAGE_JSON = fileURLToPath(new URL('../../package.json', import.meta.url))
 
@@ -318,14 +318,14 @@ function manualHint(repo) {
 // no una dependencia dura para tener el harness instalado.
 // prompts (default: el modulo real de UI) se puede inyectar en tests para
 // ejercer el camino interactivo sin una TTY real ni mockear el modulo entero.
-export async function ensureVault({ cwd, flags = {}, manifest, lock, yes, prompts = ui, git = gitReal }) {
+export async function ensureVault({ cwd, flags = {}, manifest, lock, yes, prompts = ui, git = gitReal, modo = 'equipo' }) {
   const abs = await conectarVault({ cwd, flags, manifest, lock, yes, prompts })
   if (!abs) return null
   // El contrato de arriba ("nunca lanza") tiene que valer tambien para los pasos
   // que completan la identidad del repo: son datos de conveniencia, no un
   // requisito para tener el harness instalado.
   try {
-    await asegurarProyecto(cwd, abs, { flags, yes, prompts, git })
+    await asegurarProyecto(cwd, abs, { flags, yes, prompts, git, modo })
     await asegurarQuien(cwd, { yes, prompts })
   } catch (err) {
     ui.log.warn(`No se pudo completar la config del Vault: ${err.message}`)
@@ -354,7 +354,7 @@ export async function ensureVault({ cwd, flags = {}, manifest, lock, yes, prompt
 // carpeta > preguntar.
 // No bloqueante en ningun caso: lo que no se puede resolver termina en un
 // warning, nunca en un fallo de la instalacion.
-async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git = gitReal }) {
+async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git = gitReal, modo = 'equipo' }) {
   const config = leerConfigDeArchivo(cwd)
   const carpetas = carpetasProyecto(vaultPath)
   const disponibles = () => `Carpetas disponibles: ${carpetas.join(', ')}.`
@@ -400,7 +400,7 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
   // que poder sembrar, y cortar antes lo dejaba sin salida.
   const { carpeta: porRegistro, esperada } = resolverPorRegistro(cwd, vaultPath, carpetas)
   if (porRegistro) {
-    await completarProyectoDeclarado(vaultPath, porRegistro, { git })
+    await completarProyectoDeclarado(vaultPath, porRegistro, { git, modo })
     return persistirProyecto(cwd, vaultPath, porRegistro)
   }
 
@@ -409,7 +409,7 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
     // Es el UNICO caso en que sembrarla no inventa nada: el prefijo ya figura
     // en el registro y apunta a este repo. Caer al "hay una sola, debe ser
     // esa" aca declararia el proyecto de OTRO.
-    const sembrada = await sembrarProyecto(vaultPath, esperada, { flags, yes, prompts, git })
+    const sembrada = await sembrarProyecto(vaultPath, esperada, { flags, yes, prompts, git, modo })
     return sembrada ? persistirProyecto(cwd, vaultPath, esperada) : null
   }
 
@@ -442,7 +442,7 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
   })
 
   if (elegido === CREAR_NUEVO) {
-    const creado = await crearProyectoNuevo(cwd, vaultPath, carpetas, { prompts, git })
+    const creado = await crearProyectoNuevo(cwd, vaultPath, carpetas, { prompts, git, modo })
     return creado ? persistirProyecto(cwd, vaultPath, creado) : null
   }
 
@@ -455,7 +455,7 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
 // id-registry.md) y siembra la carpeta en el mismo paso. Solo interactivo: el
 // camino desatendido sigue resolviendo por --vault-project o por el registro
 // ya existente, nunca inventa un prefijo en silencio.
-async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts, git = gitReal }) {
+async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts, git = gitReal, modo = 'equipo' }) {
   const registrados = new Set(leerRegistroDePrefijos(vaultPath).map((f) => f.prefijo.toUpperCase()))
 
   const prefijoIngresado = await prompts.text({
@@ -502,7 +502,7 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
     ui.log.warn(`Prefijo ${prefijo} agregado en el clon local pero no se pudo publicar (${registro.motivo}). Pushea el Vault a mano.`)
   }
 
-  const sembrada = await sembrarProyecto(vaultPath, carpeta, { flags: { 'vault-seed': true }, yes: true, prompts, git })
+  const sembrada = await sembrarProyecto(vaultPath, carpeta, { flags: { 'vault-seed': true }, yes: true, prompts, git, modo })
   return sembrada
 }
 
@@ -530,7 +530,7 @@ function avisarFichaSembrada(carpeta, escritos) {
   )
 }
 
-function escribirSemillasFaltantes(vaultPath, carpeta) {
+function escribirSemillasFaltantes(vaultPath, carpeta, modo = 'equipo') {
   const raiz = path.join(vaultPath, carpeta)
   // La ficha del Observatorio se siembra desde la plantilla canonica del Vault
   // si existe (editable ahi sin release del harness); la constante embebida es
@@ -543,7 +543,7 @@ function escribirSemillasFaltantes(vaultPath, carpeta) {
   const nombre =
     leerRegistroDePrefijos(vaultPath).find((f) => f.prefijo.toUpperCase() === prefijo)?.proyecto ?? carpeta
   const escritos = []
-  for (const [rel, contenido] of Object.entries(SEMILLAS_PROYECTO)) {
+  for (const [rel, contenido] of Object.entries(semillasProyecto(modo))) {
     const abs = path.join(raiz, ...rel.split('/'))
     if (exists(abs)) continue
     const fuente = rel === 'OBSERVATORIO.md' && plantillaFicha !== null ? plantillaFicha : contenido
@@ -561,8 +561,8 @@ function escribirSemillasFaltantes(vaultPath, carpeta) {
 // upgrade/init sobre un proyecto declarado; es idempotente: no hay nada que
 // escribir despues del primer backfill exitoso. Nunca lanza: cualquier fallo
 // de push degrada a warning, igual que sembrarProyecto.
-async function completarProyectoDeclarado(vaultPath, carpeta, { git = gitReal } = {}) {
-  const escritos = escribirSemillasFaltantes(vaultPath, carpeta)
+async function completarProyectoDeclarado(vaultPath, carpeta, { git = gitReal, modo = 'equipo' } = {}) {
+  const escritos = escribirSemillasFaltantes(vaultPath, carpeta, modo)
   if (!escritos.length) return
 
   const push = await pushSeguro({
@@ -582,7 +582,7 @@ async function completarProyectoDeclarado(vaultPath, carpeta, { git = gitReal } 
   }
 }
 
-async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, git = gitReal }) {
+async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, git = gitReal, modo = 'equipo' }) {
   if (yes) {
     if (!flags['vault-seed']) {
       ui.log.warn(
@@ -601,7 +601,7 @@ async function sembrarProyecto(vaultPath, carpeta, { flags = {}, yes, prompts, g
     }
   }
 
-  const escritos = escribirSemillasFaltantes(vaultPath, carpeta)
+  const escritos = escribirSemillasFaltantes(vaultPath, carpeta, modo)
 
   if (!escritos.length) {
     ui.log.warn(`${carpeta} ya tenia sus archivos base: no se sembro nada.`)

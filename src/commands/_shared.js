@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
-import { writeLockfile } from '../core/lockfile.js'
+import { readLockfile, writeLockfile } from '../core/lockfile.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
 import { protegeBranchMain } from '../core/github-protect.js'
@@ -223,7 +223,11 @@ export async function vaultStep({ code, cwd, flags, manifest, lock }) {
   // --dry-run no escribe ni un byte, y eso incluye la config del Vault.
   if (flags['dry-run']) return code
   const yes = Boolean(flags.yes) || ui.isCI()
-  await ensureVault({ cwd, flags, manifest, lock, yes })
+  // El modo se relee fresco del lockfile: `lock` es la foto de ANTES del plan
+  // (null en un init) y apply acaba de persistir el modo elegido. La siembra
+  // del Vault depende de el (worklog.md solo en modo solo, SHS-M34).
+  const modo = readLockfile(cwd)?.modo ?? lock?.modo ?? 'equipo'
+  await ensureVault({ cwd, flags, manifest, lock, yes, modo })
   return 0
 }
 

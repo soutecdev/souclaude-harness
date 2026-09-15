@@ -113,6 +113,18 @@ const OBSERVATORIO = `# Ficha para el Observatorio - <PROYECTO>
 - AAAA-MM-DD · versión/release · Título/Descripción
 `
 
+// worklog.md: la traza minima del modo solo (SHS-M34). Una linea por bloque de
+// trabajo, pusheada al momento de empezar. Solo se siembra en proyectos de
+// repos instalados en modo solo -- un proyecto de equipo ya tiene su kanban.
+const WORKLOG = `# Worklog de <PROYECTO> — traza del modo solo
+
+Una línea con fecha por bloque de trabajo, **siempre al final**, pusheada al
+momento de empezar el bloque. Si el objetivo cambia, otra línea. Es la única
+trazabilidad obligatoria del modo solo.
+
+Formato: \`- <AAAA-MM-DD> · <en qué se trabaja>\`
+`
+
 // Ruta relativa a Project-<PREFIJO>/ -> contenido. El orden es el de la
 // estructura documentada en docs/vault-guide.md §2.
 export const SEMILLAS_PROYECTO = {
@@ -122,6 +134,16 @@ export const SEMILLAS_PROYECTO = {
   'sessions.md': SESSIONS,
   'progress/history.md': HISTORY,
   'OBSERVATORIO.md': OBSERVATORIO,
+}
+
+export const SEMILLAS_SOLO = {
+  'worklog.md': WORKLOG,
+}
+
+// Semillas segun el modo del repo (SHS-M34): el modo solo agrega worklog.md al
+// set base — los tableros base quedan por si el proyecto vuelve a modo equipo.
+export function semillasProyecto(modo = 'equipo') {
+  return modo === 'solo' ? { ...SEMILLAS_PROYECTO, ...SEMILLAS_SOLO } : SEMILLAS_PROYECTO
 }
 
 export function renderSemilla(contenido, proyecto, nombre = proyecto) {
