@@ -91,6 +91,14 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
   proyecto atribuirla). El global se actualiza aceptando la misma oferta en el
   próximo `souclaude upgrade`.
 
+> **¿Trabajas solo?** El harness también se instala en **modo solo** (single
+> coder): `npx souclaude init --solo`, o eligiéndolo en el prompt. Sin
+> milestones ni PRs obligatorios — el agente mergea directo a `dev` y `main` — y
+> la trazabilidad se reduce a una línea por bloque de trabajo en
+> `Project-<PREFIJO>/worklog.md` del Vault. Esta guía describe el **modo
+> equipo**, que es el default; el detalle del modo solo está en el README del
+> harness. Una instalación existente elige modo en su primer `upgrade`.
+
 ## 3. La regla central: trazabilidad por milestone
 
 **Todo trabajo pertenece a un milestone del Vault.** Sin excepciones.
