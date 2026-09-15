@@ -24,7 +24,9 @@
     ],
     "allow": [
       "Bash(git push:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git -C * pull*)",
+      "Bash(git -C * push:*)"
     ],
     "ask": [
       "Bash(git reset --hard:*)",
