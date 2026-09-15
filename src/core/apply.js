@@ -92,6 +92,9 @@ function buildLockfile({ plan, manifest, vars, detected, lock, prune, cwd, now }
     // Seleccion de skills de este repo. computePlan la resolvio (flags, lockfile
     // previo o catalogo completo); se persiste para que el proximo upgrade la respete.
     skills: plan.skills ?? lock?.skills,
+    // Modo de trabajo (equipo | solo, SHS-M34): sticky como skills. Con undefined
+    // (plans viejos en tests) la clave ni se escribe.
+    modo: plan.modo ?? lock?.modo,
     vars,
     detected: { stacks: detected.stacks, packageManager: detected.packageManager },
     files: {},

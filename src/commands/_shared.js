@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
-import { computePlan, writeActions, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { readLockfile, writeLockfile } from '../core/lockfile.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
 import { protegeBranchMain } from '../core/github-protect.js'
@@ -75,9 +76,11 @@ export async function resolveVars({ flags, lock, detected, cwd, manifest }) {
 
 // Que skills se instalan. Prioridad: --skills explicito > seleccion guardada en
 // el lockfile (sticky, como las vars) > checkbox interactivo con todas marcadas.
-// Las required del catalogo (soutec-github) entran siempre, elija lo que elija.
-export async function resolveSkills({ flags, lock, manifest, yes }) {
-  const catalog = manifest.skills ?? []
+// Las required del catalogo del modo (soutec-github en equipo, soutec-github-solo
+// en solo) entran siempre, elija lo que elija. El catalogo se filtra por modo:
+// las skills del otro modo ni se ofrecen ni se aceptan por flag.
+export async function resolveSkills({ flags, lock, manifest, yes, modo = 'equipo' }) {
+  const catalog = (manifest.skills ?? []).filter((s) => !s.modos || s.modos.includes(modo))
   if (!catalog.length) return undefined
 
   if (flags.skills != null) {
@@ -102,14 +105,41 @@ export async function resolveSkills({ flags, lock, manifest, yes }) {
   })
 }
 
+// Modo de trabajo del repo (SHS-M34). Prioridad: flag explicito > modo guardado
+// en el lockfile (sticky, como skills) > pregunta con default equipo. Un lockfile
+// sin campo modo (o con un valor invalido) cae a la pregunta: asi una instalacion
+// existente elige modo en su primer upgrade; en no interactivo el default es
+// equipo, para no cambiar el comportamiento de las automatizaciones.
+export async function resolveModo({ flags, lock, yes }) {
+  if (flags.solo && flags.equipo) {
+    throw new Error('--solo y --equipo son excluyentes: elige un solo modo')
+  }
+  if (flags.solo) return 'solo'
+  if (flags.equipo) return 'equipo'
+  if (MODOS.includes(lock?.modo)) return lock.modo
+  return ui.select({
+    message: 'Modo de trabajo del repo',
+    options: [
+      { value: 'equipo', label: 'equipo — metodologia completa: milestones, PRs y espejo del tablero' },
+      { value: 'solo', label: 'solo — single coder: Git fluido, sin validacion de PR, traza minima en el Vault' },
+    ],
+    initialValue: 'equipo',
+    yes,
+  })
+}
+
 // El nucleo compartido por init y upgrade: son el mismo code path. Lo unico que
 // cambia entre "repo vacio", "repo legacy" y "migrar del harness viejo" es que
 // encuentra computePlan en disco y en el lockfile.
 export async function planAndApply({ manifest, cwd, lock, vars, detected, flags, title }) {
   const force = Boolean(flags.force)
   const yes = Boolean(flags.yes) || ui.isCI()
-  const skills = await resolveSkills({ flags, lock, manifest, yes })
-  const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills })
+  // El modo se resuelve ANTES que las skills: el catalogo que se ofrece y se
+  // valida es el del modo elegido.
+  const modo = await resolveModo({ flags, lock, yes })
+  ui.log.info(`Modo de trabajo: ${modo}`)
+  const skills = await resolveSkills({ flags, lock, manifest, yes, modo })
+  const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills, modo })
 
   ui.renderPlan(plan, { verbose: Boolean(flags.verbose) })
 
@@ -117,6 +147,13 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   const obsolete = plan.actions.filter((a) => a.verdict === OBSOLETE)
 
   if (!pending.length && !obsolete.length) {
+    // Sin cambios de archivos, la decision del modo se persiste igual (salvo en
+    // --dry-run): si no, el upgrade de una instalacion existente ya al dia
+    // preguntaria el modo en cada corrida sin guardarlo jamas.
+    if (lock && plan.modo !== lock.modo && !flags['dry-run']) {
+      writeLockfile(cwd, { ...lock, modo: plan.modo })
+      ui.log.info(`Modo de trabajo persistido: ${plan.modo}`)
+    }
     ui.outro(`Ya estas en harness v${manifest.harnessVersion}. Nada que hacer.`)
     return 0
   }
@@ -186,19 +223,30 @@ export async function vaultStep({ code, cwd, flags, manifest, lock }) {
   // --dry-run no escribe ni un byte, y eso incluye la config del Vault.
   if (flags['dry-run']) return code
   const yes = Boolean(flags.yes) || ui.isCI()
-  await ensureVault({ cwd, flags, manifest, lock, yes })
+  // El modo se relee fresco del lockfile: `lock` es la foto de ANTES del plan
+  // (null en un init) y apply acaba de persistir el modo elegido. La siembra
+  // del Vault depende de el (worklog.md solo en modo solo, SHS-M34).
+  const modo = readLockfile(cwd)?.modo ?? lock?.modo ?? 'equipo'
+  await ensureVault({ cwd, flags, manifest, lock, yes, modo })
   return 0
 }
 
-// Siempre activa, sin pedir confirmacion: "main solo recibe merges desde dev"
-// es una regla dura de CLAUDE.md/soutec-github, no una preferencia opcional.
-// Igual que vaultStep, corre solo si el plan se aplico y nunca en --dry-run
-// (no toca nada fuera del repo local). Si gh no esta disponible o falla, se
-// reporta y el resto de init/upgrade sigue: nunca bloquea la instalacion.
-export function githubProtectionStep({ code, cwd, flags }) {
+// Siempre activa en modo equipo, sin pedir confirmacion: "main solo recibe
+// merges desde dev" es una regla dura de CLAUDE.md/soutec-github, no una
+// preferencia opcional. En modo solo NO corre: el flujo del modo ES mergear
+// directo a main (SHS-M34) y proteger la rama dejaria al dueño afuera de su
+// propio flujo. Igual que vaultStep, corre solo si el plan se aplico y nunca
+// en --dry-run (no toca nada fuera del repo local). Si gh no esta disponible o
+// falla, se reporta y el resto de init/upgrade sigue: nunca bloquea la
+// instalacion. `protege` es inyectable para testear el corte por modo.
+export function githubProtectionStep({ code, cwd, flags, protege = protegeBranchMain }) {
   if (code !== 0) return code
   if (flags['dry-run']) return code
-  protegeBranchMain({ cwd })
+  if ((readLockfile(cwd)?.modo ?? 'equipo') === 'solo') {
+    ui.log.info('Modo solo: no se configura branch protection de main.')
+    return code
+  }
+  protege({ cwd })
   return code
 }
 

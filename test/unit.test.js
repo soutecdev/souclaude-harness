@@ -6,6 +6,7 @@ import { buildBlock, upsertBlock, extractBlock, BEGIN } from '../src/core/block.
 import { seedMerge } from '../src/core/jsonmerge.js'
 import { lt } from '../src/core/lockfile.js'
 import { loadManifest, readTemplate } from '../src/core/manifest.js'
+import { MODOS } from '../src/core/plan.js'
 
 test('hash: CRLF y LF dan el mismo hash', () => {
   assert.equal(hashContent('a\r\nb\r\n'), hashContent('a\nb\n'))
@@ -79,7 +80,7 @@ test('manifest: todos los templates declarados existen en disco', () => {
   }
 })
 
-test('manifest: ningun dest duplicado salvo entries merge-json (se funden en computePlan, ver plan.js)', () => {
+test('manifest: ningun dest con dos entries emitibles en el mismo modo, salvo merge-json (se funden en computePlan, ver plan.js)', () => {
   const byDest = new Map()
   for (const f of loadManifest().files) {
     const group = byDest.get(f.dest) ?? []
@@ -88,6 +89,13 @@ test('manifest: ningun dest duplicado salvo entries merge-json (se funden en com
   }
   for (const [dest, group] of byDest) {
     if (group.length < 2) continue
-    assert.ok(group.every((f) => f.policy === 'merge-json'), `dest duplicado no permitido: "${dest}"`)
+    // La misma regla que findDuplicateDests (SHS-M34): entries de modos
+    // disjuntos (CLAUDE.md equipo vs solo) nunca se emiten juntos, asi que
+    // pueden compartir dest; dentro de un mismo modo, solo merge-json convive.
+    for (const modo of MODOS) {
+      const activos = group.filter((f) => !f.modos || f.modos.includes(modo))
+      if (activos.length < 2) continue
+      assert.ok(activos.every((f) => f.policy === 'merge-json'), `dest duplicado emitible en modo ${modo}: "${dest}"`)
+    }
   }
 })
