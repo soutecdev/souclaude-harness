@@ -28,6 +28,12 @@ const OPTIONS = {
   // Seleccion de skills sin modo interactivo: --skills adr-new,soutec-md-a-pdf
   // (soutec-github se instala siempre, este o no en la lista).
   skills: { type: 'string' },
+  // Modo de trabajo del repo (SHS-M34): --solo instala la superficie single
+  // coder (Git fluido, traza minima en el Vault); --equipo, la metodologia
+  // completa. Sin flag: manda el lockfile y, si no hay modo persistido, se
+  // pregunta (default equipo en no interactivo).
+  solo: { type: 'boolean' },
+  equipo: { type: 'boolean' },
   vault: { type: 'boolean', default: true },
   'vault-path': { type: 'string' },
   'vault-repo': { type: 'string' },
@@ -186,6 +192,12 @@ ${pc.bold('FLAGS')}
                        soutec-github es obligatoria: se instala siempre, este o no
                        en la lista. Sin el flag, init pregunta con un checkbox
                        (todas marcadas por defecto) y upgrade respeta lo elegido.
+  --solo | --equipo    Modo de trabajo del repo. equipo = la metodologia completa
+                       de siempre; solo = single coder (Git fluido, sin validacion
+                       de PR, traza minima en el Vault). Sin flag: manda lo
+                       persistido en .claude/harness.json; sin modo persistido
+                       (init, o upgrade de una instalacion existente) se pregunta,
+                       con equipo como default en modo no interactivo.
   --vault-path <ruta>  Conecta el Vault ya clonado sin preguntar (escribe .claude/vault.local.json).
   --vault-repo <url>   Repo del Vault a clonar. Por defecto, el del manifest.
   --vault-clone        Con --yes, clona el Vault si no esta conectado (por defecto,

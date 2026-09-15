@@ -2,7 +2,45 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Unreleased]
+## [3.13.0] — 2026-09-15
+
+### Agregado
+
+- **Single Coder Mode («modo solo»)** (SHS-M34). `init`/`upgrade` preguntan el modo de
+  trabajo del repo — `equipo` (la metodología completa de siempre) o `solo` (single
+  coder) — con flags `--solo`/`--equipo` para el modo no interactivo; la elección se
+  persiste en `.claude/harness.json` (sticky, incluso sin cambios de archivos) y una
+  instalación existente sin modo la elige en su primer `upgrade`, con `equipo` como
+  default no interactivo (T002). La superficie solo instala `CLAUDE-solo.md` (Git
+  fluido: ramas simples `tipo/slug`, sin validación de PR, merge directo del agente a
+  `dev` y `main`) y `settings-solo.json` que conserva únicamente los deny de secretos
+  (T003); la skill `soutec-github-solo` reemplaza a `soutec-github` como required del
+  modo, y `vault-milestones`/`jira-sync`/`azdo-sync` quedan solo en el catálogo de
+  equipo (T004). La trazabilidad del modo solo vive en `Project-<PREFIJO>/worklog.md`
+  del Vault — una línea con fecha por bloque de trabajo, sembrada por `init/upgrade` y
+  recordada por el hook de sesión `worklog-solo.mjs`, que muestra las últimas líneas
+  (T005). CI mínimo: solo `reglas-secretos.yml` + `check-pr-rules.mjs`; la plantilla de
+  PR, CODEOWNERS, los checks de rama/pr-metadata, tag-release y la branch protection de
+  `main` son del modo equipo (T006). El manifest gana el campo `modos` por entry y por
+  skill del catálogo (sin el campo = ambos modos), `verify` acepta dest duplicado entre
+  modos disjuntos, y cambiar de modo deja los archivos del modo anterior en OBSOLETE
+  (`--prune` ofrece borrarlos). ADR `docs/decisions/20260915-modo-solo.md`.
+
+### Cambiado
+
+- **`reglas-pr.yml` se separa en tres checks independientes** (SHS-M33): `reglas-rama-commits`
+  (formato de rama y de commits, ahora CI opcional — no bloquea el merge), `reglas-secretos`
+  y `reglas-pr-metadata` (base=`dev`, mergeable, versión/semver y secciones del PR
+  completas), ambos CI required. `check-pr-rules.mjs` gana el flag `--grupo` para correr
+  solo el subconjunto de reglas de cada workflow. `github-protect.js` configura la branch
+  protection de `main` con los dos checks required (`reglas-secretos`, `reglas-pr-metadata`)
+  en vez del check único `reglas-pr`.
+
+### Corregido
+
+- **`COMMIT_REGEX` acepta letras acentuadas y ñ al inicio de la descripción del commit**
+  (SHS-M32). Un commit como `fix: ícono roto en el panel` ya no falla el check de
+  rama/commits, y el tipo `Revert` con mayúscula inicial también valida.
 
 ## [3.12.0] — 2026-09-14
 

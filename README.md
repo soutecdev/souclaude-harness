@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.12.0**
+**v3.13.0**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.
@@ -44,6 +44,28 @@ Las skills son **project-local**: se commitean con el repo. Quien clona, las tie
 No hay instalación global por dev ni por máquina, y el `upgrade` puede mantenerlas al
 día proyecto por proyecto.
 
+## Modo de trabajo: equipo o solo
+
+El harness instala una de dos superficies:
+
+- **equipo** (default): la metodología completa de SOUTEC — milestones y kanban del
+  Vault obligatorios, rama + PR con plantilla y checks, merge del coordinador,
+  espejo del tablero (Jira/Azure Boards) y branch protection de `main`.
+- **solo** (single coder): para trabajo individual. Git fluido — ramas simples
+  `tipo/slug`, sin validación de PR, el agente puede mergear directo a `dev` y a
+  `main` (skill `soutec-github-solo`) — sin milestones ni espejo del tablero. La
+  trazabilidad no desaparece: cada bloque de trabajo deja una línea con fecha en
+  `Project-<PREFIJO>/worklog.md` del Vault (el hook de sesión la recuerda y muestra
+  las últimas), y `sessions.md`/monitor siguen funcionando igual. La única regla
+  dura que sobrevive es la de **secretos** (deny en settings + `reglas-secretos.yml`).
+
+`init` pregunta el modo (o recibe `--solo`/`--equipo`); queda persistido en
+`.claude/harness.json` y los upgrades lo respetan. Una instalación existente
+(lockfile sin modo) lo elige en su **primer `upgrade`** — en no interactivo el
+default es `equipo`, para no cambiar automatizaciones. Cambiar de modo después:
+`npx souclaude upgrade --solo` (o `--equipo`); los archivos del modo anterior
+quedan marcados obsoletos y `--prune` ofrece borrarlos.
+
 ## Comandos
 
 | | |
@@ -58,7 +80,8 @@ Sin comando, se autodetecta: hay lockfile → `upgrade` · hay estructura previa
 `adopt` · repo limpio → `init`.
 
 Flags que importan: `--dry-run` (imprime el plan, escribe cero bytes), `--yes`,
-`--force`, `--prune`, `--no-backup`, `--verbose`.
+`--force`, `--prune`, `--no-backup`, `--verbose`, `--solo`/`--equipo` (modo de
+trabajo del repo, ver arriba).
 
 ## `souclaude monitor`
 

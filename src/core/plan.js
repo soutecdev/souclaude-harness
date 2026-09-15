@@ -18,18 +18,35 @@ export const RESTORE = 'restore' // lo escribimos y el usuario lo borro -> reesc
 export const LOCAL_EDIT = 'local-edit' // el usuario lo edito, el template no cambio -> dejarlo
 export const OBSOLETE = 'obsolete' // estaba en el lockfile, ya no esta en el manifest -> ofrecer borrado
 
-export function computePlan({ manifest, cwd, lock, vars, detected, force = false, skills }) {
+// Modos de trabajo del harness (SHS-M34): la superficie completa de equipo o la
+// relajada de single coder. Fuente unica para resolver (commands/_shared.js),
+// filtrar (computePlan) y verificar (core/verify.js).
+export const MODOS = ['equipo', 'solo']
+
+export function computePlan({ manifest, cwd, lock, vars, detected, force = false, skills, modo }) {
   const actions = []
   const skippedByStack = []
   const fromVersion = lock?.harnessVersion ?? '0.0.0'
   const seenDests = new Set()
 
+  // Modo de trabajo (SHS-M34). Sin parametro explicito: el persistido en el
+  // lockfile; sin nada, equipo — el harness completo, como siempre fue (los
+  // call sites viejos y los tests que no pasan modo conservan su comportamiento).
+  const modoActivo = modo ?? lock?.modo ?? 'equipo'
+
   // Seleccion de skills. Sin parametro explicito: lo que dice el lockfile; sin
-  // lockfile, todas las del catalogo (compatibilidad con repos pre-3.0 y tests).
-  const selected = resolveSkillSet({ manifest, lock, skills })
+  // lockfile, todas las del catalogo del modo (compatibilidad con repos pre-3.0
+  // y tests).
+  const selected = resolveSkillSet({ manifest, lock, skills, modo: modoActivo })
 
   const emitted = manifest.files.filter((entry) => {
     if (entry.when === 'empty-repo' && !detected.isEmpty) return false
+    // "modos": ["equipo"|"solo", ...] — el entry pertenece solo a esa(s)
+    // superficie(s); sin el campo, es comun a ambos modos. A diferencia de
+    // stack, no se reporta nada: que el archivo no este ES el comportamiento
+    // del modo, no un hueco a completar a mano. Lo que deja de emitirse en un
+    // cambio de modo cae al barrido de OBSOLETE y se ofrece con --prune.
+    if (entry.modos && !entry.modos.includes(modoActivo)) return false
     // "when": "stack:<id>" -- el entry asume un lenguaje/runtime concreto (ej.
     // tag-release.mjs necesita Node para correr). Si el repo no trae esa senal,
     // no se instala: instalarlo igual dejaria un script que nadie puede ejecutar.
@@ -92,15 +109,21 @@ export function computePlan({ manifest, cwd, lock, vars, detected, force = false
 
   const dirs = (manifest.dirs ?? []).filter((d) => !(d.when === 'empty-repo' && !detected.isEmpty))
 
-  return { actions, dirs, fromVersion, toVersion: manifest.harnessVersion, skills: [...selected].sort(), skippedByStack }
+  return { actions, dirs, fromVersion, toVersion: manifest.harnessVersion, skills: [...selected].sort(), modo: modoActivo, skippedByStack }
 }
 
-// Las required del catalogo entran SIEMPRE, se pidan o no: es la garantia de
-// que soutec-github no se puede desinstalar.
-export function resolveSkillSet({ manifest, lock, skills }) {
-  const catalog = manifest.skills ?? []
+// Las required del catalogo del modo entran SIEMPRE, se pidan o no: es la
+// garantia de que la skill de Git (soutec-github en equipo, soutec-github-solo
+// en solo) no se puede desinstalar. El catalogo se filtra por modo con la misma
+// semantica que los entries de files: una skill sin "modos" existe en ambos.
+// Lo elegido (flag o lockfile) se intersecta con el catalogo del modo: al
+// cambiar de modo, las skills del modo anterior salen del set y sus archivos
+// caen al barrido de OBSOLETE.
+export function resolveSkillSet({ manifest, lock, skills, modo = 'equipo' }) {
+  const catalog = (manifest.skills ?? []).filter((s) => !s.modos || s.modos.includes(modo))
   const required = catalog.filter((s) => s.required).map((s) => s.id)
-  const chosen = skills ?? lock?.skills ?? catalog.map((s) => s.id)
+  const ids = new Set(catalog.map((s) => s.id))
+  const chosen = (skills ?? lock?.skills ?? catalog.map((s) => s.id)).filter((id) => ids.has(id))
   return new Set([...required, ...chosen])
 }
 

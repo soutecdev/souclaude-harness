@@ -202,9 +202,10 @@ se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, s
 **La plantilla no se aplica sola al abrir el PR por CLI.** Solo la web de GitHub la
 precarga; `gh pr create` deja el cuerpo que le pases y nada más. El flujo correcto:
 escribir la plantilla ya completada en un archivo temporal y abrir el PR con
-`gh pr create --body-file <archivo>`. En repos con el check `reglas-pr` en CI, un
-PR con la plantilla cruda o incompleta **falla el check** (secciones con el texto
-guía intacto, casilla de versión sin marcar): la descripción queda bien desde el alta.
+`gh pr create --body-file <archivo>`. En repos con el check `reglas-pr-metadata` en
+CI, un PR con la plantilla cruda o incompleta **falla el check** (secciones con el
+texto guía intacto, casilla de versión sin marcar): la descripción queda bien desde
+el alta.
 
 Si piden correcciones: **pushear a la misma rama.** El PR se actualiza solo. Crear un
 PR nuevo por cada corrección rompe la trazabilidad y duplica el ruido.

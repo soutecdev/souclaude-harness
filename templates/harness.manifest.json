@@ -1,5 +1,5 @@
 {
-  "harnessVersion": "3.12.0",
+  "harnessVersion": "3.13.0",
   "vault": {
     "repo": "https://github.com/ialvarezsoutec/soubunker-vault.git"
   },
@@ -7,7 +7,14 @@
     {
       "id": "soutec-github",
       "label": "soutec-github — flujo Git/GitHub de SOUTEC (obligatoria)",
-      "required": true
+      "required": true,
+      "modos": ["equipo"]
+    },
+    {
+      "id": "soutec-github-solo",
+      "label": "soutec-github-solo — flujo Git fluido del modo solo (obligatoria)",
+      "required": true,
+      "modos": ["solo"]
     },
     {
       "id": "it-security-review",
@@ -31,15 +38,18 @@
     },
     {
       "id": "vault-milestones",
-      "label": "vault-milestones — análisis e iteración de milestones en el Vault"
+      "label": "vault-milestones — análisis e iteración de milestones en el Vault",
+      "modos": ["equipo"]
     },
     {
       "id": "jira-sync",
-      "label": "jira-sync — espejo del tablero del Vault en Jira vía MCP de Atlassian"
+      "label": "jira-sync — espejo del tablero del Vault en Jira vía MCP de Atlassian",
+      "modos": ["equipo"]
     },
     {
       "id": "azdo-sync",
-      "label": "azdo-sync — espejo del tablero del Vault en Azure DevOps Boards vía MCP"
+      "label": "azdo-sync — espejo del tablero del Vault en Azure DevOps Boards vía MCP",
+      "modos": ["equipo"]
     }
   ],
   "files": [
@@ -49,7 +59,17 @@
       "dest": "CLAUDE.md",
       "render": true,
       "policy": "user-owned",
-      "critical": true
+      "critical": true,
+      "modos": ["equipo"]
+    },
+    {
+      "id": "claude-md-solo",
+      "src": "base/CLAUDE-solo.md",
+      "dest": "CLAUDE.md",
+      "render": true,
+      "policy": "user-owned",
+      "critical": true,
+      "modos": ["solo"]
     },
     {
       "id": "notes",
@@ -78,13 +98,29 @@
       "id": "settings",
       "src": "base/claude/settings.json",
       "dest": ".claude/settings.json",
-      "policy": "merge-json"
+      "policy": "merge-json",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "settings-solo",
+      "src": "base/claude/settings-solo.json",
+      "dest": ".claude/settings.json",
+      "policy": "merge-json",
+      "modos": ["solo"]
     },
     {
       "id": "hook-declarar-milestone",
       "src": "base/claude/hooks/declarar-milestone.mjs",
       "dest": ".claude/hooks/declarar-milestone.mjs",
-      "policy": "managed"
+      "policy": "managed",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "hook-worklog-solo",
+      "src": "base/claude/hooks/worklog-solo.mjs",
+      "dest": ".claude/hooks/worklog-solo.mjs",
+      "policy": "managed",
+      "modos": ["solo"]
     },
     {
       "id": "gitignore",
@@ -96,13 +132,15 @@
       "id": "pr-template",
       "src": "base/github/pull_request_template.md",
       "dest": ".github/pull_request_template.md",
-      "policy": "user-owned"
+      "policy": "user-owned",
+      "modos": ["equipo"]
     },
     {
       "id": "codeowners",
       "src": "base/github/CODEOWNERS",
       "dest": ".github/CODEOWNERS",
-      "policy": "user-owned"
+      "policy": "user-owned",
+      "modos": ["equipo"]
     },
     {
       "id": "check-pr-rules",
@@ -111,24 +149,40 @@
       "policy": "managed"
     },
     {
-      "id": "workflow-reglas-pr",
-      "src": "base/github/workflows/reglas-pr.yml",
-      "dest": ".github/workflows/reglas-pr.yml",
+      "id": "workflow-reglas-rama-commits",
+      "src": "base/github/workflows/reglas-rama-commits.yml",
+      "dest": ".github/workflows/reglas-rama-commits.yml",
+      "policy": "managed",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "workflow-reglas-secretos",
+      "src": "base/github/workflows/reglas-secretos.yml",
+      "dest": ".github/workflows/reglas-secretos.yml",
       "policy": "managed"
+    },
+    {
+      "id": "workflow-reglas-pr-metadata",
+      "src": "base/github/workflows/reglas-pr-metadata.yml",
+      "dest": ".github/workflows/reglas-pr-metadata.yml",
+      "policy": "managed",
+      "modos": ["equipo"]
     },
     {
       "id": "tag-release",
       "src": "base/scripts/tag-release.mjs",
       "dest": "scripts/tag-release.mjs",
       "policy": "managed",
-      "when": "stack:node"
+      "when": "stack:node",
+      "modos": ["equipo"]
     },
     {
       "id": "workflow-tag-release",
       "src": "base/github/workflows/tag-release.yml",
       "dest": ".github/workflows/tag-release.yml",
       "policy": "managed",
-      "when": "stack:node"
+      "when": "stack:node",
+      "modos": ["equipo"]
     },
     {
       "id": "skill-soutec-github",
@@ -136,6 +190,13 @@
       "dest": ".claude/skills/soutec-github/SKILL.md",
       "policy": "managed",
       "skill": "soutec-github"
+    },
+    {
+      "id": "skill-soutec-github-solo",
+      "src": "base/claude/skills/soutec-github-solo/SKILL.md",
+      "dest": ".claude/skills/soutec-github-solo/SKILL.md",
+      "policy": "managed",
+      "skill": "soutec-github-solo"
     },
     {
       "id": "skill-it-security-review",
@@ -305,7 +366,8 @@
       "id": "progress-readme",
       "src": "base/progress/README.md",
       "dest": "progress/README.md",
-      "policy": "managed"
+      "policy": "managed",
+      "modos": ["equipo"]
     },
     {
       "id": "progress-history",

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { evaluaRama, evaluaSeccionesCompletas, evaluaVersion } from '../scripts/check-pr-rules.mjs'
+import { evaluaRama, evaluaCommits, evaluaSeccionesCompletas, evaluaVersion } from '../scripts/check-pr-rules.mjs'
 
 // La norma de la skill soutec-github admite DOS formas de rama, y las dos son
 // contrato: tipo/descripcion-corta a secas, o tipo/ID-descripcion-corta donde
@@ -95,10 +95,36 @@ test('evaluaRama: contra base "main", ninguna rama de trabajo pasa, ni hotfix/*'
 test('las copias distribuidas en templates/base son identicas a las fuentes', () => {
   const espejos = [
     ['scripts/check-pr-rules.mjs', 'templates/base/scripts/check-pr-rules.mjs'],
-    ['.github/workflows/reglas-pr.yml', 'templates/base/github/workflows/reglas-pr.yml'],
+    ['.github/workflows/reglas-rama-commits.yml', 'templates/base/github/workflows/reglas-rama-commits.yml'],
+    ['.github/workflows/reglas-secretos.yml', 'templates/base/github/workflows/reglas-secretos.yml'],
+    ['.github/workflows/reglas-pr-metadata.yml', 'templates/base/github/workflows/reglas-pr-metadata.yml'],
   ]
   for (const [fuente, copia] of espejos) {
     assert.equal(readFileSync(copia, 'utf8'), readFileSync(fuente, 'utf8'), `${copia} difiere de ${fuente}`)
+  }
+})
+
+// El español usa tildes y enie en palabras corrientes (icono, nio): la
+// descripcion del commit no puede rechazarlas solo por ir primeras.
+test('evaluaCommits: acepta tildes y ñ al inicio de la descripcion', () => {
+  const commits = [
+    { hash: '1111111aaaa', subject: 'fix: ícono roto en el boton de exportar' },
+    { hash: '2222222bbbb', subject: 'feat: ñoquis de los viernes en el catering' },
+    { hash: '3333333cccc', subject: 'docs: úsese esta plantilla para el ADR' },
+  ]
+  const resultados = evaluaCommits(commits)
+  for (const r of resultados) {
+    assert.equal(r.cumple, true, r.detalle)
+  }
+})
+
+test('evaluaCommits: el tipo "revert" ya esta soportado, en minuscula y mayuscula inicial', () => {
+  const commits = [
+    { hash: '4444444dddd', subject: 'revert: deshacer el bump de version 3.12.0' },
+    { hash: '5555555eeee', subject: 'Revert: deshacer el bump de version 3.12.0' },
+  ]
+  for (const r of evaluaCommits(commits)) {
+    assert.equal(r.cumple, true, r.detalle)
   }
 })
 

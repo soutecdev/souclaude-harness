@@ -113,6 +113,27 @@ test('verify: dest duplicado SI es error si alguno de los entries no es merge-js
   assert.equal(findDuplicateDests(manifest).length, 1)
 })
 
+test('verify: dest duplicado no es error entre modos disjuntos (CLAUDE.md de equipo vs de solo)', () => {
+  const manifest = {
+    files: [
+      { id: 'claude-md', src: 'base/CLAUDE.md', dest: 'CLAUDE.md', policy: 'user-owned', modos: ['equipo'] },
+      { id: 'claude-md-solo', src: 'base/CLAUDE-solo.md', dest: 'CLAUDE.md', policy: 'user-owned', modos: ['solo'] },
+    ],
+  }
+  assert.equal(findDuplicateDests(manifest).length, 0)
+})
+
+test('verify: dest duplicado SI es error cuando los entries coinciden en algun modo', () => {
+  // El entry sin "modos" vale para ambos: choca con el de solo en el modo solo.
+  const manifest = {
+    files: [
+      { id: 'claude-md', src: 'base/CLAUDE.md', dest: 'CLAUDE.md', policy: 'user-owned' },
+      { id: 'claude-md-solo', src: 'base/CLAUDE-solo.md', dest: 'CLAUDE.md', policy: 'user-owned', modos: ['solo'] },
+    ],
+  }
+  assert.equal(findDuplicateDests(manifest).length, 1)
+})
+
 test('verify: detecta critico faltante cuando el src del entry critical no existe', () => {
   const root = mkTemplatesRoot({})
   const manifest = { files: [{ id: 'claude-md', src: 'base/CLAUDE.md', dest: 'CLAUDE.md', policy: 'user-owned', critical: true }] }
