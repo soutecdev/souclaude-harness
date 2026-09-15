@@ -100,15 +100,55 @@ test('upgrade de una instalacion existente sin modo persistido: elige y persiste
   assert.equal(JSON.parse(read(dir, '.claude/harness.json')).modo, 'equipo')
 })
 
-test('cambiar de modo por flag en un repo al dia queda persistido', async () => {
+test('cambiar de modo por flag queda persistido y reemplaza la superficie', async () => {
   const dir = mkRepo({ 'README.md': '' })
   await main(['init', ...YES], dir)
   assert.equal(JSON.parse(read(dir, '.claude/harness.json')).modo, 'equipo')
+  assert.ok(read(dir, 'CLAUDE.md').includes('Git — reglas duras'))
 
-  // Hoy el manifest real no distingue superficies (T003+), asi que el cambio de
-  // modo no mueve archivos: aun asi debe quedar guardado.
   assert.equal(await main(['upgrade', ...YES, '--solo'], dir), 0)
   assert.equal(JSON.parse(read(dir, '.claude/harness.json')).modo, 'solo')
+  // CLAUDE.md intacto (user-owned sin ediciones) -> UPDATE seguro a la variante solo.
+  assert.ok(read(dir, 'CLAUDE.md').includes('modo solo'), 'el switch no reescribio CLAUDE.md')
+})
+
+test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin candados git/gh)', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  assert.equal(await main(['init', ...YES, '--solo'], dir), 0)
+
+  const claudeMd = read(dir, 'CLAUDE.md')
+  assert.ok(claudeMd.includes('modo solo'), 'CLAUDE.md no es la variante solo')
+  assert.ok(claudeMd.includes('worklog.md'), 'falta el protocolo de worklog')
+  assert.ok(!claudeMd.includes('Trazabilidad obligatoria'), 'quedo la regla de milestones de equipo')
+  assert.ok(!claudeMd.includes('reglas duras'), 'quedo el Git de equipo')
+  // Las vars renderizan igual que en equipo.
+  assert.ok(claudeMd.includes('# CLAUDE.md — acme'))
+
+  const settings = JSON.parse(read(dir, '.claude/settings.json'))
+  // Secretos: la unica regla dura sobrevive identica.
+  assert.ok(settings.permissions.deny.includes('Read(./.env)'))
+  assert.ok(settings.permissions.deny.includes('Read(./secrets/**)'))
+  // Sin candados git/gh: ni deny de Bash, ni gates de ask; el merge queda permitido.
+  assert.ok(!settings.permissions.deny.some((r) => r.startsWith('Bash(')), 'quedo un deny de Bash en modo solo')
+  assert.ok(settings.permissions.allow.includes('Bash(gh pr merge:*)'))
+  assert.equal(settings.permissions.ask, undefined, 'modo solo no gatea con ask')
+  // El hook de milestones no se cablea en solo (la traza llega con su hook propio, T005).
+  assert.equal(settings.hooks, undefined)
+})
+
+test('init equipo: la superficie de siempre queda intacta', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  assert.equal(await main(['init', ...YES], dir), 0)
+
+  const claudeMd = read(dir, 'CLAUDE.md')
+  assert.ok(claudeMd.includes('Git — reglas duras'))
+  assert.ok(claudeMd.includes('Trazabilidad obligatoria'))
+  assert.ok(!claudeMd.includes('modo solo'))
+
+  const settings = JSON.parse(read(dir, '.claude/settings.json'))
+  assert.ok(settings.permissions.deny.includes('Bash(gh pr merge:*)'))
+  assert.ok(settings.permissions.ask.includes('Bash(git push --force*)'))
+  assert.ok(settings.hooks.SessionStart, 'falta el hook declarar-milestone en equipo')
 })
 
 test('--dry-run no persiste ni la decision del modo', async () => {

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { TEMPLATES_DIR } from './manifest.js'
 import { toPosix } from './fsx.js'
 import { SIGNATURES } from './detect.js'
+import { MODOS } from './plan.js'
 
 export const ERROR = 'error'
 export const WARNING = 'warning'
@@ -107,10 +108,13 @@ export function findDuplicateIds(manifest) {
   return errors
 }
 
-// Dos entries con el mismo dest son un error salvo que TODOS los que comparten
-// ese dest sean policy merge-json: computePlan los funde en una sola accion
-// (ver src/core/plan.js) antes de escribir, asi que no hay riesgo de que uno
-// pise al otro. Cualquier otra policy duplicada si es un bug del manifest.
+// Dos entries con el mismo dest son un error salvo que nunca puedan emitirse en
+// la misma corrida. Se evalua POR MODO (SHS-M34): en cada modo, los entries
+// activos sobre un dest (los que no declaran "modos" cuentan en todos) solo
+// pueden convivir si todos son merge-json — computePlan los funde en una sola
+// accion (ver src/core/plan.js), asi que no se pisan. Un dest compartido por
+// entries de modos disjuntos (CLAUDE.md de equipo vs de solo) es valido: cada
+// corrida emite a lo sumo uno.
 export function findDuplicateDests(manifest) {
   const byDest = new Map()
   for (const entry of manifest.files) {
@@ -121,8 +125,13 @@ export function findDuplicateDests(manifest) {
   const errors = []
   for (const [dest, group] of byDest) {
     if (group.length < 2) continue
-    if (group.every((e) => e.policy === 'merge-json')) continue
-    errors.push({ type: ERROR, code: 'duplicate-dest', message: `manifest.files[] tiene mas de un entry con dest "${dest}".` })
+    const chocanEnAlgunModo = MODOS.some((modo) => {
+      const activos = group.filter((e) => !e.modos || e.modos.includes(modo))
+      return activos.length > 1 && !activos.every((e) => e.policy === 'merge-json')
+    })
+    if (chocanEnAlgunModo) {
+      errors.push({ type: ERROR, code: 'duplicate-dest', message: `manifest.files[] tiene mas de un entry con dest "${dest}" emitible en el mismo modo.` })
+    }
   }
   return errors
 }

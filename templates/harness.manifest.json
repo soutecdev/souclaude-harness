@@ -49,7 +49,17 @@
       "dest": "CLAUDE.md",
       "render": true,
       "policy": "user-owned",
-      "critical": true
+      "critical": true,
+      "modos": ["equipo"]
+    },
+    {
+      "id": "claude-md-solo",
+      "src": "base/CLAUDE-solo.md",
+      "dest": "CLAUDE.md",
+      "render": true,
+      "policy": "user-owned",
+      "critical": true,
+      "modos": ["solo"]
     },
     {
       "id": "notes",
@@ -78,7 +88,15 @@
       "id": "settings",
       "src": "base/claude/settings.json",
       "dest": ".claude/settings.json",
-      "policy": "merge-json"
+      "policy": "merge-json",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "settings-solo",
+      "src": "base/claude/settings-solo.json",
+      "dest": ".claude/settings.json",
+      "policy": "merge-json",
+      "modos": ["solo"]
     },
     {
       "id": "hook-declarar-milestone",

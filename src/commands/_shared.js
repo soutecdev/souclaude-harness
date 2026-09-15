@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
-import { computePlan, writeActions, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
 import { writeLockfile } from '../core/lockfile.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
@@ -108,8 +108,6 @@ export async function resolveSkills({ flags, lock, manifest, yes }) {
 // sin campo modo (o con un valor invalido) cae a la pregunta: asi una instalacion
 // existente elige modo en su primer upgrade; en no interactivo el default es
 // equipo, para no cambiar el comportamiento de las automatizaciones.
-export const MODOS = ['equipo', 'solo']
-
 export async function resolveModo({ flags, lock, yes }) {
   if (flags.solo && flags.equipo) {
     throw new Error('--solo y --equipo son excluyentes: elige un solo modo')

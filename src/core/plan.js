@@ -18,6 +18,11 @@ export const RESTORE = 'restore' // lo escribimos y el usuario lo borro -> reesc
 export const LOCAL_EDIT = 'local-edit' // el usuario lo edito, el template no cambio -> dejarlo
 export const OBSOLETE = 'obsolete' // estaba en el lockfile, ya no esta en el manifest -> ofrecer borrado
 
+// Modos de trabajo del harness (SHS-M34): la superficie completa de equipo o la
+// relajada de single coder. Fuente unica para resolver (commands/_shared.js),
+// filtrar (computePlan) y verificar (core/verify.js).
+export const MODOS = ['equipo', 'solo']
+
 export function computePlan({ manifest, cwd, lock, vars, detected, force = false, skills, modo }) {
   const actions = []
   const skippedByStack = []
