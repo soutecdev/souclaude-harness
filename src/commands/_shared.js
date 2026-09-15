@@ -231,15 +231,22 @@ export async function vaultStep({ code, cwd, flags, manifest, lock }) {
   return 0
 }
 
-// Siempre activa, sin pedir confirmacion: "main solo recibe merges desde dev"
-// es una regla dura de CLAUDE.md/soutec-github, no una preferencia opcional.
-// Igual que vaultStep, corre solo si el plan se aplico y nunca en --dry-run
-// (no toca nada fuera del repo local). Si gh no esta disponible o falla, se
-// reporta y el resto de init/upgrade sigue: nunca bloquea la instalacion.
-export function githubProtectionStep({ code, cwd, flags }) {
+// Siempre activa en modo equipo, sin pedir confirmacion: "main solo recibe
+// merges desde dev" es una regla dura de CLAUDE.md/soutec-github, no una
+// preferencia opcional. En modo solo NO corre: el flujo del modo ES mergear
+// directo a main (SHS-M34) y proteger la rama dejaria al dueño afuera de su
+// propio flujo. Igual que vaultStep, corre solo si el plan se aplico y nunca
+// en --dry-run (no toca nada fuera del repo local). Si gh no esta disponible o
+// falla, se reporta y el resto de init/upgrade sigue: nunca bloquea la
+// instalacion. `protege` es inyectable para testear el corte por modo.
+export function githubProtectionStep({ code, cwd, flags, protege = protegeBranchMain }) {
   if (code !== 0) return code
   if (flags['dry-run']) return code
-  protegeBranchMain({ cwd })
+  if ((readLockfile(cwd)?.modo ?? 'equipo') === 'solo') {
+    ui.log.info('Modo solo: no se configura branch protection de main.')
+    return code
+  }
+  protege({ cwd })
   return code
 }
 

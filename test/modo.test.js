@@ -6,7 +6,7 @@ import { main } from '../src/cli.js'
 import { mkRepo, read, has, replan, verdicts } from './helpers.js'
 import { computePlan, NOOP, OBSOLETE } from '../src/core/plan.js'
 import { resolveDetected } from '../src/core/detect.js'
-import { resolveModo } from '../src/commands/_shared.js'
+import { resolveModo, githubProtectionStep } from '../src/commands/_shared.js'
 import { semillasProyecto } from '../src/core/vault-seeds.js'
 
 const YES = ['--yes', '--name', 'acme', '--type', 'backend', '--lang', 'es']
@@ -186,8 +186,41 @@ test('switch equipo -> solo: la skill de solo entra y las de equipo quedan obsol
   assert.ok(obsoletos.includes('.claude/skills/jira-sync/SKILL.md'))
   assert.ok(obsoletos.includes('.claude/hooks/declarar-milestone.mjs'))
   assert.ok(obsoletos.includes('progress/README.md'))
+  assert.ok(obsoletos.includes('.github/workflows/reglas-rama-commits.yml'))
+  assert.ok(obsoletos.includes('.github/pull_request_template.md'))
   const lock = JSON.parse(read(dir, '.claude/harness.json'))
   assert.ok(!lock.skills.includes('jira-sync'), 'el lockfile arrastro una skill del modo anterior')
+})
+
+test('init --solo: CI minimo (solo el workflow de secretos) y sin artefactos de review', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  assert.equal(await main(['init', ...YES, '--solo'], dir), 0)
+
+  // Lo unico de CI que sobrevive: el check de secretos y el script que usa.
+  assert.ok(has(dir, '.github/workflows/reglas-secretos.yml'))
+  assert.ok(has(dir, 'scripts/check-pr-rules.mjs'))
+  // Sin checks de estilo/metadata, sin plantilla de PR, sin CODEOWNERS.
+  for (const f of [
+    '.github/workflows/reglas-rama-commits.yml',
+    '.github/workflows/reglas-pr-metadata.yml',
+    '.github/pull_request_template.md',
+    '.github/CODEOWNERS',
+  ]) {
+    assert.ok(!has(dir, f), `se emitio ${f} en modo solo`)
+  }
+})
+
+test('githubProtectionStep: en modo solo no configura branch protection; en equipo si', () => {
+  const llamadas = []
+  const protege = (args) => llamadas.push(args)
+
+  const solo = mkRepo({ '.claude/harness.json': JSON.stringify({ modo: 'solo' }) })
+  githubProtectionStep({ code: 0, cwd: solo, flags: {}, protege })
+  assert.equal(llamadas.length, 0, 'protegio main en modo solo')
+
+  const equipo = mkRepo({ '.claude/harness.json': JSON.stringify({ modo: 'equipo' }) })
+  githubProtectionStep({ code: 0, cwd: equipo, flags: {}, protege })
+  assert.equal(llamadas.length, 1, 'no protegio main en modo equipo')
 })
 
 test('semillasProyecto: worklog.md solo se siembra en modo solo', () => {
