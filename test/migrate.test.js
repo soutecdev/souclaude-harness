@@ -2,11 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { main } from '../src/cli.js'
 import { mkRepo, read, has, snapshot, replan, verdicts } from './helpers.js'
-import { OBSOLETE, NOOP } from '../src/core/plan.js'
+import { OBSOLETE, NOOP, computePlan } from '../src/core/plan.js'
 import { apply } from '../src/core/apply.js'
 import { loadManifest } from '../src/core/manifest.js'
-import { detect } from '../src/core/detect.js'
+import { detect, resolveDetected } from '../src/core/detect.js'
 import { readLockfile } from '../src/core/lockfile.js'
+import { hashContent } from '../src/core/hash.js'
 
 const YES = ['--yes', '--name', 'kit', '--type', 'backend', '--lang', 'es']
 
@@ -69,12 +70,10 @@ test('migracion v0: el .claudeignore se marca obsoleto, pero NO se borra solo', 
   assert.match(razon, /nunca soporto \.claudeignore/)
 })
 
-test('migracion v0: --prune borra el .claudeignore, con backup', async () => {
+test('migracion v0: --prune solo NO alcanza para el .claudeignore (no hay lockfile previo, no se puede verificar si lo editaron)', async () => {
   const dir = kitV0()
   await main(['upgrade', ...YES], dir)
 
-  // --prune exige doble confirmacion interactiva, asi que en test se ejercita
-  // apply() directo. Es la misma ruta de codigo que corre tras el "BORRAR".
   const manifest = loadManifest()
   const lock = readLockfile(dir)
   const detected = detect(dir)
@@ -82,9 +81,27 @@ test('migracion v0: --prune borra el .claudeignore, con backup', async () => {
 
   const res = apply({ plan, cwd: dir, manifest, vars: lock.vars, detected, lock, prune: true, backup: true })
 
+  assert.ok(has(dir, '.claudeignore'), 'un obsoleto sin lockfile previo no se puede clasificar como sin editar, y se borro igual')
+  assert.deepEqual(res.removed, [])
+})
+
+test('migracion v0: --prune + pruneEdited borra el .claudeignore, con backup', async () => {
+  const dir = kitV0()
+  await main(['upgrade', ...YES], dir)
+
+  // --prune de un obsoleto editado (o sin lockfile) exige la confirmacion escrita
+  // interactiva, asi que en test se ejercita apply() directo con pruneEdited: true.
+  // Es la misma ruta de codigo que corre tras el "BORRAR".
+  const manifest = loadManifest()
+  const lock = readLockfile(dir)
+  const detected = detect(dir)
+  const plan = replan(dir)
+
+  const res = apply({ plan, cwd: dir, manifest, vars: lock.vars, detected, lock, prune: true, pruneEdited: true, backup: true })
+
   assert.ok(!has(dir, '.claudeignore'), 'el .claudeignore no se borro')
   assert.deepEqual(res.removed, ['.claudeignore'])
-  // Backup antes de borrar: P5.
+  // Backup antes de borrar: P6.
   assert.ok(res.backupRoot)
   assert.ok(has(dir, `.claude/${res.backupRoot.split(/[\\/]/).pop()}/.claudeignore`))
 })
@@ -172,4 +189,31 @@ test('upgrade despues de adopt: converge y queda idempotente', async () => {
   // y el CLAUDE.md del usuario (que nunca se pisa).
   const pendientes = Object.keys(verdicts(replan(dir))).filter((v) => v !== NOOP)
   assert.deepEqual(pendientes.sort(), ['foreign', 'obsolete'])
+})
+
+// Un obsoleto de verdad (declarado en el lockfile, ya no en el manifest): si el
+// contenido en disco sigue siendo exactamente lo que el harness escribio, es
+// contenido del harness y --prune lo borra sin pedir confirmacion (autoPrune).
+// Si el usuario lo edito, --prune exige la confirmacion escrita de siempre.
+test('computePlan: obsoleto sin editar (hash intacto) se marca autoPrune, editado no', () => {
+  const contenidoOriginal = 'contenido que escribio el harness\n'
+  const dir = mkRepo({ 'viejo/intacto.md': contenidoOriginal, 'viejo/editado.md': 'lo que el usuario dejo\n' })
+  const manifest = { harnessVersion: '1.0.0', files: [], obsolete: [] }
+  const lock = {
+    harnessVersion: '1.0.0',
+    files: {
+      'viejo/intacto.md': { policy: 'managed', hash: hashContent(contenidoOriginal) },
+      'viejo/editado.md': { policy: 'managed', hash: hashContent('contenido que escribio el harness, version anterior\n') },
+    },
+  }
+  const detected = resolveDetected(dir, null)
+
+  const plan = computePlan({ manifest, cwd: dir, lock, vars: {}, detected })
+  const porDest = Object.fromEntries(plan.actions.map((a) => [a.dest, a]))
+
+  assert.equal(porDest['viejo/intacto.md'].verdict, OBSOLETE)
+  assert.equal(porDest['viejo/intacto.md'].autoPrune, true)
+
+  assert.equal(porDest['viejo/editado.md'].verdict, OBSOLETE)
+  assert.equal(porDest['viejo/editado.md'].autoPrune, false)
 })

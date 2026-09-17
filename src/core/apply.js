@@ -11,7 +11,7 @@ export function backupDirName(now = new Date()) {
   return `backup-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}T${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`
 }
 
-export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false, backup = true, now }) {
+export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false, pruneEdited = false, backup = true, now }) {
   const written = []
   const backedUp = []
   const removed = []
@@ -33,6 +33,7 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
   for (const action of plan.actions) {
     if (action.verdict === OBSOLETE) {
       if (!prune) continue
+      if (!action.autoPrune && !pruneEdited) continue
       const abs = path.join(cwd, ...action.dest.split('/'))
       const saved = saveBackup(cwd, backupRoot, action.dest)
       if (backup && saved) backedUp.push(saved)
@@ -66,7 +67,7 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
     written.push({ dest: action.writePath, verdict: action.verdict })
   }
 
-  const nextLock = buildLockfile({ plan, manifest, vars, detected, lock, prune, cwd, now })
+  const nextLock = buildLockfile({ plan, manifest, vars, detected, lock, prune, pruneEdited, cwd, now })
   writeLockfile(cwd, nextLock)
 
   return { written, backedUp, removed, backupRoot: backedUp.length ? backupRoot : null, lock: nextLock }
@@ -82,7 +83,7 @@ function saveBackup(cwd, backupRoot, dest) {
   return dest
 }
 
-function buildLockfile({ plan, manifest, vars, detected, lock, prune, cwd, now }) {
+function buildLockfile({ plan, manifest, vars, detected, lock, prune, pruneEdited, cwd, now }) {
   const next = {
     harnessVersion: manifest.harnessVersion,
     cliVersion: manifest.cliVersion ?? manifest.harnessVersion,
@@ -127,9 +128,11 @@ function buildLockfile({ plan, manifest, vars, detected, lock, prune, cwd, now }
         if (prev) next.files[action.dest] = prev
         break
 
-      case OBSOLETE:
-        if (!prune && prev) next.files[action.dest] = prev
+      case OBSOLETE: {
+        const removedNow = prune && (action.autoPrune || pruneEdited)
+        if (!removedNow && prev) next.files[action.dest] = prev
         break
+      }
 
       default:
         // local-edit: conservamos el hash original para seguir detectando la edicion.

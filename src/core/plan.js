@@ -90,21 +90,41 @@ export function computePlan({ manifest, cwd, lock, vars, detected, force = false
   }
 
   // Archivos que emitimos en una version anterior y que este manifest ya no
-  // declara. Nunca se borran solos: se ofrecen con --prune + doble confirmacion (P5).
+  // declara. Si siguen intactos desde que el harness los escribio (hash de disco
+  // == hash del lockfile), --prune los borra sin pedir confirmacion: es contenido
+  // del harness, no del usuario. Si el hash no coincide, el usuario lo edito para
+  // acomodarlo a su gusto y --prune exige la confirmacion escrita de siempre (P6).
   for (const dest of Object.keys(lock?.files ?? {})) {
     if (seenDests.has(dest)) continue
-    if (readIfExists(path.join(cwd, ...dest.split('/'))) == null) continue
-    actions.push({ dest, policy: 'managed', verdict: OBSOLETE, reasons: ['ya no forma parte del harness'] })
+    const abs = path.join(cwd, ...dest.split('/'))
+    const lockEntry = lock.files[dest]
+    const raw = lockEntry.binary ? readBytesIfExists(abs) : readIfExists(abs)
+    if (raw == null) continue
+    const diskHash = lockEntry.binary ? hashBytes(raw) : hashContent(raw)
+    const edited = diskHash !== lockEntry.hash
+    actions.push({
+      dest,
+      policy: 'managed',
+      verdict: OBSOLETE,
+      autoPrune: !edited,
+      reasons: [edited ? 'ya no forma parte del harness; lo editaste, revisar antes de borrar' : 'ya no forma parte del harness; sin editar, se borra sin confirmar'],
+    })
     seenDests.add(dest)
   }
 
   // Archivos que el harness declara muertos explicitamente. A diferencia de los
   // anteriores, estos se detectan aunque NO haya lockfile — es como se le avisa a
-  // un repo que copio el Kit a mano que su .claudeignore no hace nada.
+  // un repo que copio el Kit a mano que su .claudeignore no hace nada. Sin
+  // lockfile no hay forma de saber si el usuario lo edito, asi que se tratan
+  // como editados (exigen confirmacion) por seguridad.
   for (const dead of manifest.obsolete ?? []) {
     if (seenDests.has(dead.dest)) continue
-    if (readIfExists(path.join(cwd, ...dead.dest.split('/'))) == null) continue
-    actions.push({ dest: dead.dest, policy: 'managed', verdict: OBSOLETE, reasons: [dead.reason] })
+    const abs = path.join(cwd, ...dead.dest.split('/'))
+    if (readIfExists(abs) == null) continue
+    const lockEntry = lock?.files?.[dead.dest]
+    const diskHash = lockEntry ? (lockEntry.binary ? hashBytes(readBytesIfExists(abs)) : hashContent(readIfExists(abs))) : null
+    const autoPrune = lockEntry != null && diskHash === lockEntry.hash
+    actions.push({ dest: dead.dest, policy: 'managed', verdict: OBSOLETE, autoPrune, reasons: [dead.reason] })
   }
 
   const dirs = (manifest.dirs ?? []).filter((d) => !(d.when === 'empty-repo' && !detected.isEmpty))
