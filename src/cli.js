@@ -184,7 +184,8 @@ ${pc.bold('FLAGS')}
   --dry-run            Imprime el plan y no escribe ni un byte.
   -y, --yes            Acepta los defaults. No pregunta nada. (CI=true lo implica)
   --force              Sobrescribe archivos que editaste tú. Pide confirmacion escrita.
-  --prune              Ofrece borrar archivos obsoletos. Exige doble confirmacion (P5).
+  --prune              Borra archivos obsoletos sin editar sin preguntar; los que
+                       editaste piden confirmacion escrita.
   --no-backup          No copia a .claude/backup-<ts>/ antes de sobrescribir.
   -v, --verbose        Muestra tambien los archivos sin cambios.
   --name, --type, --stack, --lang    Responden las preguntas sin modo interactivo.
