@@ -13,7 +13,16 @@ const RAMA_PROTEGIDA = 'main'
 // no debe trabar un merge, solo avisar -- lo que si bloquea es un secreto
 // filtrado o un PR que rompe el flujo de release. Si alguno de estos jobs se
 // renombra, esto se desincroniza y hay que actualizarlo a mano.
-const CHECKS_REQUERIDOS = ['reglas-secretos', 'reglas-pr-metadata']
+//
+// PAUSA TEMPORAL (SHS-M36): los workflows reglas-*.yml tienen los triggers
+// automaticos desactivados, asi que estos checks nunca reportan; si siguieran
+// como requeridos, ningun PR a main podria mergearse. Mientras dure la pausa
+// la lista queda vacia y la proteccion se aplica sin required_status_checks
+// (PR obligatorio, sin force-push ni borrado siguen vigentes). Para revertir:
+// restaurar la linea original que sigue. Ver
+// docs/decisions/20260921-pausa-github-actions.md.
+// const CHECKS_REQUERIDOS = ['reglas-secretos', 'reglas-pr-metadata']
+const CHECKS_REQUERIDOS = []
 
 function sh(args, cwd, input) {
   return execFileSync(args[0], args.slice(1), {
@@ -56,8 +65,12 @@ function ramaExiste(cwd, repo) {
 // -- con los checks requeridos en verde, sin force-push ni borrado de la rama.
 // enforce_admins: true para que la regla alcance tambien a administradores.
 function cuerpoProteccion() {
+  // La API exige null (no un objeto con checks vacios) para "sin checks".
+  const required_status_checks = CHECKS_REQUERIDOS.length
+    ? { strict: true, checks: CHECKS_REQUERIDOS.map((context) => ({ context })) }
+    : null
   return JSON.stringify({
-    required_status_checks: { strict: true, checks: CHECKS_REQUERIDOS.map((context) => ({ context })) },
+    required_status_checks,
     enforce_admins: true,
     required_pull_request_reviews: { required_approving_review_count: 0 },
     restrictions: null,
@@ -98,7 +111,10 @@ export function protegeBranchMain({ cwd }) {
       cwd,
       cuerpoProteccion()
     )
-    ui.log.success(`Branch protection de "${RAMA_PROTEGIDA}" en ${repo}: PR obligatorio + checks ${CHECKS_REQUERIDOS.map((c) => `"${c}"`).join(' y ')} en verde.`)
+    const checks = CHECKS_REQUERIDOS.length
+      ? `+ checks ${CHECKS_REQUERIDOS.map((c) => `"${c}"`).join(' y ')} en verde`
+      : '(sin checks requeridos: Actions en pausa, SHS-M36)'
+    ui.log.success(`Branch protection de "${RAMA_PROTEGIDA}" en ${repo}: PR obligatorio ${checks}.`)
     return { aplicado: true }
   } catch (err) {
     ui.log.warn(
