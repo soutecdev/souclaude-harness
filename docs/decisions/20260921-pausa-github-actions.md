@@ -41,6 +41,13 @@ check que nunca llega y **ningún PR a `main` puede mergearse**.
    workflows son `managed` y la branch protection se reaplica en cada upgrade.
 4. Ningún archivo se borra ni se saca del manifest: el revert es restaurar
    contenido, no reconstruir.
+5. **Regla permanente (no se revierte): solo los workflows del harness.** Se
+   detectó que distintos proyectos venían sumando workflows y checks propios según
+   la funcionalidad implementada, con consumo dispar de minutos. Las
+   instrucciones distribuidas (`CLAUDE.md`, `CLAUDE-solo.md`, skills
+   `soutec-github` y `soutec-github-solo`) prohíben crear o modificar workflows
+   en `.github/workflows/` por proyecto; cualquier necesidad de CI propia se
+   pide al coordinador y se evalúa en el harness.
 
 ### Procedimiento de revert
 
@@ -52,6 +59,9 @@ check que nunca llega y **ningún PR a `main` puede mergearse**.
 3. `npm test` y `npx souclaude verify` en verde; release del harness; en cada
    repo consumidor `npx souclaude upgrade` (reaplica workflows y protección).
 4. Marcar este ADR como `superseded` por el ADR de la optimización.
+
+El punto 5 (solo workflows del harness) **no forma parte del revert**: queda
+vigente después de reactivar los checks.
 
 Como todo entró en un solo milestone (SHS-M36), `git revert` del merge commit de
 su PR es la vía rápida si no hubo cambios encima.

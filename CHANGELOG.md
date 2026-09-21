@@ -16,6 +16,11 @@ El harness y el CLI se versionan juntos.
   Mientras dure, `check-pr-rules.mjs` se corre a mano y los tags de release vuelven
   a ser manuales. Procedimiento de revert en
   `docs/decisions/20260921-pausa-github-actions.md`.
+- **Solo los workflows del harness** (SHS-M36). `CLAUDE.md`, `CLAUDE-solo.md` y las
+  skills `soutec-github` / `soutec-github-solo` prohíben crear o modificar workflows
+  de GitHub Actions por proyecto o por funcionalidad (tests, lint, build, deploy,
+  checks extra): cualquier CI propia se pide al coordinador y se evalúa en el
+  harness. Esta regla es permanente, no parte de la pausa.
 
 ## [3.13.0] — 2026-09-15
 

@@ -37,6 +37,13 @@ Estas no se negocian, ni siquiera en un hotfix.
   agente puede crearlos a mano en su lugar, únicamente al publicar y después del
   merge.
 - **Un hotfix NO es un bypass.** Aun en máxima criticidad: rama + Pull Request.
+- **Nunca crear workflows de GitHub Actions ni checks adicionales.** Los únicos
+  workflows del repo son los que instala y actualiza el harness (`reglas-*.yml`,
+  `tag-release.yml`); no se agregan otros en `.github/workflows/` por proyecto ni
+  por funcionalidad (tests, lint, build, deploy, checks extra en los PRs) ni se
+  editan a mano. Si un proyecto necesita CI propia, se pide al coordinador y se
+  evalúa en el harness. El consumo de minutos de Actions es de la organización,
+  no del repo.
 
 ## Antes de tocar código
 

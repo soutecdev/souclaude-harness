@@ -33,6 +33,10 @@ Recomendaciones (no bloquean; mantienen el historial legible):
   publicable, merge `dev` → `main` (y tag `vX.Y.Z`, si el proyecto versiona).
 - `git push --force` no está bloqueado en este repo, pero evítalo sobre `dev` y
   `main`: reescribir historia es mala idea aunque trabajes solo.
+- **GitHub Actions: solo los workflows que instala el harness.** No crees ni
+  modifiques workflows en `.github/workflows/` (tests, lint, build, deploy ni
+  checks extra). Si el proyecto necesita CI propia, se pide al coordinador y se
+  evalúa en el harness. Esta sí es regla dura, no recomendación.
 
 ## El Vault — traza mínima
 

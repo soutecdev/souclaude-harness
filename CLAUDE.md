@@ -61,6 +61,10 @@ por PR.
   ahí parás y reportás.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
+- **GitHub Actions: solo los workflows que instala el harness.** No crees ni
+  modifiques workflows en `.github/workflows/` por proyecto ni por funcionalidad
+  (tests, lint, build, deploy, ni checks extra en los PRs). Si un proyecto necesita
+  CI propia, se pide al coordinador y se evalúa en el harness, no en el repo.
 
 ## Los dos repos
 
