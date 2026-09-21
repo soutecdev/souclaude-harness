@@ -50,8 +50,11 @@ por PR.
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
   Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
   publicar y después del merge de release `dev` → `main`.
-- **El PR se abre solo cuando el usuario lo pide explícitamente** o dice que quiere
-  mergear. Trabajo terminado sin ese pedido: push a la rama y reportar, sin PR.
+- **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
+  quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
+  ya sea hora de cerrar** (el feature está terminado y verificado), si abres el PR;
+  no lo menciones antes ni lo repitas en cada avance. Sin esa respuesta no lo abras:
+  push a la rama y reportar.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
 - **GitHub Actions: solo los workflows que instala el harness.** No crees ni

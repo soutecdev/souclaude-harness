@@ -2,6 +2,19 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Sin publicar]
+
+### Cambiado
+
+- **Remoto canónico `soutecdev`** (SHS-M37, cubre SHS-M20-T001). Las URLs de repo y de
+  Vault (`package.json`, manifest, `cli-global.js`, `cli.js`, skill `harness-upgrade`,
+  README y docs) dejan de apuntar a `ialvarezsoutec`; el histórico de este changelog
+  y los registros de `specs/` y `progress/` se conservan tal cual.
+- **El agente pregunta antes de abrir el PR.** `CLAUDE.md` (local y plantilla) y la skill
+  `soutec-github` pasan de «solo a pedido explícito» a «con el visto bueno del usuario»:
+  el agente pregunta una sola vez, cuando ya es hora de cerrar el feature, si abre el
+  PR; sin respuesta afirmativa no lo abre.
+
 ## [3.14.0] — 2026-09-21
 
 ### Cambiado
