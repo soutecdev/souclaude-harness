@@ -10,7 +10,7 @@ frenarla. No hay coordinador, no hay aprobaciones, no hay checks de formato que
 bloqueen. Lo que sigue son convenciones para que el historial se mantenga legible
 — y **una** regla que sí es ley.
 
-## La única regla inviolable
+## Las reglas inviolables
 
 - **Nunca commitear secretos**: `.env`, `*.pem`, `*.key`, `*.pfx`,
   `credentials.json`, `secrets.json`, tokens, contraseñas, llaves privadas.
@@ -18,6 +18,11 @@ bloqueen. Lo que sigue son convenciones para que el historial se mantenga legibl
   **rotarla**, no solo borrar el commit.
 - Corolario fuera de este repo: en el **Vault** (repo compartido de la
   organización) jamás `git push --force`.
+- **Nunca crear workflows de GitHub Actions ni checks adicionales.** El único
+  workflow del repo es el que instala el harness (`reglas-secretos.yml`); no se
+  agregan otros en `.github/workflows/` (tests, lint, build, deploy, checks) ni
+  se edita ese a mano. Si el proyecto necesita CI propia, se pide al coordinador
+  y se evalúa en el harness: los minutos de Actions son de la organización.
 
 ## Flujo fluido
 

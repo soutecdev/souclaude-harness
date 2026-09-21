@@ -169,15 +169,19 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
     return 1
   }
 
-  // P5: --prune borra archivos. Es destructivo, exige una segunda confirmacion
-  // explicita y --yes NO alcanza. Hay que tipear la palabra.
-  let prune = false
-  if (obsolete.length && flags.prune) {
-    prune = await ui.confirmDestructive({
-      message: `Se van a BORRAR ${obsolete.length} archivo(s) obsoleto(s):\n${obsolete.map((a) => `    ${a.dest}`).join('\n')}`,
+  // P6: --prune borra archivos. Los obsoletos intactos desde que el harness los
+  // escribio (autoPrune) se borran sin preguntar -- es contenido del harness, no
+  // del usuario. Los que el usuario edito exigen la segunda confirmacion escrita
+  // de siempre, y --yes NUNCA la implica.
+  const prune = Boolean(flags.prune && obsolete.length)
+  const editedObsolete = obsolete.filter((a) => !a.autoPrune)
+  let pruneEdited = false
+  if (prune && editedObsolete.length) {
+    pruneEdited = await ui.confirmDestructive({
+      message: `Se van a BORRAR ${editedObsolete.length} archivo(s) obsoleto(s) que editaste:\n${editedObsolete.map((a) => `    ${a.dest}`).join('\n')}`,
       word: 'BORRAR',
     })
-    if (!prune) ui.log.warn('Prune cancelado. Los archivos obsoletos quedan donde estan.')
+    if (!pruneEdited) ui.log.warn('Prune de los editados cancelado. Esos archivos quedan donde estan.')
   }
 
   const result = apply({
@@ -188,6 +192,7 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
     detected,
     lock,
     prune,
+    pruneEdited,
     backup: flags.backup !== false,
   })
 
