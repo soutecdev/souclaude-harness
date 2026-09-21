@@ -162,7 +162,7 @@ function printHelp() {
 ${pc.bold('souclaude')} — harness de Claude Code de SOUTEC
 
 ${pc.bold('USO')}
-  npx github:ialvarezsoutec/souclaude-harness#v3 [comando] [flags]
+  npx github:soutecdev/souclaude-harness#v3 [comando] [flags]
 
 ${pc.bold('COMANDOS')}
   ${pc.cyan('init')}      Instala el harness. Sirve igual en un repo vacio y en uno legacy.
@@ -212,7 +212,7 @@ ${pc.bold('FLAGS')}
                        carpeta todavia no existe (por defecto, --yes no escribe en
                        el Vault compartido). Con TTY se pregunta y el flag sobra.
   --cli-global         Instala/actualiza el CLI global sin preguntar
-                       (npm install -g github:ialvarezsoutec/souclaude-harness#v3):
+                       (npm install -g github:soutecdev/souclaude-harness#v3):
                        deja \`souclaude monitor\` disponible en cualquier terminal.
                        Con --yes o CI es la unica via (sin el flag solo se avisa);
                        con TTY, sin flag init/upgrade lo preguntan. Idempotente.

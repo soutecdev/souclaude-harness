@@ -97,7 +97,7 @@ el Vault.
 
 ## El Vault es OTRO repo: pull antes, push después
 
-El Vault (`https://github.com/ialvarezsoutec/soubunker-vault.git`) es un repo git con su
+El Vault (`https://github.com/soutecdev/soubunker-vault.git`) es un repo git con su
 propio remoto. Trabajas contra **dos repos a la vez** y no se parecen en nada:
 
 | | Repo del proyecto | Repo del Vault |

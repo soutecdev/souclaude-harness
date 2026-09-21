@@ -579,7 +579,7 @@ const slides = [
     lead: 'Cómo se instala en cualquier repo, cómo se declara el milestone antes de tocar código, y cómo el tablero compartido y el monitor de tokens vuelven visible el trabajo de todo el equipo.',
     term: [
       [['# en cualquier repo, nuevo o legacy', 'c']],
-      [['$ ', 'p'], ['npx github:ialvarezsoutec/souclaude-harness#v3', 'ink']]
+      [['$ ', 'p'], ['npx github:soutecdev/souclaude-harness#v3', 'ink']]
     ],
     meta: 'souclaude-harness v3.5.0   ·   Node ≥ 22.4 + git   ·   sin registry, sin token'
   },

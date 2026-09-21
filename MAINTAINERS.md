@@ -139,7 +139,7 @@ función chica. **Nada de un DSL de migraciones.**
    git push origin vX.Y.Z
    git push -f origin v3
    ```
-6. Los devs corren `npx github:ialvarezsoutec/souclaude-harness#v3 upgrade` y reciben la
+6. Los devs corren `npx github:soutecdev/souclaude-harness#v3 upgrade` y reciben la
    nueva versión. No hay registry ni publicación de npm. Para cambiar de major, editan
    la ref y corren `upgrade --prune`.
 

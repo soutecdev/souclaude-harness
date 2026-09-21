@@ -17,7 +17,7 @@
     "STACK": "Node.js",
     "ARCH_ENFORCER": "dependency-cruiser (o ESLint no-restricted-imports)",
     "LANGUAGE": "espanol",
-    "VAULT_REPO": "https://github.com/ialvarezsoutec/soubunker-vault.git",
+    "VAULT_REPO": "https://github.com/soutecdev/soubunker-vault.git",
     "OWNER": "Ignacio A",
     "DATE": "2026-07-14",
     "HARNESS_VERSION": "3.1.0"

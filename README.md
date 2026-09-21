@@ -8,7 +8,7 @@ Sin agentes ni flujos fijos: el modelo trabaja directo, con las skills de SOUTEC
 única capa.
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3
+npx github:soutecdev/souclaude-harness#v3
 ```
 
 Sin registry, sin `.npmrc`, sin token. Solo hace falta git y Node ≥20.
@@ -99,7 +99,7 @@ Para el equipo, el monitor se usa como **CLI global instalado desde GitHub** —
 npx ni la URL larga:
 
 ```bash
-npm install -g github:ialvarezsoutec/souclaude-harness#v3   # una vez por máquina
+npm install -g github:soutecdev/souclaude-harness#v3   # una vez por máquina
 souclaude monitor                                           # desde cualquier carpeta
 ```
 
@@ -346,8 +346,8 @@ proyectos instalados antes de la v3 apuntan a **`#v1`** — el tag móvil `v2` n
 creó, la serie 2 solo tiene el inmutable `v2.4.0`.
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade --dry-run   # ver el plan
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade --prune     # aplicar + limpiar
+npx github:soutecdev/souclaude-harness#v3 upgrade --dry-run   # ver el plan
+npx github:soutecdev/souclaude-harness#v3 upgrade --prune     # aplicar + limpiar
 ```
 
 El upgrade marca **obsoletos** los restos del flujo viejo (agentes, `AGENTS.md`,

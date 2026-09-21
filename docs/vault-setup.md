@@ -17,11 +17,11 @@ carpeta directamente como base del §2.
 
 ## 1. El repo del Vault
 
-> **El Vault ya existe**: `https://github.com/ialvarezsoutec/soubunker-vault.git`. Es
+> **El Vault ya existe**: `https://github.com/soutecdev/soubunker-vault.git`. Es
 > singleton — no se crea otro. Lo normal, en una máquina nueva, es **clonarlo**:
 >
 > ```powershell
-> git clone https://github.com/ialvarezsoutec/soubunker-vault.git
+> git clone https://github.com/soutecdev/soubunker-vault.git
 > ```
 >
 > Y ni eso hace falta a mano: `npx souclaude` en cualquier repo de proyecto pregunta si lo

@@ -337,7 +337,7 @@ CLI para instalar y migrar el harness CCEM en cualquier repo — uno nuevo, uno 
 cinco años, o uno con una versión vieja del harness. Se distribuye sin registry ni token:
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3
+npx github:soutecdev/souclaude-harness#v3
 ```
 
 Solo hace falta git y Node ≥20. **El harness y las skills son project-local**: se commitean
