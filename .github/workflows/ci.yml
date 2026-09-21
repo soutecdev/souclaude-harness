@@ -1,9 +1,15 @@
 name: CI
 
+# PAUSA TEMPORAL (SHS-M36): los triggers automaticos estan desactivados para
+# frenar el consumo de minutos de Actions hasta optimizar los checks. Solo
+# corre a mano (workflow_dispatch). Para revertir: borrar el bloque `on:` de
+# abajo y descomentar el original que sigue. Ver docs/decisions/20260921-pausa-github-actions.md.
+# on:
+#   push:
+#     branches: [main, dev]
+#   pull_request:
 on:
-  push:
-    branches: [main, dev]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:

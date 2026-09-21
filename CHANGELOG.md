@@ -2,6 +2,21 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+### Cambiado
+
+- **Pausa temporal y revertible de GitHub Actions** (SHS-M36). Los 5 workflows de
+  este repo y los 4 distribuidos en `templates/base/github/workflows/` pierden sus
+  triggers automáticos y quedan solo con `workflow_dispatch`; el bloque `on:`
+  original queda comentado en cada archivo. `github-protect.js` deja de exigir
+  checks requeridos en `main` (`required_status_checks: null`) para que los PRs no
+  queden bloqueados por checks que ya no corren; el resto de la protección no
+  cambia. Los repos consumidores reciben la pausa con `npx souclaude upgrade`.
+  Mientras dure, `check-pr-rules.mjs` se corre a mano y los tags de release vuelven
+  a ser manuales. Procedimiento de revert en
+  `docs/decisions/20260921-pausa-github-actions.md`.
+
 ## [3.13.0] — 2026-09-15
 
 ### Agregado
