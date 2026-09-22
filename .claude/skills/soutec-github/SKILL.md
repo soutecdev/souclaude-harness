@@ -265,13 +265,19 @@ GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 ficha y no hay nada que mantener.
 
 `npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
-plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre ella:
+plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
 
 - **Al instalar el harness**: si ya tienes contexto del proyecto — por la
   conversación, el README o el propio código — **rellena la ficha en ese mismo
   momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
   Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
-  complete; solo queda vacía cuando de verdad no hay información.
+  complete; solo queda vacía cuando de verdad no hay información. Si al rellenarla
+  identificas hitos o milestones del proyecto (README, CHANGELOG, tags o lo que
+  cuente el usuario), **no los cargues todos a ciegas en "Hitos"**: para cada uno
+  evalúa si ya ocurrió o si es planificado a futuro — compara su fecha contra hoy,
+  confirma en el repo (tags, releases publicados, PRs mergeados) que de verdad
+  haya salido, o pregúntale al usuario si no queda claro. Lo que ya pasó va en
+  "Hitos"; lo planificado a futuro va en "Próxima versión".
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no
@@ -284,6 +290,12 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre e
   descarta, elimina el hito en la sesión que lo detecte. El hito **no es
   opcional**: todo tag publicado tiene su línea en "Hitos", también los
   releases menores.
+- **Si el hito que acabas de agregar a "Hitos" ya estaba listado en "Próxima
+  versión"** (el roadmap de milestones/versiones todavía no cerradas): quítalo de
+  "Próxima versión" en el mismo commit — un mismo hito no puede figurar a la vez
+  como cerrado en "Hitos" y como pendiente en "Próxima versión". Si "Próxima
+  versión" queda vacía después, déjala vacía con su comentario guía de la
+  plantilla; no borres la sección.
 - **Cuando detectes un cambio importante del proyecto** — en un release o en
   cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
   próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y

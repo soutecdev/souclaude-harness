@@ -103,10 +103,14 @@ Vault"). Git fluido no exime de esa línea.
 Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
 
 - **Al instalar el harness**, si hay contexto del proyecto, rellena la ficha y
-  pushéala al Vault en el momento.
+  pushéala al Vault en el momento. Si hay hitos/milestones para cargar, no los
+  metas todos en "Hitos" a ciegas: para cada uno evalúa por fecha/repo/tags si ya
+  ocurrió o es planificado a futuro, o pregúntale al usuario. Lo ya ocurrido va en
+  "Hitos"; lo planificado va en "Próxima versión".
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
-  publicado tiene su línea.
+  publicado tiene su línea. Si ese hito ya estaba en "Próxima versión", quítalo de
+  ahí en el mismo commit — no debe quedar duplicado.
 - **Ante un cambio importante del proyecto** (alcance, plataforma, equipo),
   actualiza la sección afectada y pushea.
 
