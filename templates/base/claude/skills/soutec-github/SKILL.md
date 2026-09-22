@@ -278,24 +278,52 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   confirma en el repo (tags, releases publicados, PRs mergeados) que de verdad
   haya salido, o pregúntale al usuario si no queda claro. Lo que ya pasó va en
   "Hitos"; lo planificado a futuro va en "Próxima versión".
+- **La Roca vigente alimenta "Próxima versión"** — al instalar el harness y en
+  cada `upgrade` (misma regla en la skill `harness-upgrade`): busca
+  `Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/` (raíz o subcarpeta
+  `roca/`/`rocas/` — la convención varía entre proyectos) y toma el trimestre
+  vigente (el de `<trimestre>` más alto; si hay varios, el de fecha de
+  modificación más nueva). Sin Roca, no hay nada que hacer — no lo preguntes,
+  no bloquees el install/upgrade por esto. Con Roca, lee su tabla "Alta rápida"
+  (columnas Title / Due date) y por cada **hito de producto** — descarta
+  trámites internos del cierre de la Roca (informe de cierre, traspaso, alta en
+  Ninety: no son un entregable que el Observatorio muestre) — arma la línea
+  `- <Due date> · <PREFIJO>-H<n> · <título sin el prefijo "H<n> ·">`, **sin el
+  responsable** (regla 6 de la plantilla: la ficha no lleva nombres de
+  personas). Si quedan más de 5 hitos de producto, prioriza los más próximos
+  por fecha (el template admite hasta 5 líneas). Estas líneas se
+  **sincronizan en cada upgrade, no solo se agregan una vez**: si el hito de la
+  Roca cambió de fecha o título, corrige la línea existente (misma etiqueta
+  `<PREFIJO>-H<n>`); si el hito ya no está en la Roca vigente, quita su línea.
+  No toques líneas de "Próxima versión" sin etiqueta `<PREFIJO>-H<n>` — son
+  manuales, de otra fuente.
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no
   controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
   la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
   versión propuesta en `package.json` y resumen del cambio principal —
-  CHANGELOG o descripción del PR de release).
+  CHANGELOG o descripción del PR de release). **En el mismo momento, revisa
+  toda "Próxima versión"** —no solo la línea que coincida en texto con el hito
+  que acabas de agregar— contra lo que este release entrega de verdad
+  (CHANGELOG o descripción del PR de release):
+  - Si el release cumple una línea **completa**, quítala de "Próxima versión"
+    — un mismo hito no puede figurar a la vez como cerrado en "Hitos" y como
+    pendiente en "Próxima versión".
+  - Si una línea agrupa varios hitos (p. ej. "Rediseño visual (OBS-M46) y
+    galería de capturas (OBS-M39)") y el release solo cumple parte, **edítala**
+    dejando solo lo que sigue pendiente en vez de borrarla entera; si no queda
+    nada pendiente, ahí sí se quita.
+  - Si no es claro si el release cumple una línea, déjala — no la borres a
+    ciegas.
+  Si "Próxima versión" queda vacía después, déjala vacía con su comentario guía
+  de la plantilla; no borres la sección.
 - **Al confirmarse el merge y el tag**: verifica el hito y corrige fecha o
   resumen si difieren de lo publicado. Si el PR de release se rechaza o se
-  descarta, elimina el hito en la sesión que lo detecte. El hito **no es
-  opcional**: todo tag publicado tiene su línea en "Hitos", también los
-  releases menores.
-- **Si el hito que acabas de agregar a "Hitos" ya estaba listado en "Próxima
-  versión"** (el roadmap de milestones/versiones todavía no cerradas): quítalo de
-  "Próxima versión" en el mismo commit — un mismo hito no puede figurar a la vez
-  como cerrado en "Hitos" y como pendiente en "Próxima versión". Si "Próxima
-  versión" queda vacía después, déjala vacía con su comentario guía de la
-  plantilla; no borres la sección.
+  descarta, elimina el hito en la sesión que lo detecte y restaura en "Próxima
+  versión" cualquier línea que hayas quitado o editado creyendo que este
+  release la cumplía. El hito **no es opcional**: todo tag publicado tiene su
+  línea en "Hitos", también los releases menores.
 - **Cuando detectes un cambio importante del proyecto** — en un release o en
   cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
   próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y

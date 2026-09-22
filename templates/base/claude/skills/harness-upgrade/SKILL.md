@@ -18,7 +18,9 @@ No hace falta que el usuario pida cada paso por separado.
    ```
 
    Si ya está en la última versión y no hay archivos obsoletos ni `.new`
-   pendientes, avisa eso en una línea y termina — no hay nada más que hacer.
+   pendientes, avisa eso en una línea y termina — no hay nada más que hacer,
+   salvo el paso 5 (ficha del Observatorio), que corre igual aunque el harness
+   no haya cambiado.
 
 2. **Diagnóstico en seco**, siempre antes de tocar nada:
 
@@ -62,12 +64,23 @@ No hace falta que el usuario pida cada paso por separado.
    Borra el `.new` después de mergear. Nunca copies un `.new` entero encima del
    original sin pasar por esta revisión hunk por hunk.
 
-5. **Reporte final.** Avísale al usuario, en un resumen corto:
+5. **Ficha del Observatorio.** Si el repo tiene el Vault conectado
+   (`.claude/vault.local.json`), sincroniza "Próxima versión" de
+   `Project-<PREFIJO>/OBSERVATORIO.md` con la Roca vigente del proyecto — el
+   mismo chequeo que al instalar el harness, detallado en la skill
+   `soutec-github` (sección "Ficha del Observatorio"): busca
+   `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente, y agrega,
+   corrige o quita las líneas con etiqueta `<PREFIJO>-H<n>` según sus hitos de
+   producto. Sin Vault conectado o sin Roca, no hay nada que hacer — no lo
+   preguntes. Push directo al Vault en el momento.
+
+6. **Reporte final.** Avísale al usuario, en un resumen corto:
    - versión anterior → versión nueva.
    - qué se borró sin preguntar (obsoletos sin editar).
    - qué obsoletos editados quedaron pendientes de revisión (con la ruta).
    - qué `.new` se mergearon y qué se preservó de lo suyo en cada uno.
    - cualquier archivo que se saltó por stack (ver sección de abajo).
+   - qué cambió en "Próxima versión" de OBSERVATORIO.md, si algo cambió.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
