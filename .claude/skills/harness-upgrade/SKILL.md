@@ -19,8 +19,10 @@ No hace falta que el usuario pida cada paso por separado.
 
    Si ya está en la última versión y no hay archivos obsoletos ni `.new`
    pendientes, avisa eso en una línea y termina — no hay nada más que hacer,
-   salvo el paso 5 (ficha del Observatorio), que corre igual aunque el harness
-   no haya cambiado.
+   salvo verificar el paso 5 (ficha del Observatorio): esa verificación corre
+   igual aunque el harness no haya cambiado, pero solo **actúa** si encuentra
+   una diferencia real contra la Roca — no es un paso que reescriba o pushee
+   en cada corrida.
 
 2. **Diagnóstico en seco**, siempre antes de tocar nada:
 
@@ -64,15 +66,17 @@ No hace falta que el usuario pida cada paso por separado.
    Borra el `.new` después de mergear. Nunca copies un `.new` entero encima del
    original sin pasar por esta revisión hunk por hunk.
 
-5. **Ficha del Observatorio.** Si el repo tiene el Vault conectado
-   (`.claude/vault.local.json`), sincroniza "Próxima versión" de
-   `Project-<PREFIJO>/OBSERVATORIO.md` con la Roca vigente del proyecto — el
-   mismo chequeo que al instalar el harness, detallado en la skill
+5. **Ficha del Observatorio, solo si hace falta.** Si el repo tiene el Vault
+   conectado (`.claude/vault.local.json`), verifica si "Próxima versión" de
+   `Project-<PREFIJO>/OBSERVATORIO.md` ya refleja la Roca vigente del proyecto
+   — el mismo chequeo que al instalar el harness, detallado en la skill
    `soutec-github` (sección "Ficha del Observatorio"): busca
-   `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente, y agrega,
-   corrige o quita las líneas con etiqueta `<PREFIJO>-H<n>` según sus hitos de
-   producto. Sin Vault conectado o sin Roca, no hay nada que hacer — no lo
-   preguntes. Push directo al Vault en el momento.
+   `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente, y compara sus
+   hitos de producto contra las líneas con etiqueta `<PREFIJO>-H<n>` que ya
+   están en "Próxima versión". **Si ya coinciden, no hay nada que hacer** —
+   esto no es un paso que reescriba o pushee en cada upgrade. Solo si falta,
+   cambió o sobra una línea, corrígela y pushea al Vault en el momento. Sin
+   Vault conectado o sin Roca, tampoco hay nada que hacer — no lo preguntes.
 
 6. **Reporte final.** Avísale al usuario, en un resumen corto:
    - versión anterior → versión nueva.

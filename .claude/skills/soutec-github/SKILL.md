@@ -278,25 +278,29 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   confirma en el repo (tags, releases publicados, PRs mergeados) que de verdad
   haya salido, o pregúntale al usuario si no queda claro. Lo que ya pasó va en
   "Hitos"; lo planificado a futuro va en "Próxima versión".
-- **La Roca vigente alimenta "Próxima versión"** — al instalar el harness y en
-  cada `upgrade` (misma regla en la skill `harness-upgrade`): busca
+- **La Roca vigente alimenta "Próxima versión", solo si hace falta** — al
+  instalar el harness y en cada `upgrade` (misma regla en la skill
+  `harness-upgrade`). Esto **no es un paso que reescriba o pushee en cada
+  corrida**: es una verificación que solo actúa cuando detecta una diferencia
+  real, no algo que el upgrade te pida hacer de nuevo cada vez. Busca
   `Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/` (raíz o subcarpeta
   `roca/`/`rocas/` — la convención varía entre proyectos) y toma el trimestre
   vigente (el de `<trimestre>` más alto; si hay varios, el de fecha de
   modificación más nueva). Sin Roca, no hay nada que hacer — no lo preguntes,
   no bloquees el install/upgrade por esto. Con Roca, lee su tabla "Alta rápida"
-  (columnas Title / Due date) y por cada **hito de producto** — descarta
+  (columnas Title / Due date) y arma, por cada **hito de producto** — descarta
   trámites internos del cierre de la Roca (informe de cierre, traspaso, alta en
-  Ninety: no son un entregable que el Observatorio muestre) — arma la línea
-  `- <Due date> · <PREFIJO>-H<n> · <título sin el prefijo "H<n> ·">`, **sin el
-  responsable** (regla 6 de la plantilla: la ficha no lleva nombres de
-  personas). Si quedan más de 5 hitos de producto, prioriza los más próximos
-  por fecha (el template admite hasta 5 líneas). Estas líneas se
-  **sincronizan en cada upgrade, no solo se agregan una vez**: si el hito de la
-  Roca cambió de fecha o título, corrige la línea existente (misma etiqueta
-  `<PREFIJO>-H<n>`); si el hito ya no está en la Roca vigente, quita su línea.
-  No toques líneas de "Próxima versión" sin etiqueta `<PREFIJO>-H<n>` — son
-  manuales, de otra fuente.
+  Ninety: no son un entregable que el Observatorio muestre) — la línea que le
+  correspondería: `- <Due date> · <PREFIJO>-H<n> · <título sin el prefijo
+  "H<n> ·">`, **sin el responsable** (regla 6 de la plantilla: la ficha no
+  lleva nombres de personas), máximo 5 (prioriza las más próximas por fecha si
+  sobran). **Compara esa lista contra las líneas que ya existen en "Próxima
+  versión"** (las que llevan etiqueta `<PREFIJO>-H<n>`) antes de tocar nada:
+  si ya coinciden fecha y título, no hay nada que hacer — no reescribas ni
+  pushees sin cambios. Actúa solo donde hay diferencia: agrega la línea que
+  falta, corrige la que cambió de fecha o título, o quita la que ya no está en
+  la Roca vigente. No toques líneas de "Próxima versión" sin etiqueta
+  `<PREFIJO>-H<n>` — son manuales, de otra fuente.
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no

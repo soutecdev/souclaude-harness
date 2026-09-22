@@ -107,13 +107,14 @@ Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
   metas todos en "Hitos" a ciegas: para cada uno evalúa por fecha/repo/tags si ya
   ocurrió o es planificado a futuro, o pregúntale al usuario. Lo ya ocurrido va en
   "Hitos"; lo planificado va en "Próxima versión".
-- **Al instalar y en cada actualización**, si hay una Roca vigente del proyecto
-  (`Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/`, raíz o subcarpeta
-  `roca/`/`rocas/`), sincroniza sus hitos de producto —sin trámites de cierre
-  (informe, traspaso, Ninety) ni responsable— como líneas `- <Due date> ·
-  <PREFIJO>-H<n> · <título>` en "Próxima versión" (máximo 5, los más próximos
-  por fecha): agrega, corrige o quita según cambie la Roca. Sin Roca, no hay
-  nada que hacer.
+- **Al instalar y en cada actualización, solo si hace falta**: si hay una Roca
+  vigente del proyecto (`Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/`,
+  raíz o subcarpeta `roca/`/`rocas/`), compara sus hitos de producto —sin
+  trámites de cierre (informe, traspaso, Ninety) ni responsable— contra las
+  líneas `- <Due date> · <PREFIJO>-H<n> · <título>` que ya existen en "Próxima
+  versión" (máximo 5, los más próximos por fecha). Si ya coinciden, no hagas
+  nada — esto no es un paso que reescriba o pushee en cada actualización. Si
+  falta, cambió o sobra una, corrígelo. Sin Roca, no hay nada que hacer.
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
   publicado tiene su línea. En el mismo momento revisa toda "Próxima versión"
