@@ -14,6 +14,12 @@ El harness y el CLI se versionan juntos.
   `soutec-github` pasan de «solo a pedido explícito» a «con el visto bueno del usuario»:
   el agente pregunta una sola vez, cuando ya es hora de cerrar el feature, si abre el
   PR; sin respuesta afirmativa no lo abre.
+- **El ciclo Git del Vault no pide confirmación** (SHS-M37-T002). `settings.json` (local
+  y plantilla) permite `git -C <ruta> add/commit/pull/push/status/fetch/log/diff`, la
+  forma que usa el protocolo del Vault. Para no abrir una puerta lateral, se deniega
+  `git -C * push * main*` (con `-C` se esquivaban los deny de `main` del proyecto; el
+  push del Vault va sin refspec) y el force-push con `-C` queda en `ask`. Los repos
+  consumidores lo reciben con `npx souclaude upgrade`.
 
 ## [3.14.0] — 2026-09-21
 
