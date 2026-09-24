@@ -14,15 +14,22 @@ El harness y el CLI se versionan juntos.
   `soutec-github` pasan de «solo a pedido explícito» a «con el visto bueno del usuario»:
   el agente pregunta una sola vez, cuando ya es hora de cerrar el feature, si abre el
   PR; sin respuesta afirmativa no lo abre.
-- **El ciclo Git del Vault no pide confirmación** (SHS-M37-T002). `settings.json` (local
-  y plantilla) permite `git -C <ruta> add/commit/pull/push/status/fetch/log/diff`, la
-  forma que usa el protocolo del Vault. Para no abrir una puerta lateral, se deniegan
-  `git -C * push * main*` y `git -C * push * *:main*` (con `-C` se esquivaban los deny
-  de `main` del proyecto, incluido el bypass por refspec `HEAD:main` que cerró SHS-M29;
-  el push del Vault va sin refspec) y el force-push con `-C`, por flag (`--force`, `-f`)
-  o por refspec `+`, queda en `ask`. La plantilla del modo solo (`settings-solo.json`)
-  recibe solo los `allow`: no tiene deny de `main`, y el worklog también se pushea al
-  Vault. Los repos consumidores lo reciben con `npx souclaude upgrade`.
+- **El ciclo del Vault corre sin confirmación por `vault-sync`** (SHS-M37-T002). Las
+  plantillas de `settings.json` (equipo y solo) permiten `souclaude vault-sync:*` (el CLI
+  global; la copia local, además, `npx souclaude` y `node bin/cli.mjs`), y el protocolo
+  (`CLAUDE.md`, `progress/README.md`, skill `vault-milestones` y el hook del modo solo) pasa
+  de `git -C "<vault>" add/commit/pull/push` a `souclaude vault-sync` /
+  `souclaude vault-sync --push -m ... --paths Project-<PREFIJO>`, que usa la ruta de
+  `vault.local.json`, argumentos fijos, `push` sin refspec y nunca force. Cambios de diseño
+  frente al primer intento, por el security review: (1) no se permiten reglas `git -C * <cmd>`
+  genéricas: un `allow` así deja pasar `-c core.sshCommand=...`, `--output=...`,
+  `--work-tree=...` o un push a cualquier remoto o refspec sin confirmación, y con la sintaxis
+  `:*` ni siquiera casan (el `*` del medio es literal); (2) no se permite `npx souclaude`
+  en las plantillas: fuera de este repo `npx` lo resuelve contra el registro público, donde
+  ese nombre no es el del harness y estaría libre para registrarlo; (3) `vault-sync --push`
+  rechaza (exit 2) una ruta de `--paths` que empiece con `-`, para que ninguna se lea como
+  opción de `git add`. Los repos consumidores lo reciben con `upgrade` y necesitan
+  el CLI global (`npm install -g github:soutecdev/souclaude-harness#v3`).
 
 ## [3.14.0] — 2026-09-21
 

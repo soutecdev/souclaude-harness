@@ -155,6 +155,18 @@ test('vault-sync --push -m: espejo completo y exit 0; --paths restringe el add',
   assert.deepEqual(git.llamadas[0], ['-C', VAULT, 'add', 'Project-SHS', 'otro/dir'])
 })
 
+test('vault-sync --push con una ruta con forma de opcion de git: exit 2 sin tocar git', async () => {
+  const git = gitFake()
+  const code = await vaultSync(
+    { push: true, message: 'chore: kanban', paths: 'Project-SHS,--pathspec-from-file=/etc/hosts' },
+    repoConVault(),
+    { git }
+  )
+
+  assert.equal(code, 2)
+  assert.deepEqual(git.llamadas, [])
+})
+
 test('vault-sync --status: exit 0 y consulta el working tree del Vault', async () => {
   const git = gitFake({ status: ' M Project-SHS/kanban.md\n' })
   const code = await vaultSync({ status: true }, repoConVault(), { git })

@@ -21,7 +21,7 @@ alcance de la tarjeta.
 1. Lee la ruta del Vault de `.claude/vault.local.json` (respaldo: `VAULT_PATH`).
    Si no hay ruta o no existe: dilo y trabaja en modo solo-análisis con lo que el
    usuario pegue — **nunca bloquees por el Vault**.
-2. `git -C "<vault>" pull --rebase` (o `npx souclaude vault-sync`). Un análisis
+2. `souclaude vault-sync` (pull --rebase seguro del Vault). Un análisis
    sobre un tablero desactualizado es peor que ninguno.
 3. Lee `Project-<PREFIJO>/milestones.md`, `kanban.md`, `plans/` y `sessions.md`.
    El milestone dice el claim; el kanban y las sesiones dicen la verdad.
@@ -119,12 +119,12 @@ Todo cambio aceptado al tablero se commitea y pushea **al momento**, no en un
 push final de sesión:
 
 ```bash
-git -C "<vault>" add Project-<PREFIJO>
-git -C "<vault>" commit -m "chore: alta de <PREFIJO>-M<n> en Backlog"
-git -C "<vault>" pull --rebase && git -C "<vault>" push
+souclaude vault-sync --push -m "chore: alta de <PREFIJO>-M<n> en Backlog" --paths Project-<PREFIJO>
 ```
 
-(`npx souclaude vault-sync --push -m "<msg>"` hace el ciclo completo.)
+(`vault-sync --push` hace el ciclo completo — add → commit → pull → push — y `settings.json`
+lo permite sin confirmación; no uses `git -C "<vault>"` a mano, que sí la pide. Requiere el
+CLI global: `npm install -g github:soutecdev/souclaude-harness#v3`.)
 
 - Commits del Vault: `chore:` para movimientos de tablero, `docs:` para planes.
 - **Nunca `git push --force`.**

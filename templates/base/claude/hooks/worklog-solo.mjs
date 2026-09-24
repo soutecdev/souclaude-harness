@@ -13,7 +13,7 @@ const REGLA = [
   '[harness] Modo solo: la trazabilidad vive en Project-<PREFIJO>/worklog.md del Vault.',
   'Al empezar cada bloque de trabajo agrega al final una linea con fecha y objetivo',
   '("- 2026-09-15 · migrando auth a OAuth") y pushea en el momento',
-  '(npx souclaude vault-sync --push -m "docs: worklog"). Si el objetivo cambia, otra linea.',
+  '(souclaude vault-sync --push -m "docs: worklog"). Si el objetivo cambia, otra linea.',
 ]
 
 function leerJson(ruta) {

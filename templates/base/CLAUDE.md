@@ -88,7 +88,7 @@ trabajo local sigue.
 Jira.
 
 La ruta local del Vault está en `.claude/vault.local.json` (la escribe `npx souclaude`).
-Antes de empezar a trabajar: `git -C "<vault>" pull --rebase` y lee
+Antes de empezar a trabajar: `souclaude vault-sync` y lee
 `Project-<PREFIJO>/milestones.md` y `kanban.md`. Si el milestone o la tarea ya está
 **En curso** con otro dueño u otra máquina: **para y pregunta**. Al tomar o cerrar
 algo, mueve la tarjeta y pushea **en ese momento**: una tarea pasa a **Hecho** al
