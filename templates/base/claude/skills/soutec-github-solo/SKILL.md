@@ -103,10 +103,24 @@ Vault"). Git fluido no exime de esa línea.
 Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
 
 - **Al instalar el harness**, si hay contexto del proyecto, rellena la ficha y
-  pushéala al Vault en el momento.
+  pushéala al Vault en el momento. Si hay hitos/milestones para cargar, no los
+  metas todos en "Hitos" a ciegas: para cada uno evalúa por fecha/repo/tags si ya
+  ocurrió o es planificado a futuro, o pregúntale al usuario. Lo ya ocurrido va en
+  "Hitos"; lo planificado va en "Próxima versión".
+- **Al instalar y en cada actualización, solo si hace falta**: si hay una Roca
+  vigente del proyecto (`Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/`,
+  raíz o subcarpeta `roca/`/`rocas/`), compara sus hitos de producto —sin
+  trámites de cierre (informe, traspaso, Ninety) ni responsable— contra las
+  líneas `- <Due date> · <PREFIJO>-H<n> · <título>` que ya existen en "Próxima
+  versión" (máximo 5, los más próximos por fecha). Si ya coinciden, no hagas
+  nada — esto no es un paso que reescriba o pushee en cada actualización. Si
+  falta, cambió o sobra una, corrígelo. Sin Roca, no hay nada que hacer.
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
-  publicado tiene su línea.
+  publicado tiene su línea. En el mismo momento revisa toda "Próxima versión"
+  contra lo que el release entrega de verdad: quita lo que se cumple del todo,
+  edita la línea si solo se cumple una parte (varios hitos agrupados en una
+  línea), y deja el resto si no es claro.
 - **Ante un cambio importante del proyecto** (alcance, plataforma, equipo),
   actualiza la sección afectada y pushea.
 

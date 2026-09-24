@@ -267,25 +267,69 @@ GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
 ficha y no hay nada que mantener.
 
 `npx souclaude` siembra `Project-<PREFIJO>/OBSERVATORIO.md` en el Vault desde la
-plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Tres reglas sobre ella:
+plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
 
 - **Al instalar el harness**: si ya tienes contexto del proyecto — por la
   conversación, el README o el propio código — **rellena la ficha en ese mismo
   momento** (tagline, plataforma, resumen, por qué importa, equipo) y pushéala al
   Vault (push directo, sin PR). No la dejes vacía esperando a que el equipo la
-  complete; solo queda vacía cuando de verdad no hay información.
+  complete; solo queda vacía cuando de verdad no hay información. Si al rellenarla
+  identificas hitos o milestones del proyecto (README, CHANGELOG, tags o lo que
+  cuente el usuario), **no los cargues todos a ciegas en "Hitos"**: para cada uno
+  evalúa si ya ocurrió o si es planificado a futuro — compara su fecha contra hoy,
+  confirma en el repo (tags, releases publicados, PRs mergeados) que de verdad
+  haya salido, o pregúntale al usuario si no queda claro. Lo que ya pasó va en
+  "Hitos"; lo planificado a futuro va en "Próxima versión".
+- **La Roca vigente alimenta "Próxima versión", solo si hace falta** — al
+  instalar el harness y en cada `upgrade` (misma regla en la skill
+  `harness-upgrade`). Esto **no es un paso que reescriba o pushee en cada
+  corrida**: es una verificación que solo actúa cuando detecta una diferencia
+  real, no algo que el upgrade te pida hacer de nuevo cada vez. Busca
+  `Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/` (raíz o subcarpeta
+  `roca/`/`rocas/` — la convención varía entre proyectos) y toma el trimestre
+  vigente (el de `<trimestre>` más alto; si hay varios, el de fecha de
+  modificación más nueva). Sin Roca, no hay nada que hacer — no lo preguntes,
+  no bloquees el install/upgrade por esto. Con Roca, lee su tabla "Alta rápida"
+  (columnas Title / Due date) y arma, por cada **hito de producto** — descarta
+  trámites internos del cierre de la Roca (informe de cierre, traspaso, alta en
+  Ninety: no son un entregable que el Observatorio muestre) — la línea que le
+  correspondería: `- <Due date> · <PREFIJO>-H<n> · <título sin el prefijo
+  "H<n> ·">`, **sin el responsable** (regla 6 de la plantilla: la ficha no
+  lleva nombres de personas), máximo 5 (prioriza las más próximas por fecha si
+  sobran). **Compara esa lista contra las líneas que ya existen en "Próxima
+  versión"** (las que llevan etiqueta `<PREFIJO>-H<n>`) antes de tocar nada:
+  si ya coinciden fecha y título, no hay nada que hacer — no reescribas ni
+  pushees sin cambios. Actúa solo donde hay diferencia: agrega la línea que
+  falta, corrige la que cambió de fecha o título, o quita la que ya no está en
+  la Roca vigente. No toques líneas de "Próxima versión" sin etiqueta
+  `<PREFIJO>-H<n>` — son manuales, de otra fuente.
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no
   controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
   la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
   versión propuesta en `package.json` y resumen del cambio principal —
-  CHANGELOG o descripción del PR de release).
+  CHANGELOG o descripción del PR de release). **En el mismo momento, revisa
+  toda "Próxima versión"** —no solo la línea que coincida en texto con el hito
+  que acabas de agregar— contra lo que este release entrega de verdad
+  (CHANGELOG o descripción del PR de release):
+  - Si el release cumple una línea **completa**, quítala de "Próxima versión"
+    — un mismo hito no puede figurar a la vez como cerrado en "Hitos" y como
+    pendiente en "Próxima versión".
+  - Si una línea agrupa varios hitos (p. ej. "Rediseño visual (OBS-M46) y
+    galería de capturas (OBS-M39)") y el release solo cumple parte, **edítala**
+    dejando solo lo que sigue pendiente en vez de borrarla entera; si no queda
+    nada pendiente, ahí sí se quita.
+  - Si no es claro si el release cumple una línea, déjala — no la borres a
+    ciegas.
+  Si "Próxima versión" queda vacía después, déjala vacía con su comentario guía
+  de la plantilla; no borres la sección.
 - **Al confirmarse el merge y el tag**: verifica el hito y corrige fecha o
   resumen si difieren de lo publicado. Si el PR de release se rechaza o se
-  descarta, elimina el hito en la sesión que lo detecte. El hito **no es
-  opcional**: todo tag publicado tiene su línea en "Hitos", también los
-  releases menores.
+  descarta, elimina el hito en la sesión que lo detecte y restaura en "Próxima
+  versión" cualquier línea que hayas quitado o editado creyendo que este
+  release la cumplía. El hito **no es opcional**: todo tag publicado tiene su
+  línea en "Hitos", también los releases menores.
 - **Cuando detectes un cambio importante del proyecto** — en un release o en
   cualquier otro momento: alcance, plataforma, resumen, por qué importa, equipo o
   próximos pasos que ya no reflejan la realidad — actualiza la sección afectada y
