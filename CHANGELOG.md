@@ -16,10 +16,12 @@ El harness y el CLI se versionan juntos.
   PR; sin respuesta afirmativa no lo abre.
 - **El ciclo Git del Vault no pide confirmación** (SHS-M37-T002). `settings.json` (local
   y plantilla) permite `git -C <ruta> add/commit/pull/push/status/fetch/log/diff`, la
-  forma que usa el protocolo del Vault. Para no abrir una puerta lateral, se deniega
-  `git -C * push * main*` (con `-C` se esquivaban los deny de `main` del proyecto; el
-  push del Vault va sin refspec) y el force-push con `-C` queda en `ask`. Los repos
-  consumidores lo reciben con `npx souclaude upgrade`.
+  forma que usa el protocolo del Vault. Para no abrir una puerta lateral, se deniegan
+  `git -C * push * main*` y `git -C * push * *:main*` (con `-C` se esquivaban los deny
+  de `main` del proyecto, incluido el bypass por refspec `HEAD:main` que cerró SHS-M29;
+  el push del Vault va sin refspec) y el force-push con `-C`, por flag (`--force`, `-f`)
+  o por refspec `+`, queda en `ask`. Los repos consumidores lo reciben con
+  `npx souclaude upgrade`.
 
 ## [3.14.0] — 2026-09-21
 
