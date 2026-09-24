@@ -20,8 +20,9 @@ El harness y el CLI se versionan juntos.
   `git -C * push * main*` y `git -C * push * *:main*` (con `-C` se esquivaban los deny
   de `main` del proyecto, incluido el bypass por refspec `HEAD:main` que cerró SHS-M29;
   el push del Vault va sin refspec) y el force-push con `-C`, por flag (`--force`, `-f`)
-  o por refspec `+`, queda en `ask`. Los repos consumidores lo reciben con
-  `npx souclaude upgrade`.
+  o por refspec `+`, queda en `ask`. La plantilla del modo solo (`settings-solo.json`)
+  recibe solo los `allow`: no tiene deny de `main`, y el worklog también se pushea al
+  Vault. Los repos consumidores lo reciben con `npx souclaude upgrade`.
 
 ## [3.14.0] — 2026-09-21
 
