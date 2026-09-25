@@ -33,6 +33,17 @@ El harness y el CLI se versionan juntos.
   rechaza (exit 2) una ruta de `--paths` que empiece con `-`, para que ninguna se lea como
   opción de `git add`. Los repos consumidores lo reciben con `upgrade` y necesitan
   el CLI global (`npm install -g github:soutecdev/souclaude-harness#v3`).
+- **`upgrade` migra el `CLAUDE.md` del consumidor a `vault-sync`** (SHS-M37-T005). El
+  `CLAUDE.md` es user-owned y casi siempre está editado, así que la línea nueva solo
+  llegaba al `CLAUDE.md.new` y el agente seguía usando `git -C "<vault>" pull --rebase`
+  (equipo) o `npx souclaude vault-sync --push ...` (solo), que piden confirmación. La
+  migración `v3-claude-md-vault-sync` reemplaza **solo esas líneas literales** que emitieron
+  las plantillas v3.9.0–v3.14.0; si el dev las reescribió a su manera, no se tocan. Para
+  eso el motor suma el veredicto `migrate`: sobre un archivo editado (`local-edit`,
+  `conflict` o `foreign`), una migración que cambia algo se escribe **en el lugar**, con
+  backup y sin reclamar el hash en el lockfile (el archivo sigue siendo del dev y el
+  próximo upgrade no lo pisa). `conflict` y `foreign` conservan su `.new` al lado. Antes, las
+  migraciones solo llegaban a disco en los archivos `append-block` y `merge-json`.
 
 ## [3.14.0] — 2026-09-21
 

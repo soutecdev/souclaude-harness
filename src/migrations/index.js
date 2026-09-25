@@ -31,6 +31,25 @@ export const migrations = [
       return changed ? stringifyJson(json) : content
     },
   },
+  {
+    // El CLAUDE.md es user-owned y casi siempre esta editado, asi que el upgrade
+    // solo le deja un .new que nadie mira: la instruccion vieja seguiria mandando
+    // al agente a `git -C "<vault>" ...`, que pide confirmacion. Reemplazo literal
+    // del texto que emitieron las plantillas v3.9.0-v3.14.0 (equipo y solo); si el
+    // usuario lo reescribio a su manera, no coincide y no se toca.
+    id: 'v3-claude-md-vault-sync',
+    to: '3.14.1',
+    dest: 'CLAUDE.md',
+    describe: 'CLAUDE.md: el ciclo del Vault pasa a `souclaude vault-sync` (sin confirmación); solo se reemplaza la línea que escribió el harness',
+    transform(content) {
+      return content
+        .replace('`git -C "<vault>" pull --rebase` y lee', '`souclaude vault-sync` y lee')
+        .replace(
+          '`npx souclaude vault-sync --push -m "docs: worklog"`',
+          '`souclaude vault-sync --push -m "docs: worklog" --paths Project-<PREFIJO>`'
+        )
+    },
+  },
 ]
 
 // Devuelve las migraciones aplicables a `dest` para pasar de `fromVersion` al

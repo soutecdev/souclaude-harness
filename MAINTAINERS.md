@@ -188,6 +188,7 @@ Comparando disco × lockfile × template, cada archivo recibe un veredicto:
 | `foreign` | existe pero nunca lo escribimos nosotros | `.new` al lado |
 | `restore` | lo escribimos y lo borraste | reescribir |
 | `obsolete` | estaba en el lockfile, ya no en el manifest | ofrecer `--prune` |
+| `migrate` | lo editaste tú (`local-edit`, `conflict` o `foreign`) y una migración cambia algo | solo el cambio de la migración, en el lugar, con backup; el hash del lockfile no se reclama |
 
 ### La ejecución (`src/core/apply.js`)
 
@@ -196,7 +197,8 @@ Comparando disco × lockfile × template, cada archivo recibe un veredicto:
 - **Backup**: copia todo lo que va a sobrescribir a `.claude/backup-<timestamp>/` antes de
   tocarlo.
 - **Nunca pisa un archivo tuyo en silencio**: `conflict`/`foreign` van a `.new`;
-  `local-edit`/`noop` no se escriben.
+  `local-edit`/`noop` no se escriben. La única excepción es `migrate`: el reemplazo
+  puntual de una migración sobre un archivo tuyo, con backup y sin reclamar su hash.
 - Al final, reescribe el lockfile con el hash de lo emitido.
 
 ### Detalles que importan

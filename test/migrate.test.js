@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { main } from '../src/cli.js'
-import { mkRepo, read, has, snapshot, replan, verdicts } from './helpers.js'
-import { OBSOLETE, NOOP, computePlan } from '../src/core/plan.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { mkRepo, read, write, has, snapshot, replan, verdicts } from './helpers.js'
+import { OBSOLETE, NOOP, CONFLICT, MIGRATE, computePlan } from '../src/core/plan.js'
 import { apply } from '../src/core/apply.js'
 import { loadManifest } from '../src/core/manifest.js'
 import { detect, resolveDetected } from '../src/core/detect.js'
@@ -216,4 +218,97 @@ test('computePlan: obsoleto sin editar (hash intacto) se marca autoPrune, editad
 
   assert.equal(porDest['viejo/editado.md'].verdict, OBSOLETE)
   assert.equal(porDest['viejo/editado.md'].autoPrune, false)
+})
+
+// SHS-M37-T005: el CLAUDE.md de un consumidor instalado con v3.14.0 o antes dice
+// `git -C "<vault>" pull --rebase` (equipo) o `npx souclaude vault-sync --push ...`
+// (solo): las dos piden confirmacion. Es user-owned y casi siempre esta editado,
+// asi que sin migracion la linea nueva solo llegaria al .new.
+const LINEA_EQUIPO = { nueva: '`souclaude vault-sync` y lee', vieja: '`git -C "<vault>" pull --rebase` y lee' }
+const LINEA_SOLO = {
+  nueva: '`souclaude vault-sync --push -m "docs: worklog" --paths Project-<PREFIJO>`',
+  vieja: '`npx souclaude vault-sync --push -m "docs: worklog"`',
+}
+const EDICION = '\n## Notas del equipo\n\nEsto lo escribio el dev y no se toca.\n'
+
+// Deja el repo como si lo hubiera instalado la v3.14.0 y el dev hubiera editado el
+// CLAUDE.md. `plantillaCambio`: el lockfile guarda el hash de la plantilla vieja
+// (conflict) o el de la actual (local-edit).
+async function instaladoEnV314({ solo = false, plantillaCambio = true } = {}) {
+  const dir = mkRepo({ 'package.json': '{"name":"consumidor"}' })
+  assert.equal(await main(['init', ...YES, ...(solo ? ['--solo'] : [])], dir), 0)
+  const { nueva, vieja } = solo ? LINEA_SOLO : LINEA_EQUIPO
+  const actual = read(dir, 'CLAUDE.md')
+  assert.ok(actual.includes(nueva), 'la plantilla actual ya no trae la linea nueva: ajustar el test')
+  const vieja314 = actual.replace(nueva, vieja)
+  write(dir, 'CLAUDE.md', vieja314 + EDICION)
+  const lock = JSON.parse(read(dir, '.claude/harness.json'))
+  lock.harnessVersion = '3.14.0'
+  lock.files['CLAUDE.md'].hash = hashContent(plantillaCambio ? vieja314 : actual)
+  write(dir, '.claude/harness.json', JSON.stringify(lock, null, 2))
+  return { dir, hashPrevio: lock.files['CLAUDE.md'].hash }
+}
+
+for (const solo of [false, true]) {
+  const modo = solo ? 'solo' : 'equipo'
+  const { nueva, vieja } = solo ? LINEA_SOLO : LINEA_EQUIPO
+
+  test(`migracion v3 (${modo}): el CLAUDE.md editado pasa a souclaude vault-sync en el lugar, sin perder lo del dev`, async () => {
+    const { dir, hashPrevio } = await instaladoEnV314({ solo })
+
+    const plan = replan(dir)
+    const acciones = plan.actions.filter((a) => a.dest === 'CLAUDE.md').map((a) => a.verdict).sort()
+    assert.deepEqual(acciones, [CONFLICT, MIGRATE])
+
+    assert.equal(await main(['upgrade', ...YES], dir), 0)
+
+    const claude = read(dir, 'CLAUDE.md')
+    assert.ok(claude.includes(nueva), 'la instruccion nueva no llego al CLAUDE.md')
+    assert.ok(!claude.includes(vieja), 'la instruccion vieja sobrevivio')
+    assert.ok(claude.endsWith(EDICION), 'se perdio la edicion del dev')
+    // La plantilla tambien cambio: el .new sigue saliendo como siempre.
+    assert.ok(has(dir, 'CLAUDE.md.new'))
+
+    // Backup del original antes de tocarlo.
+    const backups = fs.readdirSync(path.join(dir, '.claude')).filter((e) => e.startsWith('backup-'))
+    assert.equal(backups.length, 1)
+    assert.ok(read(dir, `.claude/${backups[0]}/CLAUDE.md`).includes(vieja))
+
+    // El archivo sigue siendo del dev: el lockfile no reclama el hash migrado.
+    const lock = JSON.parse(read(dir, '.claude/harness.json'))
+    assert.equal(lock.files['CLAUDE.md'].hash, hashPrevio)
+  })
+}
+
+test('migracion v3: editado con la plantilla sin cambios -> solo la migracion, sin .new', async () => {
+  const { dir } = await instaladoEnV314({ plantillaCambio: false })
+
+  const plan = replan(dir)
+  assert.deepEqual(plan.actions.filter((a) => a.dest === 'CLAUDE.md').map((a) => a.verdict), [MIGRATE])
+
+  assert.equal(await main(['upgrade', ...YES], dir), 0)
+  assert.ok(read(dir, 'CLAUDE.md').includes(LINEA_EQUIPO.nueva))
+  assert.ok(read(dir, 'CLAUDE.md').endsWith(EDICION))
+  assert.ok(!has(dir, 'CLAUDE.md.new'))
+})
+
+test('migracion v3: si el dev reescribio la linea a su manera, no se toca', async () => {
+  const { dir } = await instaladoEnV314()
+  const propia = read(dir, 'CLAUDE.md').replace(LINEA_EQUIPO.vieja, '`git -C "<vault>" pull --rebase` (a mi manera) y lee')
+  write(dir, 'CLAUDE.md', propia)
+
+  assert.equal(await main(['upgrade', ...YES], dir), 0)
+  assert.equal(read(dir, 'CLAUDE.md'), propia)
+})
+
+test('migracion v3: despues del upgrade no se vuelve a migrar ni a escribir el CLAUDE.md', async () => {
+  const { dir } = await instaladoEnV314()
+  assert.equal(await main(['upgrade', ...YES], dir), 0)
+  const despues = read(dir, 'CLAUDE.md')
+
+  const verd = replan(dir).actions.filter((a) => a.dest === 'CLAUDE.md').map((a) => a.verdict)
+  assert.ok(!verd.includes(MIGRATE), 'la migracion se volvio a planificar')
+
+  assert.equal(await main(['upgrade', ...YES], dir), 0)
+  assert.equal(read(dir, 'CLAUDE.md'), despues)
 })
