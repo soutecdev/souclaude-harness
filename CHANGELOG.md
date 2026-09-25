@@ -2,6 +2,68 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.15.0] — 2026-09-25
+
+### Agregado
+
+- **`init`/`upgrade` instalan el CLI global solos** (SHS-M35-T004). Si `souclaude`
+  falta o está en otra versión, `init` y `upgrade` lo instalan o actualizan sin
+  preguntar, también con `--yes`; en CI se sigue exigiendo `--cli-global` y
+  `--no-cli-global` lo omite. Tras el `npm install -g` se verifica la versión que
+  quedó instalada en vez de dar el éxito por supuesto. La skill `harness-upgrade`
+  verifica `souclaude --version` y trae una guía para diagnosticar y resolver fallos
+  (PATH, EACCES/EPERM, acceso a GitHub, red, versión vieja que gana en el PATH, Node
+  viejo). Es lo que deja listo el CLI global que necesita el ciclo del Vault por
+  `vault-sync` (ver abajo).
+
+### Cambiado
+
+- **La Roca alimenta «Próxima versión» del Observatorio** (SHS-M38). Las skills
+  `soutec-github` (equipo y solo) y `harness-upgrade` clasifican los hitos al instalar
+  (lo ya ocurrido va a «Hitos», lo planificado a «Próxima versión»), toman los hitos de
+  producto de la Roca vigente solo cuando hay una diferencia real, sin reescribir ni
+  pushear en cada upgrade, y el PR de release depura «Próxima versión» contra lo que
+  el release entrega.
+
+- **Remoto canónico `soutecdev`** (SHS-M37, cubre SHS-M20-T001). Las URLs de repo y de
+  Vault (`package.json`, manifest, `cli-global.js`, `cli.js`, skill `harness-upgrade`,
+  README y docs) dejan de apuntar a `ialvarezsoutec`; el histórico de este changelog
+  y los registros de `specs/` y `progress/` se conservan tal cual.
+- **El agente pregunta antes de abrir el PR.** `CLAUDE.md` (local y plantilla) y la skill
+  `soutec-github` pasan de «solo a pedido explícito» a «con el visto bueno del usuario»:
+  el agente pregunta una sola vez, cuando ya es hora de cerrar el feature, si abre el
+  PR; sin respuesta afirmativa no lo abre.
+- **El ciclo del Vault corre sin confirmación por `vault-sync`** (SHS-M37-T002). Las
+  plantillas de `settings.json` (equipo y solo) permiten `souclaude vault-sync:*` (el CLI
+  global; la copia local, además, `npx souclaude` y `node bin/cli.mjs`), y el protocolo
+  (`CLAUDE.md` de ambos modos, `progress/README.md`, skill `vault-milestones`, el hook del
+  modo solo, el aviso del hook `declarar-milestone` cuando no pudo sincronizar y las guías
+  de `docs/`) pasa de `git -C "<vault>" add/commit/pull/push` a `souclaude vault-sync` /
+  `souclaude vault-sync --push -m ... --paths Project-<PREFIJO>`, que usa la ruta de
+  `vault.local.json`, argumentos fijos, `push` sin refspec y nunca force. El modo solo
+  también acota el `add` con `--paths`: sin confirmación de por medio, un `add -A` sobre
+  todo el Vault compartido ya no lo revisa nadie antes del push. Cambios de diseño
+  frente al primer intento, por el security review: (1) no se permiten reglas `git -C * <cmd>`
+  genéricas: un `allow` así deja pasar `-c core.sshCommand=...`, `--output=...`,
+  `--work-tree=...` o un push a cualquier remoto o refspec sin confirmación, y con la sintaxis
+  `:*` ni siquiera casan (el `*` del medio es literal); (2) no se permite `npx souclaude`
+  en las plantillas: fuera de este repo `npx` lo resuelve contra el registro público, donde
+  ese nombre no es el del harness y estaría libre para registrarlo; (3) `vault-sync --push`
+  rechaza (exit 2) una ruta de `--paths` que empiece con `-`, para que ninguna se lea como
+  opción de `git add`. Los repos consumidores lo reciben con `upgrade` y necesitan
+  el CLI global (`npm install -g github:soutecdev/souclaude-harness#v3`).
+- **`upgrade` migra el `CLAUDE.md` del consumidor a `vault-sync`** (SHS-M37-T005). El
+  `CLAUDE.md` es user-owned y casi siempre está editado, así que la línea nueva solo
+  llegaba al `CLAUDE.md.new` y el agente seguía usando `git -C "<vault>" pull --rebase`
+  (equipo) o `npx souclaude vault-sync --push ...` (solo), que piden confirmación. La
+  migración `v3-claude-md-vault-sync` reemplaza **solo esas líneas literales** que emitieron
+  las plantillas v3.9.0–v3.14.0; si el dev las reescribió a su manera, no se tocan. Para
+  eso el motor suma el veredicto `migrate`: sobre un archivo editado (`local-edit`,
+  `conflict` o `foreign`), una migración que cambia algo se escribe **en el lugar**, con
+  backup y sin reclamar el hash en el lockfile (el archivo sigue siendo del dev y el
+  próximo upgrade no lo pisa). `conflict` y `foreign` conservan su `.new` al lado. Antes, las
+  migraciones solo llegaban a disco en los archivos `append-block` y `merge-json`.
+
 ## [3.14.0] — 2026-09-21
 
 ### Cambiado

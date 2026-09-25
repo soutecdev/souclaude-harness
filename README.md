@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.14.0**
+**v3.15.0**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.
@@ -8,7 +8,7 @@ Sin agentes ni flujos fijos: el modelo trabaja directo, con las skills de SOUTEC
 única capa.
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3
+npx github:soutecdev/souclaude-harness#v3
 ```
 
 Sin registry, sin `.npmrc`, sin token. Solo hace falta git y Node ≥20.
@@ -99,15 +99,15 @@ Para el equipo, el monitor se usa como **CLI global instalado desde GitHub** —
 npx ni la URL larga:
 
 ```bash
-npm install -g github:ialvarezsoutec/souclaude-harness#v3   # una vez por máquina
+npm install -g github:soutecdev/souclaude-harness#v3   # una vez por máquina
 souclaude monitor                                           # desde cualquier carpeta
 ```
 
-`souclaude init`/`upgrade` lo ofrecen solos al final (pregunta con TTY; en modo no
-interactivo solo con `--cli-global`), y es idempotente: si el global ya está en la
-versión del harness, no hace nada. Al publicarse un release, repetir el
-`npm install -g` (o aceptar la oferta de `souclaude upgrade`) actualiza el global al
-tag `v3` vigente.
+`souclaude init`/`upgrade` lo instalan o actualizan solos al final si falta o está
+en otra versión, también con `--yes` (en CI solo con `--cli-global`; `--no-cli-global`
+lo omite), y es idempotente: si el global ya está en la versión del harness, no hace
+nada. Al publicarse un release, `souclaude upgrade` (o repetir el `npm install -g`)
+actualiza el global al tag `v3` vigente.
 
 Además, al conectar el Vault, `init`/`upgrade` espejan la conexión a nivel máquina
 (`~/.claude/souclaude/vault.json`): con eso el monitor resuelve el Vault desde
@@ -346,8 +346,8 @@ proyectos instalados antes de la v3 apuntan a **`#v1`** — el tag móvil `v2` n
 creó, la serie 2 solo tiene el inmutable `v2.4.0`.
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade --dry-run   # ver el plan
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade --prune     # aplicar + limpiar
+npx github:soutecdev/souclaude-harness#v3 upgrade --dry-run   # ver el plan
+npx github:soutecdev/souclaude-harness#v3 upgrade --prune     # aplicar + limpiar
 ```
 
 El upgrade marca **obsoletos** los restos del flujo viejo (agentes, `AGENTS.md`,

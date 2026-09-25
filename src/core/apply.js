@@ -4,7 +4,7 @@ import { hashContent, hashBytes } from './hash.js'
 import { writeFileLF, writeFileBytes, ensureDir, readBytesIfExists } from './fsx.js'
 import { extractBlock } from './block.js'
 import { writeLockfile } from './lockfile.js'
-import { CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, NOOP, OBSOLETE, writeActions } from './plan.js'
+import { CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, NOOP, OBSOLETE, MIGRATE, writeActions } from './plan.js'
 
 export function backupDirName(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0')
@@ -55,7 +55,8 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
     }
 
     // Backup de todo lo que no sea creacion nueva, antes de tocarlo.
-    const isOverwrite = action.verdict === UPDATE || (action.verdict === CONFLICT && action.writePath === action.dest)
+    const isOverwrite =
+      action.verdict === UPDATE || action.verdict === MIGRATE || (action.verdict === CONFLICT && action.writePath === action.dest)
     if (backup && isOverwrite) {
       const saved = saveBackup(cwd, backupRoot, action.dest)
       if (saved) backedUp.push(saved)
@@ -135,7 +136,8 @@ function buildLockfile({ plan, manifest, vars, detected, lock, prune, pruneEdite
       }
 
       default:
-        // local-edit: conservamos el hash original para seguir detectando la edicion.
+        // local-edit y migrate: conservamos el hash original para seguir detectando la
+        // edicion. Reclamar el hash de un archivo migrado autorizaria a pisarlo despues.
         if (prev) next.files[action.dest] = prev
         break
     }

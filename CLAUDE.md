@@ -9,7 +9,7 @@ organización.
 
 ## Harness
 
-Harness `3.14.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
+Harness `3.15.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
 viven en `.claude/skills/` y se aplican solas cuando el contexto lo amerita (en un
 proyecto consumidor se eligen al instalar con `npx souclaude`; `soutec-github` es
 obligatoria y siempre está):
@@ -52,8 +52,11 @@ por PR.
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
   Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
   publicar y después del merge de release `dev` → `main`.
-- **El PR se abre solo cuando el usuario lo pide explícitamente** o dice que quiere
-  mergear. Trabajo terminado sin ese pedido: push a la rama y reportar, sin PR.
+- **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
+  quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
+  ya sea hora de cerrar** (el feature está terminado y verificado), si abres el PR;
+  no lo menciones antes ni lo repitas en cada avance. Sin esa respuesta no lo abras:
+  push a la rama y reportar.
 - **Si el pedido de PR incluye correr antes el security review, terminado el review
   no te detengas**: seguí directo con push/PR si no hay hallazgos que bloqueen. El
   security review es un paso intermedio del mismo pedido, no un punto de checkpoint —
@@ -92,7 +95,7 @@ reemplazo, no sincronices en las dos herramientas a la vez para la misma
 tarjeta — usa la que el usuario indique como activa en cada sesión.
 
 La ruta local del Vault está en `.claude/vault.local.json` (la escribe `npx souclaude`).
-Antes de empezar a trabajar: `git -C "<vault>" pull --rebase` y lee
+Antes de empezar a trabajar: `npx souclaude vault-sync` y lee
 `Project-<PREFIJO>/milestones.md` y `kanban.md`. Si el milestone o la tarea ya está
 **En curso** con otro dueño u otra máquina: **para y pregunta**. Al tomar o cerrar
 algo, mueve la tarjeta y pushea **en ese momento**: una tarea pasa a **Hecho** al

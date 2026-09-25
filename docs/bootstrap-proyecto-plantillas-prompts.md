@@ -33,8 +33,8 @@ Las fases 0–6 describen el caso base (proyecto nuevo desde cero). Las demás c
 | `{{PREFIJO}}` | Prefijo de 2-4 letras. Nombra `Project-<PREFIJO>/` en el Vault **y** es la clave del proyecto en Jira | `CSC` |
 | `{{RUTA_LOCAL}}` | Dónde vive el repo en tu disco. **Fuera de OneDrive** | `C:\Users\tu-usuario\dev\chatbot-spacar` |
 | `{{RUTA_VAULT}}` | Dónde clonas el Vault. **Fuera de OneDrive** | `C:\Users\tu-usuario\dev\soubunker-vault` |
-| `{{HARNESS_REPO}}` | Repo del harness | `https://github.com/ialvarezsoutec/souclaude-harness` |
-| `{{VAULT_REPO}}` | Repo del Vault | `https://github.com/ialvarezsoutec/soubunker-vault` |
+| `{{HARNESS_REPO}}` | Repo del harness | `https://github.com/soutecdev/souclaude-harness` |
+| `{{VAULT_REPO}}` | Repo del Vault | `https://github.com/soutecdev/soubunker-vault` |
 | `{{JIRA_SITE}}` | Sitio de Atlassian | `https://dev-soutec.atlassian.net` |
 
 ### Prerrequisitos de máquina

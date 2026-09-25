@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
-import { CREATE, UPDATE, NOOP, CONFLICT, FOREIGN, RESTORE, LOCAL_EDIT, OBSOLETE } from './core/plan.js'
+import { CREATE, UPDATE, NOOP, CONFLICT, FOREIGN, RESTORE, LOCAL_EDIT, OBSOLETE, MIGRATE } from './core/plan.js'
 
 export const isCI = () => process.env.CI === 'true' || process.env.CI === '1'
 
@@ -71,12 +71,13 @@ const VERDICT_STYLE = {
   [RESTORE]: { label: 'restaurar', color: pc.cyan },
   [CONFLICT]: { label: 'conflicto -> .new', color: pc.yellow },
   [FOREIGN]: { label: 'ya existia -> .new', color: pc.yellow },
+  [MIGRATE]: { label: 'migrar en el lugar', color: pc.cyan },
   [LOCAL_EDIT]: { label: 'editado por ti (se respeta)', color: pc.dim },
   [NOOP]: { label: 'sin cambios', color: pc.dim },
   [OBSOLETE]: { label: 'obsoleto', color: pc.magenta },
 }
 
-const ORDER = [CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, OBSOLETE, LOCAL_EDIT, NOOP]
+const ORDER = [CREATE, UPDATE, RESTORE, MIGRATE, CONFLICT, FOREIGN, OBSOLETE, LOCAL_EDIT, NOOP]
 
 // Siempre se imprime el plan ANTES de tocar nada. Una sola confirmacion.
 export function renderPlan(plan, { verbose = false } = {}) {

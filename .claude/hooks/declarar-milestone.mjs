@@ -162,7 +162,7 @@ function main() {
   salida.push(
     vaultAlDia
       ? `Tablero ${proyecto}/milestones.md (recien sincronizado con el remoto):`
-      : `Tablero ${proyecto}/milestones.md (no se pudo sincronizar con el remoto — puede estar desactualizado: haz pull --rebase del Vault):`,
+      : `Tablero ${proyecto}/milestones.md (no se pudo sincronizar con el remoto — puede estar desactualizado: corre souclaude vault-sync):`,
   )
   salida.push(`En curso (${enCurso.length}):`)
   for (const tarjeta of enCurso) salida.push(`  ${tarjeta}`)

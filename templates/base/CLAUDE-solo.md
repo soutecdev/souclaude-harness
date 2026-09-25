@@ -45,8 +45,10 @@ El trato del modo solo: fluidez total a cambio de que la organización siga vien
 
 - **Al empezar cada bloque de trabajo**, agrega una línea con fecha a
   `Project-<PREFIJO>/worklog.md` del Vault con el objetivo del bloque
-  («2026-09-15 · migrando auth a OAuth») y pushea en el momento
-  (`npx souclaude vault-sync --push -m "docs: worklog"`). Si el objetivo cambia,
+  («2026-09-15 · migrando auth a OAuth») y pushea en el momento con
+  `souclaude vault-sync --push -m "docs: worklog" --paths Project-<PREFIJO>`
+  (permitido sin confirmación; requiere el CLI global:
+  `npm install -g github:soutecdev/souclaude-harness#v3`). Si el objetivo cambia,
   otra línea. Es una línea honesta por bloque — no un tablero.
 - `sessions.md` y el monitor de tokens (`souclaude monitor`) siguen funcionando
   exactamente igual que en modo equipo, sin pasos manuales.

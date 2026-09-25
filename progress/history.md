@@ -30,3 +30,4 @@ Formato: `- <fecha> · <ID> · <agente o persona> · <resultado> · <referencia>
 - 2026-08-11 · vault-sync · reviewer · changes_requested · docs-only (B1 spec vs plan, B2 tasks sin marcar) -> corregido
 - 2026-08-11 · vault-sync · reviewer · APPROVED · progress/vault-sync/review.md (ronda 2, docs-only corregido)
 - 2026-08-17 · vault-milestones-y-sesiones · claude · done · rama feature/vault-milestones-y-sesiones (PR a dev pendiente de abrir)
+- 2026-09-22 · SHS-M38-T001/T002/T003 · claude · done · rama docs/M38-observatorio-proxima-version (commits b795281, 4cb15dc), PR a dev pendiente de abrir

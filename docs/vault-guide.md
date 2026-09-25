@@ -135,14 +135,14 @@ repo (`vault_skip`).
   PR ya no refleja el ahora.
 - **El claim es en dos niveles** (protocolo completo en `progress/README.md` de cada
   repo):
-  1. `git -C "<vault>" pull --rebase` **antes** de empezar — sin este pull, dos agentes
-     en máquinas distintas toman lo mismo sin enterarse.
+  1. `souclaude vault-sync` (pull `--rebase` seguro) **antes** de empezar — sin este
+     pull, dos agentes en máquinas distintas toman lo mismo sin enterarse.
   2. `milestones.md`: si el milestone está **En curso con otro dueño u otra máquina**,
      lo trabaja otro agente → **parar y preguntar al humano**. Nunca tomarlo, nunca
      moverlo, nunca saltar a otro por cuenta propia.
   3. `kanban.md`: misma regla a nivel tarea (En curso o En review con otro dueño).
   4. Mover tarjeta y **pushear en ese momento**: `chore: <ID> a En curso (@dueño ·
-     <máquina>)`. `npx souclaude vault-sync --push` hace el ciclo seguro.
+     <máquina>)`. `souclaude vault-sync --push` hace el ciclo seguro.
 - **Conflictos**: una tarjeta/línea = una línea de archivo — conservar **ambas** y no
   borrar la de otro. Dos rebases fallidos seguidos → `vault_skip` en el `history.md`
   del repo y reportar; el trabajo local nunca se bloquea. **Nunca `git push --force`.**

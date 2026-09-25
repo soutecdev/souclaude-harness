@@ -255,16 +255,15 @@ export function githubProtectionStep({ code, cwd, flags, protege = protegeBranch
   return code
 }
 
-// SHS-M21: el monitor en produccion para el equipo. Ofrece dejar el CLI
-// global instalado (npm install -g desde GitHub) para que `souclaude monitor`
-// funcione desde cualquier terminal, no solo via npx con la URL larga. Igual
-// que los otros pasos post-plan: nunca corre en --dry-run, nunca bloquea la
-// instalacion si falla, y en modo no interactivo exige --cli-global.
+// SHS-M21 / SHS-M35-T004: deja el CLI global instalado y al dia (npm install
+// -g desde GitHub) para que `souclaude vault-sync` y `souclaude monitor`
+// funcionen desde cualquier terminal. Se hace solo, tambien con --yes; en CI
+// exige --cli-global. Igual que los otros pasos post-plan: nunca corre en
+// --dry-run y nunca bloquea la instalacion si falla.
 export async function cliGlobalStep({ code, flags, manifest }) {
   if (code !== 0) return code
   if (flags['dry-run']) return code
-  const yes = Boolean(flags.yes) || ui.isCI()
-  await instalarCliGlobal({ manifest, flags, yes })
+  await instalarCliGlobal({ manifest, flags })
   return code
 }
 

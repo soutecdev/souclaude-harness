@@ -97,7 +97,7 @@ el Vault.
 
 ## El Vault es OTRO repo: pull antes, push después
 
-El Vault (`https://github.com/ialvarezsoutec/soubunker-vault.git`) es un repo git con su
+El Vault (`https://github.com/soutecdev/soubunker-vault.git`) es un repo git con su
 propio remoto. Trabajas contra **dos repos a la vez** y no se parecen en nada:
 
 | | Repo del proyecto | Repo del Vault |
@@ -121,7 +121,7 @@ declarado es una violación del protocolo, no una omisión menor.
 **Antes de empezar a trabajar** — siempre, en este orden:
 
 ```bash
-git -C "<vault>" pull --rebase        # o: npx souclaude vault-sync
+souclaude vault-sync                  # pull --rebase seguro del Vault
 ```
 
 1. Lee `Project-<PREFIJO>/milestones.md`. Si el milestone que vas a trabajar ya está
@@ -136,13 +136,15 @@ git -C "<vault>" pull --rebase        # o: npx souclaude vault-sync
 — no en un push final. El tablero debe reflejar el ahora:
 
 ```bash
-git -C "<vault>" add Project-<PREFIJO>
-git -C "<vault>" commit -m "chore: <ID> a En curso (@<dueño> · <máquina>)"
-git -C "<vault>" pull --rebase && git -C "<vault>" push
+souclaude vault-sync --push -m "chore: <ID> a En curso (@<dueño> · <máquina>)" --paths Project-<PREFIJO>
 ```
 
-`npx souclaude vault-sync --push -m "<msg>"` hace el ciclo completo (add → commit →
-pull → push) de forma segura desde el CLI.
+`vault-sync --push` hace el ciclo completo (add → commit → pull → push, sin refspec ni
+force) sobre la ruta de `vault.local.json`, y `settings.json` lo permite sin pedir
+confirmación. Úsalo en vez de `git -C "<vault>"` a mano: esos comandos sí piden
+confirmación. Requiere el CLI global (`npm install -g github:soutecdev/souclaude-harness#v3`,
+una vez por máquina); no uses `npx souclaude`, que fuera de este repo baja del registro un
+paquete que no es el del harness.
 
 **Durante el trabajo**, el flujo constante es: adoptar un plan → espejarlo a `plans/`
 y anotarlo en la tarjeta del milestone → crear la rama del milestone desde `dev` →
