@@ -46,9 +46,9 @@ const OPTIONS = {
   // falta en modo desatendido: con TTY se confirma. Sin este flag, un --yes
   // nunca escribe en el repo compartido de la organizacion.
   'vault-seed': { type: 'boolean' },
-  // Instalar/actualizar el CLI global (npm install -g desde GitHub) sin
-  // preguntar. En modo no interactivo (--yes / CI) es la UNICA via: sin el
-  // flag, init/upgrade solo avisan. Con TTY, sin flag se pregunta.
+  // CLI global (npm install -g desde GitHub). Sin flag, init/upgrade lo
+  // instalan o actualizan solos, tambien con --yes; en CI hace falta el flag.
+  // --no-cli-global lo omite.
   'cli-global': { type: 'boolean' },
   'assume-version': { type: 'string' },
   // monitor. --interval y --top solo pueden ser 'string' en parseArgs (no hay tipo
@@ -211,11 +211,12 @@ ${pc.bold('FLAGS')}
                        si el id-registry ya asocia este repo a un prefijo y la
                        carpeta todavia no existe (por defecto, --yes no escribe en
                        el Vault compartido). Con TTY se pregunta y el flag sobra.
-  --cli-global         Instala/actualiza el CLI global sin preguntar
-                       (npm install -g github:soutecdev/souclaude-harness#v3):
-                       deja \`souclaude monitor\` disponible en cualquier terminal.
-                       Con --yes o CI es la unica via (sin el flag solo se avisa);
-                       con TTY, sin flag init/upgrade lo preguntan. Idempotente.
+  --cli-global         init/upgrade instalan o actualizan solos el CLI global
+                       (npm install -g github:soutecdev/souclaude-harness#v3)
+                       si falta o esta en otra version, tambien con --yes: deja
+                       \`souclaude vault-sync\` y \`souclaude monitor\` en cualquier
+                       terminal. Solo en CI hace falta este flag (sin el, se
+                       avisa). --no-cli-global lo omite. Idempotente.
   --no-vault           Omite el paso del Vault por completo.
   --assume-version     (adopt) Version del harness que se asume instalada.
   --strict             (verify) Los warnings (huerfanos) tambien hacen fallar el comando.

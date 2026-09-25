@@ -103,11 +103,11 @@ npm install -g github:soutecdev/souclaude-harness#v3   # una vez por máquina
 souclaude monitor                                           # desde cualquier carpeta
 ```
 
-`souclaude init`/`upgrade` lo ofrecen solos al final (pregunta con TTY; en modo no
-interactivo solo con `--cli-global`), y es idempotente: si el global ya está en la
-versión del harness, no hace nada. Al publicarse un release, repetir el
-`npm install -g` (o aceptar la oferta de `souclaude upgrade`) actualiza el global al
-tag `v3` vigente.
+`souclaude init`/`upgrade` lo instalan o actualizan solos al final si falta o está
+en otra versión, también con `--yes` (en CI solo con `--cli-global`; `--no-cli-global`
+lo omite), y es idempotente: si el global ya está en la versión del harness, no hace
+nada. Al publicarse un release, `souclaude upgrade` (o repetir el `npm install -g`)
+actualiza el global al tag `v3` vigente.
 
 Además, al conectar el Vault, `init`/`upgrade` espejan la conexión a nivel máquina
 (`~/.claude/souclaude/vault.json`): con eso el monitor resuelve el Vault desde

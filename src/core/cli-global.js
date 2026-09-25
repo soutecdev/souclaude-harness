@@ -36,17 +36,33 @@ export function versionGlobalInstalada({ run = runNpm } = {}) {
   }
 }
 
-// Idempotente: con el global ya en la version del manifest no hace nada. En
-// modo no interactivo (--yes / CI) solo instala con --cli-global explicito:
-// un npm install -g de ~1 minuto no se dispara solo en un runner. Si npm
-// falla, se reporta y el resto de init/upgrade sigue (mismo criterio que la
-// proteccion de main).
-export async function instalarCliGlobal({ manifest, flags, yes, run = runNpm }) {
-  // Antes de tocar npm: en modo no interactivo sin flag no se hace NADA (ni
-  // el npm ls de deteccion) -- los tests y los runners corren init/upgrade
-  // muchas veces y ese ls real cuesta segundos cada vez.
-  if (yes && flags['cli-global'] !== true) {
-    ui.log.info('CLI global "souclaude": en modo no interactivo se instala/actualiza solo con --cli-global.')
+// SHS-M35-T004: el CLI global es parte de la instalacion, no un extra. Sin el,
+// `souclaude vault-sync` (la via sancionada al Vault) y `souclaude monitor` no
+// existen en la maquina, y "instala/actualiza el harness" tiene que dejarlos
+// andando sin preguntar. Por eso se instala o actualiza SOLO si falta o esta
+// en otra version, tambien con --yes (el agente corre init/upgrade sin TTY).
+//
+// Unicas excepciones:
+// - CI: un npm install -g de ~1 minuto no se dispara solo en un runner; ahi
+//   sigue haciendo falta --cli-global explicito.
+// - --no-cli-global: opt-out explicito por corrida.
+//
+// Idempotente: con el global ya en la version del manifest no hace nada. Si
+// npm falla, se reporta con el comando a reintentar y el resto de
+// init/upgrade sigue (mismo criterio que la proteccion de main).
+export async function instalarCliGlobal({ manifest, flags, ci = ui.isCI(), run = runNpm }) {
+  const spec = specGlobal(manifest)
+
+  if (flags['cli-global'] === false) {
+    ui.log.info(`CLI global "souclaude" omitido (--no-cli-global). Se instala a mano con: npm install -g ${spec}`)
+    return { aplicado: false, motivo: 'desactivado' }
+  }
+
+  // Antes de tocar npm: en CI sin flag no se hace NADA (ni el npm ls de
+  // deteccion) -- los tests y los runners corren init/upgrade muchas veces y
+  // ese ls real cuesta segundos cada vez.
+  if (ci && flags['cli-global'] !== true) {
+    ui.log.info('CLI global "souclaude": en CI se instala/actualiza solo con --cli-global.')
     return { aplicado: false, motivo: 'sin-flag' }
   }
 
@@ -54,35 +70,33 @@ export async function instalarCliGlobal({ manifest, flags, yes, run = runNpm }) 
   const instalada = versionGlobalInstalada({ run })
 
   if (instalada === objetivo) {
-    ui.log.info(`CLI global "souclaude" v${instalada} al dia: \`souclaude monitor\` disponible en cualquier terminal.`)
+    ui.log.info(`CLI global "souclaude" v${instalada} al dia: \`souclaude vault-sync\` y \`souclaude monitor\` disponibles en cualquier terminal.`)
     return { aplicado: false, motivo: 'al-dia' }
   }
 
-  const spec = specGlobal(manifest)
-  if (flags['cli-global'] !== true) {
-    const ok = await ui.confirm({
-      message: instalada
-        ? `Actualizar el CLI global "souclaude" (v${instalada} -> v${objetivo})? Corre: npm install -g ${spec}`
-        : `Instalar el CLI global "souclaude" para usar \`souclaude monitor\` desde cualquier terminal? Corre: npm install -g ${spec}`,
-      initialValue: true,
-      yes,
-    })
-    if (!ok) {
-      ui.log.info(`CLI global omitido. Se instala a mano con: npm install -g ${spec}`)
-      return { aplicado: false, motivo: 'rechazado' }
-    }
-  }
-
   try {
-    ui.log.step(`Instalando el CLI global: npm install -g ${spec} (puede tardar ~1 min)...`)
+    ui.log.step(
+      instalada
+        ? `Actualizando el CLI global "souclaude" v${instalada} -> v${objetivo}: npm install -g ${spec} (puede tardar ~1 min)...`
+        : `Instalando el CLI global "souclaude" v${objetivo}: npm install -g ${spec} (puede tardar ~1 min)...`
+    )
     run(`npm install -g ${spec}`)
-    const ahora = versionGlobalInstalada({ run }) ?? objetivo
-    ui.log.success(`CLI global "souclaude" v${ahora} listo: corre \`souclaude monitor\` desde cualquier terminal.`)
-    return { aplicado: true }
   } catch (err) {
     ui.log.warn(
       `No se pudo instalar el CLI global (${err.message.split('\n')[0]}). El harness quedo bien igual; reintenta con: npm install -g ${spec}`
     )
     return { aplicado: false, motivo: 'error' }
   }
+
+  // npm puede salir en 0 y dejar otra version (cache del tag movil, un global
+  // viejo que gana): se verifica en vez de dar el exito por supuesto.
+  const ahora = versionGlobalInstalada({ run })
+  if (ahora !== objetivo) {
+    ui.log.warn(
+      `npm install -g termino, pero el CLI global quedo en ${ahora ? `v${ahora}` : 'ninguna version'} y no en v${objetivo}. Reintenta con: npm install -g ${spec}`
+    )
+    return { aplicado: false, motivo: 'no-verificado' }
+  }
+  ui.log.success(`CLI global "souclaude" v${ahora} listo: \`souclaude vault-sync\` y \`souclaude monitor\` desde cualquier terminal.`)
+  return { aplicado: true }
 }

@@ -19,7 +19,8 @@ No hace falta que el usuario pida cada paso por separado.
 
    Si ya está en la última versión y no hay archivos obsoletos ni `.new`
    pendientes, avisa eso en una línea y termina — no hay nada más que hacer,
-   salvo verificar el paso 5 (ficha del Observatorio): esa verificación corre
+   salvo verificar el CLI global (sección "CLI global `souclaude`", más
+   abajo) y el paso 5 (ficha del Observatorio): esa verificación corre
    igual aunque el harness no haya cambiado, pero solo **actúa** si encuentra
    una diferencia real contra la Roca — no es un paso que reescriba o pushee
    en cada corrida.
@@ -45,6 +46,11 @@ No hace falta que el usuario pida cada paso por separado.
    editaste y **borra sin preguntar** los obsoletos que nunca tocaste. Los
    obsoletos que sí editaste **no se borran solos**: quedan reportados para que
    los revises en el paso 4.
+
+   El mismo `upgrade` instala o actualiza solo el CLI global `souclaude` si
+   falta o está en otra versión. Apenas termine, verifícalo según la sección
+   "CLI global `souclaude`" (más abajo) y resuelve cualquier fallo antes de
+   seguir: sin ese CLI no hay `souclaude vault-sync` ni `souclaude monitor`.
 
 4. **Si el upgrade dejó archivos `.new`**, es porque el harness cambió una
    sección que tú también habías editado. Revisa cada uno:
@@ -80,6 +86,8 @@ No hace falta que el usuario pida cada paso por separado.
 
 6. **Reporte final.** Avísale al usuario, en un resumen corto:
    - versión anterior → versión nueva.
+   - CLI global `souclaude`: ya estaba al día, se instaló o actualizó (con qué
+     versión), o qué quedó sin resolver y por qué.
    - qué se borró sin preguntar (obsoletos sin editar).
    - qué obsoletos editados quedaron pendientes de revisión (con la ruta).
    - qué `.new` se mergearon y qué se preservó de lo suyo en cada uno.
@@ -88,6 +96,39 @@ No hace falta que el usuario pida cada paso por separado.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
+
+## CLI global `souclaude`
+
+`init` y `upgrade` instalan o actualizan el CLI global solos (fuera de CI), así
+que casi siempre ya está listo. Verifícalo siempre, aunque el harness no haya
+cambiado:
+
+```
+souclaude --version
+```
+
+Tiene que existir y mostrar la misma versión que `harnessVersion` de
+`.claude/harness.json`. Si no la muestra, instálalo o actualízalo:
+
+```
+npm install -g github:soutecdev/souclaude-harness#v3
+```
+
+Si falla, diagnostica y resuelve; no te quedes en el aviso. Causas conocidas:
+
+| Síntoma | Causa | Qué hacer |
+|---|---|---|
+| `souclaude: command not found`, pero `npm ls -g souclaude-harness` lo muestra | La carpeta de binarios globales de npm no está en el `PATH` | Obtén la carpeta con `npm prefix -g` (en Windows los binarios quedan ahí mismo; en macOS/Linux, en `<prefix>/bin`). Agrégala al `PATH` del usuario y prueba de nuevo con una terminal nueva. |
+| `EACCES` / `permission denied` (macOS/Linux) | El prefijo global de npm es del sistema (`/usr/local`) | **Nunca uses `sudo`.** `npm config set prefix ~/.npm-global`, agrega `~/.npm-global/bin` al `PATH` y reinstala. |
+| `EPERM` / `EBUSY` (Windows) | Un `souclaude monitor` en ejecución bloquea los archivos del paquete | Cierra el monitor y reinstala. |
+| Error de `git` o `Repository not found` / `403` | Falta `git` o no hay credenciales de GitHub con acceso a `soutecdev/souclaude-harness` | Con `git ls-remote https://github.com/soutecdev/souclaude-harness.git` confirma el acceso. Si falta autenticación, pide al usuario que corra `! gh auth login`. |
+| `ETIMEDOUT` / `ENOTFOUND` | Sin red o con proxy | Reintenta una vez. Si sigue, revisa `npm config get proxy` y repórtalo. |
+| La instalación termina pero `souclaude --version` sigue viejo | Otro `souclaude` gana en el `PATH` (un `npm link`, otra instalación) o quedó una versión en caché | `where souclaude` (Windows) o `which -a souclaude` para ver cuál gana; `npm uninstall -g souclaude-harness` y reinstala. |
+| `Unsupported engine` o errores de sintaxis al correr | Node menor a 22.4 | Actualizar Node es decisión del usuario: repórtalo con la versión actual (`node --version`). |
+
+Después de cada corrección, vuelve a correr `souclaude --version`. Si tras dos
+intentos sigue fallando, para y repórtalo con el error exacto: el harness del
+repo quedó bien igual, lo que falta es la máquina.
 
 ## Único punto donde SÍ hay que parar
 
