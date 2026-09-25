@@ -6,14 +6,20 @@ El harness y el CLI se versionan juntos.
 
 ### Corregido
 
-- **Sin Roca vigente, el install/upgrade la pide** (SHS-M38-T004, hotfix). Las skills
-  `harness-upgrade` y `soutec-github` (equipo y solo) decían «sin Roca, no hay nada que
-  hacer — no lo preguntes», así que un upgrade en un proyecto sin Roca terminaba sin
-  mencionarla. Ahora, al final del flujo y sin bloquearlo, el agente pide al usuario la
-  planificación de su Roca (enunciado e hitos de producto con título y fecha, que pone
-  el dueño), la crea en `Project-<PREFIJO>/` con `00-System/templates/plantilla_apertura_roca.yaml`,
-  la pushea al Vault y sincroniza «Próxima versión»; si el usuario la deja para
-  después, queda anotada como pendiente en el reporte.
+- **Sin Roca vigente, el install/upgrade la pide y la carga en el Vault** (SHS-M38-T004
+  y T005, hotfix). Las skills `harness-upgrade` y `soutec-github` (equipo y solo) decían
+  «sin Roca, no hay nada que hacer — no lo preguntes», así que un upgrade en un proyecto
+  sin Roca terminaba sin mencionarla. Ahora, al final del flujo y sin bloquearlo, el
+  agente pide al usuario su Roca —normalmente el export de Ninety/EOS en PDF, con la
+  tabla de Milestones Title / Completed / Due / Owner—, la carga completa en
+  `Project-<PREFIJO>/Roca_<trimestre>_<PREFIJO>.md` y `.yaml` (según
+  `00-System/templates/plantilla_apertura_roca.yaml`, sin inventar lo que el documento
+  no trae) y la pushea al Vault.
+- **La Roca alimenta también «Hitos» de la ficha del Observatorio.** Los hitos de
+  producto de la Roca se clasifican por estado: los completados van a «Hitos» con su
+  fecha de completado y los pendientes a «Próxima versión» con su due date, nunca en
+  las dos secciones a la vez; en cada upgrade, un hito que se completó pasa de
+  «Próxima versión» a «Hitos».
 
 ## [3.15.0] — 2026-09-25
 

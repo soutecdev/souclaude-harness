@@ -109,18 +109,22 @@ Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
   "Hitos"; lo planificado va en "Próxima versión".
 - **Al instalar y en cada actualización, solo si hace falta**: si hay una Roca
   vigente del proyecto (`Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/`,
-  raíz o subcarpeta `roca/`/`rocas/`), compara sus hitos de producto —sin
-  trámites de cierre (informe, traspaso, Ninety) ni responsable— contra las
-  líneas `- <Due date> · <PREFIJO>-H<n> · <título>` que ya existen en "Próxima
-  versión" (máximo 5, los más próximos por fecha). Si ya coinciden, no hagas
+  raíz o subcarpeta `roca/`/`rocas/`), toma sus hitos de producto —sin
+  reuniones internas ni trámites de cierre (informe, traspaso, Ninety) ni
+  responsable— y clasifícalos: los **completados** van a "Hitos"
+  (`- <fecha de completado> · <PREFIJO>-H<n> · <título>`) y los **pendientes**
+  a "Próxima versión" (`- <Due date> · <PREFIJO>-H<n> · <título>`, máximo 5,
+  los más próximos), nunca en las dos a la vez. Si ya coinciden, no hagas
   nada — esto no es un paso que reescriba o pushee en cada actualización. Si
   falta, cambió o sobra una, corrígelo. **Sin Roca vigente, pídela**: al final
-  del install/upgrade, sin bloquearlo, pídele al usuario la planificación de su
-  Roca (enunciado verificable e hitos de producto con título y fecha, que pone
-  él: no los inventes); créala en `Project-<PREFIJO>/` como
-  `Roca_<trimestre>_<PREFIJO>.md` (con tabla "Alta rápida") y `.yaml` según
-  `00-System/templates/plantilla_apertura_roca.yaml`, pushéala al Vault y
-  sincroniza "Próxima versión". Si la deja para después, anótalo y sigue.
+  del install/upgrade, sin bloquearlo, pídele al usuario su Roca — lo normal es
+  el export de Ninety/EOS en PDF (tabla de Milestones Title / Completed / Due /
+  Owner), que lees con `Read`. Carga todo en el Vault sin inventar nada:
+  `Roca_<trimestre>_<PREFIJO>.md` (todo el contenido y tabla "Alta rápida"
+  Title / Due date / Completed) y `.yaml` según
+  `00-System/templates/plantilla_apertura_roca.yaml`; año de las fechas del
+  documento y trimestre preguntado si es ambiguo. Luego clasifica en la ficha
+  como arriba y pushea. Si la deja para después, anótalo y sigue.
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
   publicado tiene su línea. En el mismo momento revisa toda "Próxima versión"
