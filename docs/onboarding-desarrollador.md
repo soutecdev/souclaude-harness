@@ -113,8 +113,8 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
 
 ## 4. El ciclo de trabajo diario
 
-1. **Sincroniza el Vault**: `git -C "<vault>" pull --rebase` (o
-   `npx souclaude vault-sync`). Lee `Project-<PREFIJO>/milestones.md` y `kanban.md`.
+1. **Sincroniza el Vault**: `souclaude vault-sync` (pull `--rebase` seguro; requiere el
+   CLI global). Lee `Project-<PREFIJO>/milestones.md` y `kanban.md`.
 2. **Toma el milestone/tarea**: mueve la tarjeta a En curso (con `@quién · máquina`)
    y **pushea el Vault en ese momento** — no al final. El agente lo hace solo.
 3. **Espeja el plan**: todo milestone En curso tiene su plan en `plans/`

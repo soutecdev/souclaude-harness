@@ -182,7 +182,7 @@ Cada agente pushea a **dos remotos distintos** y las reglas son opuestas a prop�
 | Cómo se escribe | Rama + PR. **Nunca** directo a `main` | **Push directo a `main`**, sin PR |
 | Por qué | Todo cambio se revisa | El tablero refleja el ahora, no el último merge |
 
-Antes de tomar un task, el agente hace `git -C "<vault>" pull --rebase` y lee
+Antes de tomar un task, el agente hace `souclaude vault-sync` (pull `--rebase`) y lee
 `Project-<PREFIJO>/kanban.md`: si la tarjeta ya está "En curso" con otro dueño, **para y
 pregunta**. Es el anti-solapamiento entre máquinas. El protocolo completo (convención de
 commits del Vault y resolución de conflictos del kanban) vive en el `progress/README.md`

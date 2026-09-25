@@ -17,10 +17,13 @@ El harness y el CLI se versionan juntos.
 - **El ciclo del Vault corre sin confirmación por `vault-sync`** (SHS-M37-T002). Las
   plantillas de `settings.json` (equipo y solo) permiten `souclaude vault-sync:*` (el CLI
   global; la copia local, además, `npx souclaude` y `node bin/cli.mjs`), y el protocolo
-  (`CLAUDE.md`, `progress/README.md`, skill `vault-milestones` y el hook del modo solo) pasa
-  de `git -C "<vault>" add/commit/pull/push` a `souclaude vault-sync` /
+  (`CLAUDE.md` de ambos modos, `progress/README.md`, skill `vault-milestones`, el hook del
+  modo solo, el aviso del hook `declarar-milestone` cuando no pudo sincronizar y las guías
+  de `docs/`) pasa de `git -C "<vault>" add/commit/pull/push` a `souclaude vault-sync` /
   `souclaude vault-sync --push -m ... --paths Project-<PREFIJO>`, que usa la ruta de
-  `vault.local.json`, argumentos fijos, `push` sin refspec y nunca force. Cambios de diseño
+  `vault.local.json`, argumentos fijos, `push` sin refspec y nunca force. El modo solo
+  también acota el `add` con `--paths`: sin confirmación de por medio, un `add -A` sobre
+  todo el Vault compartido ya no lo revisa nadie antes del push. Cambios de diseño
   frente al primer intento, por el security review: (1) no se permiten reglas `git -C * <cmd>`
   genéricas: un `allow` así deja pasar `-c core.sshCommand=...`, `--output=...`,
   `--work-tree=...` o un push a cualquier remoto o refspec sin confirmación, y con la sintaxis
