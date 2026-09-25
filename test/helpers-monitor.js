@@ -7,6 +7,16 @@ import path from 'node:path'
 // las rutas OneDrive de SOUTEC bajo "Soutec Ignacio Alvarez") y sin limpieza
 // automatica, porque helpers.js tampoco la hace.
 
+// SHS-M37-T004: SOUCLAUDE_LOCAL_ACCOUNTS es config de la maquina REAL (otras
+// carpetas CLAUDE_CONFIG_DIR, ej. ~/.claude2). El monitor las mezcla en el
+// arbol y en CUENTAS incluso con --claude-home, asi que un fixture recibia las
+// llamadas y la cuenta reales del dev (368 !== 2 en monitor-cmd, 3 !== 2 en el
+// e2e multicuenta) y el resultado cambiaba con cada sesion viva. Esta variable
+// se lee al llamar a monitor(), no al importarlo, por eso alcanza con limpiarla
+// aca. Los tests que necesitan cuentas locales pasan sus homes explicitos a
+// createLocalAccountsReader y no dependen del entorno.
+delete process.env.SOUCLAUDE_LOCAL_ACCOUNTS
+
 let contadorMsg = 0
 let contadorReq = 0
 

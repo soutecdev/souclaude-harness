@@ -22,7 +22,7 @@ de SOUTEC cuidan que se registre bien.**
    `CLAUDE.md`, **ya tiene el harness**: no hace falta nada más.
 3. Si arrancas un repo desde cero (o uno viejo sin harness), instálalo:
    ```bash
-   npx github:ialvarezsoutec/souclaude-harness#v3
+   npx github:soutecdev/souclaude-harness#v3
    ```
    Corre igual en un repo vacío y en uno con años de código: en el legacy solo agrega la
    superficie de Claude, no toca tu código. El instalador te deja elegir con un checkbox
@@ -134,8 +134,8 @@ De vez en cuando salen versiones nuevas (skills mejores, reglas nuevas). Para ac
 o directo:
 
 ```bash
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade --dry-run   # ver qué cambiaría
-npx github:ialvarezsoutec/souclaude-harness#v3 upgrade              # aplicarlo
+npx github:soutecdev/souclaude-harness#v3 upgrade --dry-run   # ver qué cambiaría
+npx github:soutecdev/souclaude-harness#v3 upgrade              # aplicarlo
 ```
 
 **Nunca te va a pisar un archivo que editaste tú.** Si un archivo tuyo difiere del nuevo,

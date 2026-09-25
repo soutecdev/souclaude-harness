@@ -40,6 +40,13 @@ export async function vaultSync(flags, cwd, { git = gitReal } = {}) {
       return 2
     }
     const paths = flags.paths ? flags.paths.split(',').map((p) => p.trim()).filter(Boolean) : null
+    // `--paths` lo escribe el agente y `settings.json` permite este comando sin
+    // confirmacion: una ruta con forma de opcion (`--pathspec-from-file=...`) se
+    // leeria como flag de `git add`, asi que solo se aceptan rutas del Vault.
+    if (paths?.some((p) => p.startsWith('-'))) {
+      ui.log.error('vault-sync --paths solo acepta rutas relativas al Vault: ninguna puede empezar con "-".')
+      return 2
+    }
     const r = await pushSeguro({ vaultPath: config.path, mensaje, paths, git })
     if (!r.ok) {
       ui.log.error(`No se pudo espejar al Vault (${r.motivo}). El trabajo local no se pierde: reintenta con red/sin conflictos.`)

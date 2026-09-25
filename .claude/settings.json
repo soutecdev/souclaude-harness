@@ -26,7 +26,8 @@
       "Bash(node bin/cli.mjs vault-sync:*)",
       "Bash(npx souclaude vault-sync:*)",
       "Bash(git push:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(souclaude vault-sync:*)"
     ],
     "ask": [
       "Bash(git reset --hard:*)",

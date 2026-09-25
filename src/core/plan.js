@@ -17,6 +17,7 @@ export const FOREIGN = 'foreign' // existe pero nunca lo escribimos nosotros -> 
 export const RESTORE = 'restore' // lo escribimos y el usuario lo borro -> reescribir
 export const LOCAL_EDIT = 'local-edit' // el usuario lo edito, el template no cambio -> dejarlo
 export const OBSOLETE = 'obsolete' // estaba en el lockfile, ya no esta en el manifest -> ofrecer borrado
+export const MIGRATE = 'migrate' // el usuario lo edito y una migracion aplica -> solo la migracion, en el lugar
 
 // Modos de trabajo del harness (SHS-M34): la superficie completa de equipo o la
 // relajada de single coder. Fuente unica para resolver (commands/_shared.js),
@@ -86,7 +87,7 @@ export function computePlan({ manifest, cwd, lock, vars, detected, force = false
     if (group && group.length > 1 && group[0] !== entry) continue
     seenDests.add(entry.dest)
     const seedEntries = group && group.length > 1 ? group : null
-    actions.push(planFile({ entry, manifest, cwd, lock, vars, detected, fromVersion, force, seedEntries }))
+    actions.push(...[planFile({ entry, manifest, cwd, lock, vars, detected, fromVersion, force, seedEntries })].flat())
   }
 
   // Archivos que emitimos en una version anterior y que este manifest ya no
@@ -211,7 +212,7 @@ function planFile({ entry, manifest, cwd, lock, vars, detected, fromVersion, for
     action.verdict = FOREIGN
     action.writePath = `${entry.dest}.new`
     reasons.push('ya existia y no fue generado por el harness')
-    return action
+    return conMigracion(action, baseline, onDisk)
   }
 
   if (diskHash === lockEntry.hash) {
@@ -224,13 +225,36 @@ function planFile({ entry, manifest, cwd, lock, vars, detected, fromVersion, for
   if (desiredHash === lockEntry.hash) {
     action.verdict = LOCAL_EDIT
     reasons.push('editado por ti; el template no cambio')
-    return action
+    return conMigracion(action, baseline, onDisk)
   }
 
   action.verdict = CONFLICT
   reasons.push('editado por ti Y el template cambio')
-  if (!force) action.writePath = `${entry.dest}.new`
-  return action
+  if (force) return action
+  action.writePath = `${entry.dest}.new`
+  return conMigracion(action, baseline, onDisk)
+}
+
+// Un archivo que el usuario edito nunca se pisa con el template; pero si una
+// migracion cambia algo, ese cambio puntual SI se escribe en el lugar (SHS-M37):
+// de otro modo quedaria solo en el .new, que nadie mira. El resto del archivo es
+// el del usuario, byte a byte. local-edit no escribia nada: pasa a ser solo la
+// migracion. conflict y foreign conservan su .new al lado. En los dos casos el
+// lockfile conserva el hash previo: el archivo sigue siendo del usuario.
+function conMigracion(action, baseline, onDisk) {
+  if (normalize(baseline) === normalize(onDisk)) return action
+  const esMigracion = (r) => r.startsWith('migracion ')
+  const migracion = {
+    dest: action.dest,
+    policy: action.policy,
+    verdict: MIGRATE,
+    reasons: [...action.reasons.filter(esMigracion), 'el resto del archivo es tuyo y no se toca'],
+    content: baseline,
+    writePath: action.dest,
+  }
+  if (action.verdict === LOCAL_EDIT) return migracion
+  action.reasons = action.reasons.filter((r) => !esMigracion(r))
+  return [action, migracion]
 }
 
 // La misma tabla de clasificacion que planFile, pero comparando bytes: sin
@@ -310,5 +334,5 @@ export function summarize(actions) {
 
 // Acciones que efectivamente escriben algo en disco.
 export function writeActions(actions) {
-  return actions.filter((a) => [CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN].includes(a.verdict))
+  return actions.filter((a) => [CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, MIGRATE].includes(a.verdict))
 }

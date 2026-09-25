@@ -8,7 +8,7 @@ import * as ui from './../ui.js'
 // apunta al tag movil de la serie mayor (v3), el mismo de las instrucciones
 // de npx del README, asi el global se actualiza con cada release publicado.
 const PAQUETE = 'souclaude-harness'
-const REPO_GITHUB = 'ialvarezsoutec/souclaude-harness'
+const REPO_GITHUB = 'soutecdev/souclaude-harness'
 
 export function specGlobal(manifest) {
   const major = String(manifest.harnessVersion).split('.')[0]

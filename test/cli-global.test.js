@@ -28,8 +28,8 @@ function fakeRun({ instalada = null, fallaInstall = false, quedaEn = MANIFEST.ha
 }
 
 test('specGlobal: apunta al tag movil de la serie mayor del manifest', () => {
-  assert.equal(specGlobal(MANIFEST), 'github:ialvarezsoutec/souclaude-harness#v3')
-  assert.equal(specGlobal({ harnessVersion: '4.1.2' }), 'github:ialvarezsoutec/souclaude-harness#v4')
+  assert.equal(specGlobal(MANIFEST), 'github:soutecdev/souclaude-harness#v3')
+  assert.equal(specGlobal({ harnessVersion: '4.1.2' }), 'github:soutecdev/souclaude-harness#v4')
 })
 
 test('versionGlobalInstalada: parsea npm ls y devuelve null si no esta', () => {
@@ -57,14 +57,14 @@ test('instalarCliGlobal: sin flag y fuera de CI instala solo si falta (el agente
   const f = fakeRun()
   const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
   assert.equal(r.aplicado, true)
-  assert.ok(f.llamadas.includes('npm install -g github:ialvarezsoutec/souclaude-harness#v3'))
+  assert.ok(f.llamadas.includes('npm install -g github:soutecdev/souclaude-harness#v3'))
 })
 
 test('instalarCliGlobal: --cli-global instala tambien en CI', async () => {
   const f = fakeRun()
   const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, ci: true, run: f.run })
   assert.equal(r.aplicado, true)
-  assert.ok(f.llamadas.includes('npm install -g github:ialvarezsoutec/souclaude-harness#v3'))
+  assert.ok(f.llamadas.includes('npm install -g github:soutecdev/souclaude-harness#v3'))
 })
 
 test('instalarCliGlobal: actualiza solo un global desactualizado', async () => {

@@ -1,7 +1,7 @@
 {
   "harnessVersion": "3.14.0",
   "vault": {
-    "repo": "https://github.com/ialvarezsoutec/soubunker-vault.git"
+    "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
   "skills": [
     {
