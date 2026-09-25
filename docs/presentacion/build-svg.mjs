@@ -779,7 +779,7 @@ const slides = [
     body: [
       {
         type: 'steps', size: 18, items: [
-          '`git -C "<vault>" pull --rebase` — el tablero primero, siempre. O `npx souclaude vault-sync`.',
+          '`souclaude vault-sync` — el tablero primero, siempre. Pull `--rebase` seguro, sin confirmación.',
           'Lees `milestones.md`. Si el milestone está En curso con *otro dueño u otra máquina*: **paras y preguntas**.',
           'Tomas la tarea, mueves la tarjeta a En curso y **pusheas en ese momento** — no en un push final.',
           'Jira se sincroniza inmediatamente después. Vault primero, Jira detrás.',
