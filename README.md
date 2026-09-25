@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.15.1**
+**v3.15.2**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.

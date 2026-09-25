@@ -106,25 +106,29 @@ Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
   pushéala al Vault en el momento. Si hay hitos/milestones para cargar, no los
   metas todos en "Hitos" a ciegas: para cada uno evalúa por fecha/repo/tags si ya
   ocurrió o es planificado a futuro, o pregúntale al usuario. Lo ya ocurrido va en
-  "Hitos"; lo planificado va en "Próxima versión".
+  "Hitos"; lo planificado va en "Próxima versión". Los hitos de la Roca van
+  aparte, en "Planificación".
 - **Al instalar y en cada actualización, solo si hace falta**: si hay una Roca
   vigente del proyecto (`Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/`,
-  raíz o subcarpeta `roca/`/`rocas/`), toma sus hitos de producto —sin
-  reuniones internas ni trámites de cierre (informe, traspaso, Ninety) ni
-  responsable— y clasifícalos: los **completados** van a "Hitos"
-  (`- <fecha de completado> · <PREFIJO>-H<n> · <título>`) y los **pendientes**
-  a "Próxima versión" (`- <Due date> · <PREFIJO>-H<n> · <título>`, máximo 5,
-  los más próximos), nunca en las dos a la vez. Si ya coinciden, no hagas
-  nada — esto no es un paso que reescriba o pushee en cada actualización. Si
-  falta, cambió o sobra una, corrígelo. **Sin Roca vigente, pídela**: al final
-  del install/upgrade, sin bloquearlo, pídele al usuario su Roca — lo normal es
-  el export de Ninety/EOS en PDF (tabla de Milestones Title / Completed / Due /
-  Owner), que lees con `Read`. Carga todo en el Vault sin inventar nada:
-  `Roca_<trimestre>_<PREFIJO>.md` (todo el contenido y tabla "Alta rápida"
-  Title / Due date / Completed) y `.yaml` según
+  raíz o subcarpeta `roca/`/`rocas/`), lleva todos sus hitos a la sección
+  "Planificación" de la ficha con el formato de la plantilla del Vault:
+  `- AAAA-MM-DD · <PREFIJO>-H<n> · <título> · cumplido` (fecha real y marca
+  `cumplido` si se cumplió; si no, la fecha planificada y sin marca, salvo
+  on/off track declarado en la Roca), por fecha y sin responsable. Nunca en
+  "Hitos" ni en "Próxima versión", que son solo de releases (si quedaron ahí
+  de una versión anterior, muévelos). Si la ficha no tiene "Planificación",
+  agrégala al final como en la plantilla. Si ya coinciden, no hagas nada —
+  esto no es un paso que reescriba o pushee en cada actualización. Si falta,
+  cambió o sobra una, corrígelo. **Sin Roca vigente, pregúntala una vez, sin
+  bloquear**: no todos los proyectos son Rocas. Si el usuario te pasa su Roca
+  — lo normal es el export de Ninety/EOS en PDF (tabla de Milestones Title /
+  Completed / Due / Owner), que lees con `Read` —, cárgala en el Vault sin
+  inventar nada: `Roca_<trimestre>_<PREFIJO>.md` (todo el contenido y tabla
+  "Alta rápida" Title / Due date / Completed) y `.yaml` según
   `00-System/templates/plantilla_apertura_roca.yaml`; año de las fechas del
-  documento y trimestre preguntado si es ambiguo. Luego clasifica en la ficha
-  como arriba y pushea. Si la deja para después, anótalo y sigue.
+  documento y trimestre preguntado si es ambiguo. Luego agrega sus hitos a
+  "Planificación" y pushea. Si no hay Roca o la deja para después, sigue sin
+  más.
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
   publicado tiene su línea. En el mismo momento revisa toda "Próxima versión"

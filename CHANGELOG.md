@@ -2,6 +2,25 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.15.2] — 2026-09-25
+
+### Corregido
+
+- **Los hitos de la Roca van a «Planificación» de la ficha del Observatorio** (SHS-M38-T006).
+  La plantilla del Vault (`00-System/templates/OBSERVATORIO.md`, OBS-M61) sumó la sección
+  «Planificación» para los hitos de roca y dejó «Hitos» y «Próxima versión» solo para
+  releases, así que la regla de 3.15.1 (cumplidos a «Hitos», pendientes a «Próxima
+  versión») y la de 3.15.0 (Roca en «Próxima versión») contradecían la plantilla. Ahora
+  las skills `soutec-github` (equipo y solo) y `harness-upgrade` llevan **todos** los
+  hitos de la Roca a «Planificación» con el formato de la plantilla
+  (`- AAAA-MM-DD · <PREFIJO>-H<n> · título · cumplido`: fecha real y marca `cumplido` si
+  se cumplió; si no, la fecha planificada), mueven ahí las líneas `<PREFIJO>-H<n>` que
+  una versión anterior haya dejado en «Hitos» o «Próxima versión», y agregan la sección
+  si la ficha no la tiene.
+- **Sin Roca, no hay bloqueo.** No todos los proyectos son Rocas: el agente pregunta una
+  vez al final del install/upgrade y, si el usuario no la entrega, sigue sin más
+  («Planificación» queda con su viñeta vacía).
+
 ## [3.15.1] — 2026-09-25
 
 ### Corregido

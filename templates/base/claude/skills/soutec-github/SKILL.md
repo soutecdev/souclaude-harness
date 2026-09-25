@@ -279,64 +279,73 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   evalúa si ya ocurrió o si es planificado a futuro — compara su fecha contra hoy,
   confirma en el repo (tags, releases publicados, PRs mergeados) que de verdad
   haya salido, o pregúntale al usuario si no queda claro. Lo que ya pasó va en
-  "Hitos"; lo planificado a futuro va en "Próxima versión".
-- **La Roca vigente alimenta "Hitos" y "Próxima versión", solo si hace falta** —
-  al instalar el harness y en cada `upgrade` (misma regla en la skill
+  "Hitos"; lo planificado a futuro va en "Próxima versión". Los hitos de la
+  Roca no van en ninguna de las dos: van en "Planificación" (regla siguiente).
+- **La Roca vigente alimenta "Planificación", solo si hace falta** — al
+  instalar el harness y en cada `upgrade` (misma regla en la skill
   `harness-upgrade`). Esto **no es un paso que reescriba o pushee en cada
   corrida**: es una verificación que solo actúa cuando detecta una diferencia
   real. Busca `Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/` (raíz o
   subcarpeta `roca/`/`rocas/` — la convención varía entre proyectos) y toma
   el trimestre vigente (el de `<trimestre>` más alto; si hay varios, el de
   fecha de modificación más nueva). Sin Roca, sigue la regla siguiente. Con
-  Roca, lee sus hitos (tabla "Alta rápida": Title / Due date y, si la tiene,
-  Completed; o `fecha_real` en su `.yaml`) y quédate con los **hitos de
-  producto** — descarta reuniones internas y trámites del cierre de la Roca
-  (informe de cierre, traspaso, alta en Ninety: no son un entregable que el
-  Observatorio muestre). Clasifica cada uno según si ya está completado:
-  - **Completado** (tiene fecha de completado) → "Hitos":
-    `- <fecha de completado> · <PREFIJO>-H<n> · <título sin el prefijo "H<n> ·">`.
-  - **Pendiente** (sin fecha de completado) → "Próxima versión":
-    `- <Due date> · <PREFIJO>-H<n> · <título sin el prefijo "H<n> ·">`, máximo
-    5 (prioriza los más próximos por fecha si sobran).
+  Roca, sus hitos van **solo** en la sección "Planificación" de la ficha, con
+  el formato de la plantilla del Vault (`00-System/templates/OBSERVATORIO.md`),
+  una línea por hito:
+  `- AAAA-MM-DD · <PREFIJO>-H<n> · <título tal como está en la Roca> · <marca>`
+  - **Fecha**: la real si el hito ya se cumplió (columna Completed de "Alta
+    rápida" o `fecha_real` del `.yaml`); si no, la planificada (Due date). Un
+    hito sin fecha conocida no se incluye.
+  - **Etiqueta**: siempre `<PREFIJO>-H<n>` (si la Roca dice "H1", escribe
+    "OBS-H1"). El título va sin ese prefijo.
+  - **Marca**: `cumplido` si el hito ya se cumplió. Si no, `on track` u
+    `off track` solo si la Roca lo declara explícitamente; sin marca, el
+    Observatorio la calcula por la fecha.
+  - Van **todos** los hitos de la Roca, ordenados por fecha (máximo 40), sin
+    responsable (la ficha no lleva nombres de personas) y sin inventar nada
+    que la Roca no traiga.
 
-  Ninguna línea lleva el responsable (regla 6 de la plantilla: la ficha no
-  lleva nombres de personas), y un mismo hito nunca figura a la vez en "Hitos"
-  y en "Próxima versión": si uno que estaba en "Próxima versión" ya se
-  completó, muévelo a "Hitos" con su fecha de completado. **Compara contra las
-  líneas con etiqueta `<PREFIJO>-H<n>` que ya existen en ambas secciones**
-  antes de tocar nada: si ya coinciden, no reescribas ni pushees. Actúa solo
-  donde hay diferencia: agrega la línea que falta, corrige la que cambió de
-  fecha, título o estado, o quita de "Próxima versión" la que ya no está en la
-  Roca vigente. No toques líneas sin etiqueta `<PREFIJO>-H<n>` (son manuales o
-  de releases `vX.Y.Z`).
-- **Sin Roca vigente, pídela — no te quedes callado.** Si el proyecto no tiene
-  Roca del trimestre en curso, al final del install/upgrade (sin bloquear el
-  resto del flujo) pídele al usuario la planificación de su Roca. Lo normal es
+  "Hitos" y "Próxima versión" son **solo de releases**: un hito de Roca nunca
+  va ahí. Si una versión anterior del harness dejó líneas `<PREFIJO>-H<n>` en
+  esas secciones, muévelas a "Planificación". Si la ficha no tiene la sección
+  "Planificación" (fichas sembradas antes de que la plantilla la trajera),
+  agrégala al final, con el encabezado y el comentario guía de la plantilla.
+  **Compara contra las líneas que ya existen en "Planificación"** antes de
+  tocar nada: si ya coinciden, no reescribas ni pushees. Actúa solo donde hay
+  diferencia: agrega el hito que falta, corrige el que cambió de fecha, título
+  o marca (por ejemplo, uno que se cumplió), o quita el que ya no está en la
+  Roca vigente.
+- **Sin Roca vigente, pregúntala una vez — no es bloqueante.** No todos los
+  proyectos son Rocas. Si el proyecto no tiene Roca del trimestre en curso, al
+  final del install/upgrade (sin frenar el resto del flujo) pregúntale al
+  usuario si el proyecto tiene una y, si la tiene, que te la pase. Lo normal es
   que te pase **el export de la Roca desde Ninety/EOS** (un PDF con objetivo,
   alcance, entregables, criterios de aceptación, due date y estado de la Roca,
   y la tabla de Milestones Title / Completed / Due / Owner); léelo con `Read`.
-  También sirve texto pegado. **Carga todo en el Vault**, sin inventar nada que
-  el documento no diga:
+  También sirve texto pegado. **Al subir la Roca al Vault, sus hitos se
+  agregan a "Planificación" de la ficha**, sin inventar nada que el documento
+  no diga:
   1. Crea `Project-<PREFIJO>/Roca_<trimestre>_<PREFIJO>.md` con todo el
      contenido del documento (objetivo, alcance por fase, entregables,
      criterios de aceptación, due date y estado) y la tabla "Alta rápida"
      Title / Due date / Completed, un `<PREFIJO>-H<n>` por milestone en el
      orden del documento. Crea también `Roca_<trimestre>_<PREFIJO>.yaml` según
      `00-System/templates/plantilla_apertura_roca.yaml`: llena lo que el
-     documento trae (los hitos completados con su `fecha_real`) y deja vacío
-     lo que no trae (riesgos, restricciones…). Si tienes una skill de apertura
-     de Roca, como `/rock-plan`, úsala.
+     documento trae (los hitos cumplidos con su `fecha_real`) y deja vacío lo
+     que no trae (riesgos, restricciones…). Si tienes una skill de apertura de
+     Roca, como `/rock-plan`, úsala.
   2. Fechas sin año (p. ej. "Sep 30"): toma el año de la fecha de creación o
      impresión del documento, y escríbelas en ISO `AAAA-MM-DD` (formato que
      exige la ficha). El `<trimestre>` (p. ej. `Q3Y26`) sale del
      documento; si es ambiguo, pregúntalo en vez de adivinarlo.
-  3. Aplica la regla anterior: los milestones **completados** van a "Hitos" y
-     los **pendientes** a "Próxima versión" de la ficha.
-  4. Pushea todo al Vault en el momento (Roca y ficha) y reporta qué quedó en
-     cada sección.
+  3. Agrega sus hitos a "Planificación" de la ficha según la regla anterior.
+  4. Pushea todo al Vault en el momento (Roca y ficha) con
+     `souclaude vault-sync --push -m "..." --paths Project-<PREFIJO>` y
+     reporta qué quedó en "Planificación".
 
-  Si el usuario todavía no la tiene o prefiere dejarla para después, anótalo
-  como pendiente en el reporte y sigue — no insistas en la misma sesión.
+  Si el usuario dice que el proyecto no es una Roca, no la tiene a mano o
+  prefiere dejarla para después, sigue sin más: no es un error ni un bloqueo,
+  y "Planificación" queda con su viñeta vacía. No insistas en la misma sesión.
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no

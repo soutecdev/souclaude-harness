@@ -73,33 +73,35 @@ No hace falta que el usuario pida cada paso por separado.
    original sin pasar por esta revisión hunk por hunk.
 
 5. **Ficha del Observatorio, solo si hace falta.** Si el repo tiene el Vault
-   conectado (`.claude/vault.local.json`), verifica si "Hitos" y "Próxima
-   versión" de `Project-<PREFIJO>/OBSERVATORIO.md` ya reflejan la Roca vigente
-   del proyecto — el mismo chequeo que al instalar el harness, detallado en la
-   skill `soutec-github` (sección "Ficha del Observatorio"): busca
-   `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente y clasifica sus
-   hitos de producto: los **completados** van a "Hitos" (con su fecha de
-   completado) y los **pendientes** a "Próxima versión" (con su due date),
-   siempre con etiqueta `<PREFIJO>-H<n>` y nunca en las dos secciones a la vez.
+   conectado (`.claude/vault.local.json`), verifica si la sección
+   "Planificación" de `Project-<PREFIJO>/OBSERVATORIO.md` ya refleja la Roca
+   vigente del proyecto — el mismo chequeo que al instalar el harness,
+   detallado en la skill `soutec-github` (sección "Ficha del Observatorio"):
+   busca `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente y lleva
+   todos sus hitos a "Planificación" con el formato de la plantilla
+   (`- AAAA-MM-DD · <PREFIJO>-H<n> · <título> · cumplido`: fecha real y marca
+   `cumplido` si el hito se cumplió; si no, la fecha planificada). Los hitos de
+   Roca nunca van en "Hitos" ni en "Próxima versión", que son solo de
+   releases: si un upgrade anterior los dejó ahí, muévelos a "Planificación".
    **Si ya coinciden, no hay nada que hacer** — esto no es un paso que
    reescriba o pushee en cada upgrade. Solo si falta, cambió (fecha, título o
-   estado) o sobra una línea, corrígela y pushea al Vault en el momento. Sin
+   marca) o sobra una línea, corrígela y pushea al Vault en el momento. Sin
    Vault conectado, no hay nada que hacer.
 
-   **Sin Roca vigente, pídela — no te quedes callado.** Al final del flujo,
-   junto al reporte (sin bloquear el resto del upgrade), pídele al usuario la
-   planificación de su Roca. Lo normal es que te pase el export de la Roca
-   desde Ninety/EOS (un PDF con objetivo, alcance, entregables, criterios y la
-   tabla de Milestones Title / Completed / Due / Owner); léelo con `Read`.
-   Con eso **carga todo en el Vault** sin inventar nada: crea
-   `Project-<PREFIJO>/Roca_<trimestre>_<PREFIJO>.md` (con todo el contenido y
-   la tabla "Alta rápida" Title / Due date / Completed) y su `.yaml` según
-   `00-System/templates/plantilla_apertura_roca.yaml`, y lleva a la ficha los
-   milestones completados a "Hitos" y los pendientes a "Próxima versión".
-   Pushea en el momento. Detalle completo (año de las fechas, trimestre,
-   formato de las líneas) en la skill `soutec-github`, sección "Ficha del
-   Observatorio". Si el usuario todavía no la tiene o prefiere dejarla para
-   después, anótalo como pendiente y sigue.
+   **Sin Roca vigente, pregúntala una vez — no es bloqueante.** No todos los
+   proyectos son Rocas. Al final del flujo, junto al reporte, pregúntale al
+   usuario si el proyecto tiene Roca y, si la tiene, que te la pase: lo normal
+   es el export de Ninety/EOS (un PDF con objetivo, alcance, entregables,
+   criterios y la tabla de Milestones Title / Completed / Due / Owner), que
+   lees con `Read`. Con eso **carga todo en el Vault** sin inventar nada:
+   crea `Project-<PREFIJO>/Roca_<trimestre>_<PREFIJO>.md` (con todo el
+   contenido y la tabla "Alta rápida" Title / Due date / Completed) y su
+   `.yaml` según `00-System/templates/plantilla_apertura_roca.yaml`, agrega
+   sus hitos a "Planificación" de la ficha y pushea en el momento. Detalle
+   completo (año de las fechas, trimestre, formato de las líneas) en la skill
+   `soutec-github`, sección "Ficha del Observatorio". Si el usuario dice que
+   el proyecto no es una Roca, no la tiene a mano o prefiere dejarla para
+   después, sigue sin más: no es un error ni un bloqueo.
 
 6. **Reporte final.** Avísale al usuario, en un resumen corto:
    - versión anterior → versión nueva.
@@ -109,10 +111,9 @@ No hace falta que el usuario pida cada paso por separado.
    - qué obsoletos editados quedaron pendientes de revisión (con la ruta).
    - qué `.new` se mergearon y qué se preservó de lo suyo en cada uno.
    - cualquier archivo que se saltó por stack (ver sección de abajo).
-   - qué cambió en "Hitos" y "Próxima versión" de OBSERVATORIO.md, si algo
-     cambió.
-   - si el proyecto no tiene Roca vigente: la pregunta por su planificación
-     (paso 5), o que quedó pendiente si el usuario la dejó para después.
+   - qué cambió en "Planificación" de OBSERVATORIO.md, si algo cambió.
+   - si el proyecto no tiene Roca vigente: la pregunta del paso 5 y qué
+     respondió el usuario.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
@@ -156,8 +157,9 @@ repo quedó bien igual, lo que falta es la máquina.
   en el paso 5 y pregúntale si quiere que lo borres.
 - Un hunk ambiguo de un `.new` no se resuelve solo: se deja como está y se
   reporta.
-- Sin Roca vigente, la planificación la pone el usuario: pregúntasela al final
-  (paso 5), sin frenar el resto del flujo.
+- Sin Roca vigente, pregúntale al usuario al final si el proyecto tiene una
+  (paso 5). No todos los proyectos son Rocas: si no la entrega, el flujo
+  termina igual.
 
 Fuera de esos casos, el flujo completo corre sin pedir OK intermedio — para
 eso es "una sola instrucción".
