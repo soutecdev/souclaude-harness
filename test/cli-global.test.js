@@ -6,7 +6,7 @@ const MANIFEST = { harnessVersion: '3.7.0' }
 
 // run inyectable: registra los comandos npm y devuelve lo programado. Nada
 // toca el npm real de la maquina.
-function fakeRun({ instalada = null, fallaInstall = false } = {}) {
+function fakeRun({ instalada = null, fallaInstall = false, quedaEn = MANIFEST.harnessVersion } = {}) {
   const llamadas = []
   let version = instalada
   return {
@@ -19,7 +19,7 @@ function fakeRun({ instalada = null, fallaInstall = false } = {}) {
       }
       if (cmd.startsWith('npm install -g')) {
         if (fallaInstall) throw new Error('EACCES: permission denied')
-        version = MANIFEST.harnessVersion
+        version = quedaEn
         return ''
       }
       throw new Error(`comando inesperado: ${cmd}`)
@@ -41,34 +41,54 @@ test('versionGlobalInstalada: parsea npm ls y devuelve null si no esta', () => {
 
 test('instalarCliGlobal: idempotente si el global ya esta en la version del manifest', async () => {
   const f = fakeRun({ instalada: '3.7.0' })
-  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, yes: true, run: f.run })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
   assert.deepEqual(r, { aplicado: false, motivo: 'al-dia' })
   assert.ok(!f.llamadas.some((c) => c.startsWith('npm install')))
 })
 
-test('instalarCliGlobal: en modo no interactivo sin --cli-global no toca npm', async () => {
+test('instalarCliGlobal: en CI sin --cli-global no toca npm', async () => {
   const f = fakeRun()
-  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, yes: true, run: f.run })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: true, run: f.run })
   assert.deepEqual(r, { aplicado: false, motivo: 'sin-flag' })
   assert.equal(f.llamadas.length, 0)
 })
 
-test('instalarCliGlobal: --cli-global instala sin preguntar (tambien con --yes)', async () => {
+test('instalarCliGlobal: sin flag y fuera de CI instala solo si falta (el agente corre init/upgrade sin TTY)', async () => {
   const f = fakeRun()
-  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, yes: true, run: f.run })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
   assert.equal(r.aplicado, true)
   assert.ok(f.llamadas.includes('npm install -g github:ialvarezsoutec/souclaude-harness#v3'))
 })
 
-test('instalarCliGlobal: actualiza un global desactualizado con --cli-global', async () => {
+test('instalarCliGlobal: --cli-global instala tambien en CI', async () => {
+  const f = fakeRun()
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, ci: true, run: f.run })
+  assert.equal(r.aplicado, true)
+  assert.ok(f.llamadas.includes('npm install -g github:ialvarezsoutec/souclaude-harness#v3'))
+})
+
+test('instalarCliGlobal: actualiza solo un global desactualizado', async () => {
   const f = fakeRun({ instalada: '3.5.0' })
-  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, yes: false, run: f.run })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
   assert.equal(r.aplicado, true)
   assert.ok(f.llamadas.some((c) => c.startsWith('npm install -g')))
 })
 
 test('instalarCliGlobal: si npm falla, reporta y no rompe (aplicado false)', async () => {
   const f = fakeRun({ fallaInstall: true })
-  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': true }, yes: true, run: f.run })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
   assert.deepEqual(r, { aplicado: false, motivo: 'error' })
+})
+
+test('instalarCliGlobal: --no-cli-global no toca npm', async () => {
+  const f = fakeRun()
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: { 'cli-global': false }, ci: false, run: f.run })
+  assert.deepEqual(r, { aplicado: false, motivo: 'desactivado' })
+  assert.equal(f.llamadas.length, 0)
+})
+
+test('instalarCliGlobal: si npm sale bien pero la version no quedo, no lo da por instalado', async () => {
+  const f = fakeRun({ instalada: '3.5.0', quedaEn: '3.5.0' })
+  const r = await instalarCliGlobal({ manifest: MANIFEST, flags: {}, ci: false, run: f.run })
+  assert.deepEqual(r, { aplicado: false, motivo: 'no-verificado' })
 })

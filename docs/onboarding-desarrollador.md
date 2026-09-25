@@ -73,8 +73,8 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
   **un proyecto del Vault = un proyecto Jira**, con la clave igual al prefijo
   (`Project-SHS` → `SHS`).
 - **CLI global `souclaude`** (una vez por máquina): al final, `init`/`upgrade`
-  ofrecen instalarlo (`npm install -g github:ialvarezsoutec/souclaude-harness#v3`).
-  Acéptalo: te deja el **monitor de tokens** a un comando de distancia en
+  lo instalan o actualizan solos (`npm install -g github:ialvarezsoutec/souclaude-harness#v3`).
+  Te deja el **monitor de tokens** a un comando de distancia en
   cualquier terminal —
 
   ```bash
