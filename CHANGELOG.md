@@ -2,9 +2,28 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Sin publicar]
+## [3.15.0] — 2026-09-25
+
+### Agregado
+
+- **`init`/`upgrade` instalan el CLI global solos** (SHS-M35-T004). Si `souclaude`
+  falta o está en otra versión, `init` y `upgrade` lo instalan o actualizan sin
+  preguntar, también con `--yes`; en CI se sigue exigiendo `--cli-global` y
+  `--no-cli-global` lo omite. Tras el `npm install -g` se verifica la versión que
+  quedó instalada en vez de dar el éxito por supuesto. La skill `harness-upgrade`
+  verifica `souclaude --version` y trae una guía para diagnosticar y resolver fallos
+  (PATH, EACCES/EPERM, acceso a GitHub, red, versión vieja que gana en el PATH, Node
+  viejo). Es lo que deja listo el CLI global que necesita el ciclo del Vault por
+  `vault-sync` (ver abajo).
 
 ### Cambiado
+
+- **La Roca alimenta «Próxima versión» del Observatorio** (SHS-M38). Las skills
+  `soutec-github` (equipo y solo) y `harness-upgrade` clasifican los hitos al instalar
+  (lo ya ocurrido va a «Hitos», lo planificado a «Próxima versión»), toman los hitos de
+  producto de la Roca vigente solo cuando hay una diferencia real, sin reescribir ni
+  pushear en cada upgrade, y el PR de release depura «Próxima versión» contra lo que
+  el release entrega.
 
 - **Remoto canónico `soutecdev`** (SHS-M37, cubre SHS-M20-T001). Las URLs de repo y de
   Vault (`package.json`, manifest, `cli-global.js`, `cli.js`, skill `harness-upgrade`,
