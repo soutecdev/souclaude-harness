@@ -288,8 +288,8 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   `Roca_<trimestre>_<PREFIJO>.md` en `Project-<PREFIJO>/` (raíz o subcarpeta
   `roca/`/`rocas/` — la convención varía entre proyectos) y toma el trimestre
   vigente (el de `<trimestre>` más alto; si hay varios, el de fecha de
-  modificación más nueva). Sin Roca, no hay nada que hacer — no lo preguntes,
-  no bloquees el install/upgrade por esto. Con Roca, lee su tabla "Alta rápida"
+  modificación más nueva). Sin Roca, sigue la regla siguiente. Con Roca, lee
+  su tabla "Alta rápida"
   (columnas Title / Due date) y arma, por cada **hito de producto** — descarta
   trámites internos del cierre de la Roca (informe de cierre, traspaso, alta en
   Ninety: no son un entregable que el Observatorio muestre) — la línea que le
@@ -303,6 +303,20 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   falta, corrige la que cambió de fecha o título, o quita la que ya no está en
   la Roca vigente. No toques líneas de "Próxima versión" sin etiqueta
   `<PREFIJO>-H<n>` — son manuales, de otra fuente.
+- **Sin Roca vigente, pídela — no te quedes callado.** Si el proyecto no tiene
+  Roca del trimestre en curso, al final del install/upgrade (sin bloquear el
+  resto del flujo) pídele al usuario la planificación de su Roca: el enunciado
+  verificable de la Roca y sus hitos de producto con título y fecha. **Las
+  fechas y los hitos los pone el dueño: no los inventes ni los deduzcas del
+  repo.** Con su respuesta, crea la Roca en `Project-<PREFIJO>/` como
+  `Roca_<trimestre>_<PREFIJO>.md` (con su tabla "Alta rápida" Title / Due
+  date) y `Roca_<trimestre>_<PREFIJO>.yaml`, siguiendo
+  `00-System/templates/plantilla_apertura_roca.yaml` y
+  `00-System/metodologia-roca.md` (si tienes una skill de apertura de Roca,
+  como `/rock-plan`, úsala), pushéala al Vault en el momento y sincroniza
+  "Próxima versión" con sus hitos según la regla anterior. Si el usuario todavía
+  no la tiene o prefiere dejarla para después, anótalo como pendiente en el
+  reporte y sigue — no insistas en la misma sesión.
 - **Al abrir el PR de release `dev` → `main`**: **agrega el hito** del release
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no

@@ -114,7 +114,13 @@ Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
   líneas `- <Due date> · <PREFIJO>-H<n> · <título>` que ya existen en "Próxima
   versión" (máximo 5, los más próximos por fecha). Si ya coinciden, no hagas
   nada — esto no es un paso que reescriba o pushee en cada actualización. Si
-  falta, cambió o sobra una, corrígelo. Sin Roca, no hay nada que hacer.
+  falta, cambió o sobra una, corrígelo. **Sin Roca vigente, pídela**: al final
+  del install/upgrade, sin bloquearlo, pídele al usuario la planificación de su
+  Roca (enunciado verificable e hitos de producto con título y fecha, que pone
+  él: no los inventes); créala en `Project-<PREFIJO>/` como
+  `Roca_<trimestre>_<PREFIJO>.md` (con tabla "Alta rápida") y `.yaml` según
+  `00-System/templates/plantilla_apertura_roca.yaml`, pushéala al Vault y
+  sincroniza "Próxima versión". Si la deja para después, anótalo y sigue.
 - **Al publicar un release con tag**, agrega el hito en la sección "Hitos"
   (`- YYYY-MM-DD · vX.Y.Z · resumen breve`) con push directo al Vault. Todo tag
   publicado tiene su línea. En el mismo momento revisa toda "Próxima versión"

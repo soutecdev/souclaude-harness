@@ -82,7 +82,21 @@ No hace falta que el usuario pida cada paso por separado.
    están en "Próxima versión". **Si ya coinciden, no hay nada que hacer** —
    esto no es un paso que reescriba o pushee en cada upgrade. Solo si falta,
    cambió o sobra una línea, corrígela y pushea al Vault en el momento. Sin
-   Vault conectado o sin Roca, tampoco hay nada que hacer — no lo preguntes.
+   Vault conectado, no hay nada que hacer.
+
+   **Sin Roca vigente, pídela — no te quedes callado.** Al final del flujo,
+   junto al reporte (sin bloquear el resto del upgrade), pídele al usuario la
+   planificación de su Roca del trimestre en curso: el enunciado verificable y
+   los hitos de producto con título y fecha. Las fechas y los hitos los pone
+   el dueño: no los inventes. Con su respuesta, crea la Roca en
+   `Project-<PREFIJO>/` (`Roca_<trimestre>_<PREFIJO>.md` con su tabla "Alta
+   rápida", más su `.yaml`) siguiendo
+   `00-System/templates/plantilla_apertura_roca.yaml` y
+   `00-System/metodologia-roca.md` (o la skill de apertura de Roca, como
+   `/rock-plan`, si la tienes), pushéala al Vault y sincroniza "Próxima
+   versión" con sus hitos. Detalle en la skill `soutec-github` (sección
+   "Ficha del Observatorio"). Si el usuario todavía no la tiene o prefiere
+   dejarla para después, anótalo como pendiente y sigue.
 
 6. **Reporte final.** Avísale al usuario, en un resumen corto:
    - versión anterior → versión nueva.
@@ -93,6 +107,8 @@ No hace falta que el usuario pida cada paso por separado.
    - qué `.new` se mergearon y qué se preservó de lo suyo en cada uno.
    - cualquier archivo que se saltó por stack (ver sección de abajo).
    - qué cambió en "Próxima versión" de OBSERVATORIO.md, si algo cambió.
+   - si el proyecto no tiene Roca vigente: la pregunta por su planificación
+     (paso 5), o que quedó pendiente si el usuario la dejó para después.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
@@ -136,8 +152,10 @@ repo quedó bien igual, lo que falta es la máquina.
   en el paso 5 y pregúntale si quiere que lo borres.
 - Un hunk ambiguo de un `.new` no se resuelve solo: se deja como está y se
   reporta.
+- Sin Roca vigente, la planificación la pone el usuario: pregúntasela al final
+  (paso 5), sin frenar el resto del flujo.
 
-Fuera de esos dos casos, el flujo completo corre sin pedir OK intermedio — para
+Fuera de esos casos, el flujo completo corre sin pedir OK intermedio — para
 eso es "una sola instrucción".
 
 ## Tag-release fuera de Node
