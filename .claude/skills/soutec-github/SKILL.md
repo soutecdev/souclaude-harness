@@ -1,6 +1,6 @@
 ---
 name: soutec-github
-description: Flujo Git/GitHub obligatorio de SOUTEC (Guía Operativa v2.0). Aplicar SIEMPRE antes de crear una rama, commitear, pushear o abrir un Pull Request en un repo de SOUTEC. Cubre nombres de rama tipo/ID-milestone (una rama por milestone, no por tarea), commits Conventional Commits, la plantilla obligatoria de PR, squash & merge, semver vX.Y.Z y las reglas de secretos.
+description: Flujo Git/GitHub obligatorio de SOUTEC (Guía Operativa v2.0). Aplicar SIEMPRE antes de crear una rama, commitear, pushear o abrir un Pull Request en un repo de SOUTEC. Cubre nombres de rama tipo/ID-milestone (una rama por milestone, no por tarea), commits Conventional Commits, la plantilla obligatoria de PR, los checks de PR que corre el hook reglas-pr en la sesión, squash & merge, semver vX.Y.Z (tags de release) y las reglas de secretos.
 ---
 
 # SOUTEC — Git & GitHub
@@ -32,10 +32,12 @@ Estas no se negocian, ni siquiera en un hotfix.
   commits en la rama de su milestone; el ID `-T<nnn>` nunca va en el nombre de la
   rama. Ver "Ciclo de vida de la rama del milestone".
 - **Nunca crear repositorios.** Eso es del coordinador. Los **tags de versión**
-  (`vX.Y.Z` y el tag móvil por major) los crea el workflow `tag-release.yml` al
-  mergear el PR de release `dev` → `main`; en repos sin ese workflow instalado, el
-  agente puede crearlos a mano en su lugar, únicamente al publicar y después del
-  merge.
+  (`vX.Y.Z` y el tag móvil por major) se crean únicamente al publicar, después
+  del merge del PR de release `dev` → `main`: los crea el workflow
+  `tag-release.yml` o, en repos sin ese workflow, el agente.
+  **PAUSA TEMPORAL (SHS-M36)**: mientras GitHub Actions esté en pausa,
+  `tag-release.yml` no se dispara y los tags los crea siempre el agente (ver
+  "Versionamiento").
 - **Un hotfix NO es un bypass.** Aun en máxima criticidad: rama + Pull Request.
 - **Nunca crear workflows de GitHub Actions ni checks adicionales.** Los únicos
   workflows del repo son los que instala y actualiza el harness (`reglas-*.yml`,
@@ -81,7 +83,8 @@ Con Vault conectado, la rama y el milestone viven juntos:
 1. **Nace de `dev` al tomar el milestone** (tarjeta a En curso en `milestones.md`),
    con el nombre `tipo/M<n>-slug`. Anota la rama en la tarjeta del
    milestone.
-2. **Cada tarea terminada son commits pusheados a esa rama.** Al pushear, la
+2. **Cada tarea terminada son commits pusheados a esa rama.** Cuando el push
+   pasa (si el hook `reglas-pr` lo deniega, la tarea sigue En curso), la
    tarjeta de la tarea pasa a **Hecho** en `kanban.md` en ese momento (push
    inmediato al Vault, espejo en la skill de sincronización instalada). No hace
    falta esperar a que el PR se mergee. `En review` queda para las tareas que el
@@ -181,6 +184,26 @@ Antes de pedir revisión:
 - El README está actualizado si aplica.
 - El PR indica si requiere versión/release.
 
+**Los checks de PR corren en la sesión, con el hook `reglas-pr`.**
+PAUSA TEMPORAL (SHS-M36): con GitHub Actions en pausa, los checks de
+`scripts/check-pr-rules.mjs` no corren en CI. Los corre, solo, un hook de
+**Claude Code** (`.claude/hooks/reglas-pr.mjs`, SHS-M39 — no es un git hook):
+
+- **Antes de cada `git push`**: el grupo `secretos` sobre cada commit que el push
+  subiría. Si falla, el push queda denegado con el motivo: sigue sus
+  instrucciones (sacar el archivo de los commits sin pushear; si ya se había
+  pusheado, avisar al usuario para rotar la credencial).
+- **Al crear el PR o editar su body o su base**: los tres grupos contra el PR
+  (`rama-commits` es informativo; `secretos` y `pr-metadata` bloquean). El
+  resultado se publica como comentario en el PR — la evidencia para el revisor —
+  y te vuelve como contexto.
+
+No lo rodees: nada de `bash -c`, `node -e`, scripts ni otra tool para pushear o
+crear el PR por fuera. Los PRs se crean y editan **solo** con `gh pr create` y
+`gh pr edit`: el hook no ve el MCP de GitHub ni `gh api`. Si tras crear o editar
+el PR no te llegó el resultado de `reglas-pr`, córrelo a mano:
+`node .claude/hooks/reglas-pr.mjs --pr <url>`.
+
 **Antes de abrir el PR, delegar el security review a un subagente** (`Agent`, tipo
 `general-purpose`) en vez de correr `/security-review` inline. Instrúyelo a fondo:
 que corra `/security-review` sobre el diff de la rama y devuelva los hallazgos
@@ -206,15 +229,36 @@ Al recibir el resultado del subagente:
 tareas del milestone de la rama: en "Milestone y tareas relacionadas" van el ID del
 milestone y la lista de tareas que este PR integra. Checkboxes tildadas porque
 se hizo, no por rellenar. Nada de "N/A" genéricos: si una sección no aplica, se
-**omite entera** (título incluido), no se deja con "N/A" ni vacía.
+**omite entera** (título incluido), no se deja con "N/A" ni vacía. **Excepción:
+"Descripción del cambio", "Evidencia", "Impacto / Riesgos" y "Requiere versión /
+release" van siempre** — las valida el check `pr-metadata`, que da FAIL si
+faltan, están vacías, dicen "N/A" o conservan el texto guía de la plantilla.
 
 **La plantilla no se aplica sola al abrir el PR por CLI.** Solo la web de GitHub la
 precarga; `gh pr create` deja el cuerpo que le pases y nada más. El flujo correcto:
 escribir la plantilla ya completada en un archivo temporal y abrir el PR con
-`gh pr create --body-file <archivo>`. En repos con el check `reglas-pr-metadata` en
-CI, un PR con la plantilla cruda o incompleta **falla el check** (secciones con el
-texto guía intacto, casilla de versión sin marcar): la descripción queda bien desde
-el alta.
+`gh pr create --body-file <archivo>`. Un PR con la plantilla cruda o incompleta
+(secciones con el texto guía intacto, casilla de versión sin marcar) **falla
+`pr-metadata`**: la descripción tiene que quedar bien desde el alta.
+
+**Apenas creas el PR, el hook `reglas-pr` te devuelve el resultado de los
+checks.** Con un FAIL en `secretos` o `pr-metadata`, el PR no está listo:
+corrígelo en ese momento.
+
+- Body o base: `gh pr edit <url> --body-file <archivo>` o
+  `gh pr edit <url> --base dev` (cada edición vuelve a disparar el check y deja
+  un comentario nuevo en el PR).
+- Conflictos: `git fetch origin && git merge origin/dev`, push, y después
+  `node .claude/hooks/reglas-pr.mjs --pr <url>` — un push no vuelve a disparar
+  el check del PR.
+- Secreto: sácalo en un commit nuevo (`git rm --cached`) y avisa al usuario: ya
+  se pusheó, hay que rotar la credencial.
+- `rama-commits` es informativo: no reescribas commits ya pusheados por su
+  formato.
+
+Si el FAIL no se arregla desde el body o la base (por ejemplo, `gh` sin
+autenticar), o sigue tras dos rondas de corrección, **para y repórtalo al
+usuario** — no reintentes en bucle.
 
 Si piden correcciones: **pushear a la misma rama.** El PR se actualiza solo. Crear un
 PR nuevo por cada corrección rompe la trazabilidad y duplica el ruido.
@@ -225,6 +269,9 @@ arrastrar checks en rojo por fallos transitorios que conviene reintentar. Detect
 fallidos con `gh pr checks <pr>` y relánzalos con `gh run rerun <run-id> --failed` —
 solo los jobs en estado `failure`, no el run completo. Si no hay jobs fallidos, edita
 el body y no hagas nada más: no re-corras lo que ya está en verde ni informes de sobra.
+PAUSA TEMPORAL (SHS-M36): mientras GitHub Actions esté en pausa no hay runs que
+relanzar (`gh pr checks` sale vacío); el check lo vuelve a correr el hook
+`reglas-pr` al editar el body.
 
 Integración: **squash & merge**, y la hace el coordinador. Para un `refactor/` grande o
 una migración, el coordinador puede optar por merge commit y lo registra en el PR.
@@ -257,8 +304,22 @@ Tras el merge `dev` → `main`, en repos con el workflow
 `tag-release.yml` instalado, este lee esa versión del commit de merge y
 crea/pushea el tag inmutable `vX.Y.Z` y el tag móvil de la serie (`v3`) — es
 idempotente: si el tag ya existe, no falla ni duplica. En repos sin el workflow,
-el agente puede crearlos y pushearlos a mano en el mismo momento. Los releases de
-GitHub siguen siendo del coordinador; ni el workflow ni el agente los crean.
+el agente los crea y pushea en el mismo momento.
+
+**PAUSA TEMPORAL (SHS-M36)**: mientras GitHub Actions esté en pausa,
+`tag-release.yml` no se dispara y los tags los creas tú al publicar, después del
+merge del release, con el mismo script:
+
+```bash
+git fetch origin && node scripts/tag-release.mjs --ref origin/main
+```
+
+`--ref` lee la versión del `package.json` de `origin/main` y taggea ese commit,
+sin cambiar de rama ni tocar tu árbol de trabajo; es idempotente. En repos sin
+`scripts/tag-release.mjs` (stack no Node), usa el script de tags del stack (skill
+`harness-upgrade`) o créalos a mano: `vX.Y.Z` anotado y el móvil `vX` movido al
+mismo commit. Los releases de GitHub siguen siendo del coordinador; ni el
+workflow ni el agente los crean.
 
 ## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
 
@@ -367,7 +428,8 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
     ciegas.
   Si "Próxima versión" queda vacía después, déjala vacía con su comentario guía
   de la plantilla; no borres la sección.
-- **Al confirmarse el merge y el tag**: verifica el hito y corrige fecha o
+- **Al confirmarse el merge y el tag** (mientras Actions esté en pausa, el tag
+  lo creas tú: ver "Versionamiento"): verifica el hito y corrige fecha o
   resumen si difieren de lo publicado. Si el PR de release se rechaza o se
   descarta, elimina el hito en la sesión que lo detecte y restaura en "Próxima
   versión" cualquier línea que hayas quitado o editado creyendo que este
@@ -395,5 +457,6 @@ No lo inventes. Si hace falta, pregunta:
 - `CHANGELOG.md` — el changelog es el `git log` de `main`.
 - Ramas `release/*` — no existen.
 - `BREAKING CHANGE` / `!` de Conventional Commits.
-- Git hooks, `--no-verify`.
+- Git hooks, `--no-verify` (el hook `reglas-pr` es de Claude Code, no de git:
+  ver "Pull Request").
 - Commits firmados: **no** son obligatorios hoy.

@@ -132,12 +132,11 @@ función chica. **Nada de un DSL de migraciones.**
    (`v1`, `v2`, `v3`) que apunta al último release de su serie. Un breaking sube el
    major y estrena su propio tag móvil; los tags móviles viejos quedan congelados en
    el último release de su serie, así ningún proyecto recibe un breaking sin pedirlo.
+   Con Actions en pausa (SHS-M36), `tag-release.yml` no se dispara: el agente corre
+   el mismo script, que lee la versión de `origin/main`, crea el tag anotado y mueve
+   el móvil (idempotente, sin cambiar de rama):
    ```bash
-   git checkout main && git pull origin main
-   git tag vX.Y.Z
-   git tag -f v3            # el tag móvil de la serie actual
-   git push origin vX.Y.Z
-   git push -f origin v3
+   git fetch origin && node scripts/tag-release.mjs --ref origin/main
    ```
 6. Los devs corren `npx github:soutecdev/souclaude-harness#v3 upgrade` y reciben la
    nueva versión. No hay registry ni publicación de npm. Para cambiar de major, editan

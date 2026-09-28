@@ -114,6 +114,9 @@ No hace falta que el usuario pida cada paso por separado.
    - qué cambió en "Planificación" de OBSERVATORIO.md, si algo cambió.
    - si el proyecto no tiene Roca vigente: la pregunta del paso 5 y qué
      respondió el usuario.
+   - si el upgrade sumó o cambió hooks en `.claude/settings.json` (por ejemplo
+     `reglas-pr`, SHS-M39): que **reinicie Claude Code** para que los cargue —
+     los hooks se leen al iniciar la sesión, no en caliente.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
@@ -185,6 +188,13 @@ adaptas mejor que un template genérico.
    `base: main`, condicionado a `github.event.pull_request.merged == true`,
    usando el runtime del stack detectado (no `actions/setup-node` si el
    proyecto no es Node).
+   PAUSA TEMPORAL (SHS-M36): mientras GitHub Actions esté en pausa, genera el
+   workflow **pausado**, igual que los que distribuye el harness: solo
+   `on: workflow_dispatch:`, con el `on:` de arriba comentado justo encima y el
+   comentario `PAUSA TEMPORAL (SHS-M36)`. Hasta que vuelva, el tag lo crea el
+   agente corriendo el script del stack tras el merge de release (skill
+   `soutec-github`, "Versionamiento"). Al revertir la pausa, este workflow no lo
+   restaura `upgrade`: hay que descomentarlo a mano.
 5. **Nunca crea el GitHub Release**: eso lo sigue haciendo el coordinador a
    mano, igual que en el resto de la organización.
 
