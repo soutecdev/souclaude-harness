@@ -116,6 +116,9 @@ test('las copias distribuidas en templates/base son identicas a las fuentes', ()
     ['.github/workflows/reglas-rama-commits.yml', 'templates/base/github/workflows/reglas-rama-commits.yml'],
     ['.github/workflows/reglas-secretos.yml', 'templates/base/github/workflows/reglas-secretos.yml'],
     ['.github/workflows/reglas-pr-metadata.yml', 'templates/base/github/workflows/reglas-pr-metadata.yml'],
+    // SHS-M39: el agente corre tag-release.mjs a mano mientras Actions esta en pausa.
+    ['scripts/tag-release.mjs', 'templates/base/scripts/tag-release.mjs'],
+    ['.github/workflows/tag-release.yml', 'templates/base/github/workflows/tag-release.yml'],
   ]
   for (const [fuente, copia] of espejos) {
     assert.equal(readFileSync(copia, 'utf8'), readFileSync(fuente, 'utf8'), `${copia} difiere de ${fuente}`)
