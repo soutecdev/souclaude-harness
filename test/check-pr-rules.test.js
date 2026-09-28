@@ -1,8 +1,26 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import fs, { readFileSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
-import { evaluaRama, evaluaCommits, evaluaSeccionesCompletas, evaluaVersion } from '../scripts/check-pr-rules.mjs'
+import {
+  evaluaRama,
+  evaluaCommits,
+  evaluaSeccionesCompletas,
+  evaluaVersion,
+  esArchivoDeSecreto,
+  evaluaSecretos,
+  rutasDeSalidaZ,
+  contextoDelCheck,
+  esperaMergeable,
+  ultimoTagDe,
+  describeError,
+} from '../scripts/check-pr-rules.mjs'
+
+const SCRIPT = fileURLToPath(new URL('../scripts/check-pr-rules.mjs', import.meta.url))
 
 // La norma de la skill soutec-github admite DOS formas de rama, y las dos son
 // contrato: tipo/descripcion-corta a secas, o tipo/ID-descripcion-corta donde
@@ -168,4 +186,183 @@ test('evaluaVersion: exige exactamente una casilla marcada', () => {
   const cruda = '## Requiere versión / release\n- [ ] No\n- [ ] Sí\nVersión sugerida: vX.Y.Z'
   assert.equal(evaluaVersion({ body: conNo }, 'dev').cumple, true)
   assert.equal(evaluaVersion({ body: cruda }, 'dev').cumple, false)
+})
+
+// SHS-M39: con Actions en pausa, el grupo secretos lo corre un hook que
+// DENIEGA el push. Un falso positivo ya no es un check en rojo que un revisor
+// ignora: frena el trabajo. .env.example es la plantilla sin valores que la
+// skill pide commitear (y que el harness siembra).
+test('esArchivoDeSecreto: .env.example y sus variantes no son secretos', () => {
+  for (const ruta of ['.env.example', 'app/.env.sample', '.env.template', 'config/.env.dist']) {
+    assert.equal(esArchivoDeSecreto(ruta), false, ruta)
+  }
+})
+
+test('esArchivoDeSecreto: los .env reales y las credenciales si lo son', () => {
+  const secretos = [
+    '.env',
+    '.env.local',
+    '.env.staging',
+    'config/.env',
+    'configuración/.env',
+    'certs/servidor.pem',
+    'llave.key',
+    'firma.pfx',
+    'credentials.json',
+    'infra/secrets.json',
+  ]
+  for (const ruta of secretos) {
+    assert.equal(esArchivoDeSecreto(ruta), true, ruta)
+  }
+})
+
+test('evaluaSecretos: el detalle dice donde se buscaron', () => {
+  const r = evaluaSecretos(['a.txt', '.env.staging'], 'en commits sin pushear')
+  assert.equal(r.cumple, false)
+  assert.match(r.detalle, /en commits sin pushear: \.env\.staging/)
+  assert.equal(evaluaSecretos(['a.txt']).cumple, true)
+})
+
+test('rutasDeSalidaZ: separa por NUL y descarta vacios y saltos de linea sueltos', () => {
+  assert.deepEqual(rutasDeSalidaZ('a.txt\0configuración/.env\0\n\0b/c.json\0'), ['a.txt', 'configuración/.env', 'b/c.json'])
+  assert.deepEqual(rutasDeSalidaZ(''), [])
+})
+
+test('contextoDelCheck: con PR, base y rama salen del PR', () => {
+  const pr = { baseRefName: 'main', headRefName: 'dev' }
+  assert.deepEqual(contextoDelCheck({ pr, envBase: 'dev', ramaLocal: 'fix/M1-otra' }), { base: 'main', rama: 'dev' })
+})
+
+test('contextoDelCheck: sin PR usa el entorno o dev, y la rama local', () => {
+  assert.deepEqual(contextoDelCheck({ envBase: 'main', ramaLocal: 'dev' }), { base: 'main', rama: 'dev' })
+  // Actions define GITHUB_BASE_REF vacio fuera de pull_request.
+  assert.deepEqual(contextoDelCheck({ envBase: '', ramaLocal: 'fix/M1-algo' }), { base: 'dev', rama: 'fix/M1-algo' })
+  assert.deepEqual(contextoDelCheck({ ramaLocal: 'fix/M1-algo' }), { base: 'dev', rama: 'fix/M1-algo' })
+})
+
+test('esperaMergeable: relee mientras GitHub no calculo el estado', () => {
+  const respuestas = ['UNKNOWN', 'MERGEABLE']
+  const esperas = []
+  const pr = esperaMergeable({ mergeable: 'UNKNOWN', body: 'x' }, () => respuestas.shift(), (ms) => esperas.push(ms), { esperaMs: 5 })
+  assert.equal(pr.mergeable, 'MERGEABLE')
+  assert.equal(pr.body, 'x', 'no pierde el resto de los datos del PR')
+  assert.deepEqual(esperas, [5, 5])
+})
+
+test('esperaMergeable: se rinde tras los intentos y queda en UNKNOWN (skip, no FAIL)', () => {
+  let lecturas = 0
+  const pr = esperaMergeable({ mergeable: 'UNKNOWN' }, () => (lecturas++, 'UNKNOWN'), () => {}, { intentos: 3 })
+  assert.equal(pr.mergeable, 'UNKNOWN')
+  assert.equal(lecturas, 3)
+})
+
+test('esperaMergeable: si la relectura falla o ya hay estado, no insiste', () => {
+  const fallida = esperaMergeable({ mergeable: 'UNKNOWN' }, () => { throw new Error('red') }, () => {})
+  assert.equal(fallida.mergeable, 'UNKNOWN')
+  let lecturas = 0
+  esperaMergeable({ mergeable: 'CONFLICTING' }, () => (lecturas++, 'MERGEABLE'), () => {})
+  assert.equal(lecturas, 0)
+})
+
+test('ultimoTagDe: el mayor semver, ignorando el tag movil y los ajenos', () => {
+  assert.equal(ultimoTagDe(['v3', 'v3.9.2', 'v3.15.2', 'v3.10.0', 'latest']), 'v3.15.2')
+  assert.equal(ultimoTagDe(['v1']), null)
+  assert.equal(ultimoTagDe([]), null)
+})
+
+test('describeError: gh ausente y errores de git se describen en una linea', () => {
+  assert.match(describeError({ code: 'ENOENT', path: 'gh' }), /no se encontro "gh" en el PATH/)
+  assert.equal(describeError({ stderr: 'fatal: bad revision\nmas detalle', message: 'Command failed' }), 'fatal: bad revision')
+})
+
+// --- Integracion: el script real contra repos git en tmp (con espacios en la
+// ruta, como los de OneDrive), sin red. origin/* se simula con update-ref.
+
+function git(dir, ...args) {
+  return execFileSync('git', ['-c', 'user.email=test@test', '-c', 'user.name=test', '-C', dir, ...args], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+}
+
+function repoConBase() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude check '))
+  git(dir, 'init', '-q', '-b', 'dev')
+  git(dir, 'commit', '-q', '--allow-empty', '-m', 'chore: raiz')
+  git(dir, 'update-ref', 'refs/remotes/origin/dev', 'HEAD')
+  git(dir, 'switch', '-q', '-c', 'fix/M1-algo')
+  return dir
+}
+
+function commitear(dir, archivos, mensaje) {
+  for (const [ruta, contenido] of Object.entries(archivos)) {
+    const destino = path.join(dir, ruta)
+    if (contenido == null) {
+      fs.rmSync(destino)
+    } else {
+      fs.mkdirSync(path.dirname(destino), { recursive: true })
+      fs.writeFileSync(destino, contenido)
+    }
+  }
+  git(dir, 'add', '-A', '--force')
+  git(dir, 'commit', '-q', '-m', mensaje)
+}
+
+function correrCheck(dir, args, env = process.env) {
+  try {
+    const stdout = execFileSync(process.execPath, [SCRIPT, ...args], { cwd: dir, encoding: 'utf8', env, stdio: ['ignore', 'pipe', 'pipe'] })
+    return { status: 0, stdout }
+  } catch (e) {
+    return { status: e.status, stdout: e.stdout ?? '' }
+  }
+}
+
+test('secretos --sin-pushear: detecta el secreto agregado y borrado en commits locales', () => {
+  const dir = repoConBase()
+  commitear(dir, { 'configuración/.env': 'TOKEN=1\n', 'a.txt': 'a\n' }, 'feat: uno')
+  commitear(dir, { 'configuración/.env': null }, 'fix: dos')
+
+  // El diff de arboles no lo ve (el archivo ya no esta en la cabeza)...
+  assert.equal(correrCheck(dir, ['--grupo', 'secretos']).status, 0)
+  // ...pero el push subiria el commit que lo contiene.
+  const r = correrCheck(dir, ['--grupo', 'secretos', '--sin-pushear'])
+  assert.equal(r.status, 1, r.stdout)
+  assert.match(r.stdout, /\[FAIL\] sin-secretos: archivos sospechosos en commits sin pushear: configuración\/\.env/)
+})
+
+test('secretos --sin-pushear: lo ya pusheado no se vuelve a revisar', () => {
+  const dir = repoConBase()
+  commitear(dir, { '.env.staging': 'X=1\n' }, 'feat: uno')
+  git(dir, 'update-ref', 'refs/remotes/origin/fix/M1-algo', 'HEAD')
+  commitear(dir, { 'b.txt': 'b\n' }, 'feat: dos')
+  const r = correrCheck(dir, ['--grupo', 'secretos', '--sin-pushear'])
+  assert.equal(r.status, 0, r.stdout)
+  assert.match(r.stdout, /\[OK  \] sin-secretos/)
+})
+
+test('secretos: una ruta con tildes se detecta y .env.example no', () => {
+  const dir = repoConBase()
+  commitear(dir, { '.env.example': 'TOKEN=\n' }, 'feat: plantilla de entorno')
+  assert.equal(correrCheck(dir, ['--grupo', 'secretos']).status, 0)
+
+  commitear(dir, { 'datos/configuración/credentials.json': '{}\n' }, 'feat: config')
+  const r = correrCheck(dir, ['--grupo', 'secretos'])
+  assert.equal(r.status, 1, r.stdout)
+  assert.match(r.stdout, /datos\/configuración\/credentials\.json/)
+})
+
+test('pr-metadata sin gh disponible: [ERROR] y exit 2, no un FAIL de regla', () => {
+  const dir = repoConBase()
+  const vacio = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude sin gh '))
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toUpperCase() !== 'PATH'))
+  env.PATH = vacio
+  const r = correrCheck(dir, ['--grupo', 'pr-metadata', '--pr', '1'], env)
+  assert.equal(r.status, 2, r.stdout)
+  assert.match(r.stdout, /^\[ERROR\] pr-metadata: no se pudo verificar: no se encontro "gh"/)
+})
+
+test('uso incorrecto: [ERROR] y exit 2', () => {
+  const r = correrCheck(repoConBase(), ['--grupo', 'inventado'])
+  assert.equal(r.status, 2)
+  assert.match(r.stdout, /^\[ERROR\] uso: --grupo debe ser uno de/)
 })
