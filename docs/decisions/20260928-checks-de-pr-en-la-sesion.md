@@ -182,7 +182,8 @@ Esta decisión **no supersede** al ADR de la pausa, que sigue vigente. Cuando Ac
 vuelva:
 
 1. Busca `PAUSA TEMPORAL (SHS-M36)` en las skills (`soutec-github`,
-   `harness-upgrade`) y en `CLAUDE.md`, y reescribe esos párrafos.
+   `harness-upgrade`) y `SHS-M36` en `CLAUDE.md` (plantilla y local), y reescribe
+   esos párrafos.
 2. Decide si el hook `reglas-pr` sigue, como red local previa a CI, o se retira.
    Retirarlo exige una migración de `settings.json`, porque `merge-json` no quita
    entradas.
