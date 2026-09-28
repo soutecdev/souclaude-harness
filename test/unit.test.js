@@ -65,6 +65,21 @@ test('seedMerge: sin archivo previo devuelve el seed entero', () => {
   assert.deepEqual(seedMerge(null, { a: 1 }), { a: 1 })
 })
 
+// SHS-M39: el bloque PreToolUse/PostToolUse del harness llega a los
+// consumidores por merge-json. Tiene que convivir con hooks propios del
+// usuario y no duplicarse en cada upgrade.
+test('seedMerge: los hooks del harness se suman a los del usuario y no se duplican', () => {
+  const seed = JSON.parse(readTemplate('base/claude/settings.json'))
+  const propio = { matcher: 'Edit', hooks: [{ type: 'command', command: 'node mi-hook.mjs' }] }
+  const user = { hooks: { PreToolUse: [propio] } }
+
+  const una = seedMerge(user, seed)
+  assert.deepEqual(una.hooks.PreToolUse[0], propio, 'el hook del usuario queda primero')
+  assert.equal(una.hooks.PreToolUse.length, 1 + seed.hooks.PreToolUse.length)
+  assert.deepEqual(una.hooks.PostToolUse, seed.hooks.PostToolUse)
+  assert.deepEqual(seedMerge(una, seed), una, 'un segundo upgrade no cambia nada')
+})
+
 test('lt: comparacion semver', () => {
   assert.ok(lt('0.0.0', '1.0.0'))
   assert.ok(lt('1.0.0', '1.0.1'))

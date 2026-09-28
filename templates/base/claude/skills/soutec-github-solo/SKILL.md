@@ -16,6 +16,14 @@ bloqueen. Lo que sigue son convenciones para que el historial se mantenga legibl
   `credentials.json`, `secrets.json`, tokens, contraseñas, llaves privadas.
   `.env.example` sin valores. Si una credencial se expone por accidente:
   **rotarla**, no solo borrar el commit.
+  **Antes de cada `git push`** —también el de un merge directo a `dev` o a
+  `main`— el hook de Claude Code `reglas-pr` revisa cada commit que el push
+  subiría y lo **deniega** si agrega un archivo de credenciales (SHS-M39). Sigue
+  su motivo: saca el archivo de los commits todavía no pusheados (`git reset
+  --soft` al upstream, `git rm --cached`, `.gitignore`, recommit) y, si ya se
+  había pusheado, avisa al usuario para rotarla. No lo rodees (`bash -c`,
+  `node -e`, otra tool). Si es un falso positivo, avisa al usuario: ese push lo
+  hace él.
 - Corolario fuera de este repo: en el **Vault** (repo compartido de la
   organización) jamás `git push --force`.
 - **Nunca crear workflows de GitHub Actions ni checks adicionales.** El único

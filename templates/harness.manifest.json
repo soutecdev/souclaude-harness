@@ -123,6 +123,12 @@
       "modos": ["solo"]
     },
     {
+      "id": "hook-reglas-pr",
+      "src": "base/claude/hooks/reglas-pr.mjs",
+      "dest": ".claude/hooks/reglas-pr.mjs",
+      "policy": "managed"
+    },
+    {
       "id": "gitignore",
       "src": "fragments/gitignore",
       "dest": ".gitignore",

@@ -49,7 +49,9 @@ por PR.
   `git push --force`.**
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
   Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
-  publicar y después del merge de release `dev` → `main`.
+  publicar y después del merge de release `dev` → `main`: mientras GitHub Actions
+  esté en pausa (SHS-M36), con `git fetch origin && node scripts/tag-release.mjs
+  --ref origin/main`.
 - **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
   quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
   ya sea hora de cerrar** (el feature está terminado y verificado), si abres el PR;
@@ -57,6 +59,12 @@ por PR.
   push a la rama y reportar.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
+- **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
+  Claude Code deniega el `git push` que sube archivos de secretos y, al crear o
+  editar el PR con `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs`
+  y publica el resultado como comentario en el PR. Un FAIL de `secretos` o
+  `pr-metadata` se corrige antes de dar el PR por listo, y el hook no se rodea
+  (skill `soutec-github`).
 - **GitHub Actions: solo los workflows que instala el harness.** No crees ni
   modifiques workflows en `.github/workflows/` por proyecto ni por funcionalidad
   (tests, lint, build, deploy, ni checks extra en los PRs). Si un proyecto necesita

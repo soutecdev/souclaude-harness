@@ -21,8 +21,11 @@ docs/decisions/               ADRs + su template (skill adr-new)
 notes.md                      scratchpad persistente
 progress/                     progreso del proyecto y protocolo del Vault
 .claude/
-  settings.json               permisos y effort (schema-correcto)
+  settings.json               permisos, effort y registro de hooks (schema-correcto)
   harness.json                lockfile: versión + hash + skills elegidas
+  hooks/                      de Claude Code: milestone al iniciar la sesión y
+                              reglas-pr (checks de PR en la sesión mientras
+                              Actions está en pausa)
   skills/                     las que elijas en el checkbox de init
     soutec-github             flujo Git/GitHub (obligatoria, se instala siempre)
     it-security-review        security review para IT
@@ -57,7 +60,10 @@ El harness instala una de dos superficies:
   trazabilidad no desaparece: cada bloque de trabajo deja una línea con fecha en
   `Project-<PREFIJO>/worklog.md` del Vault (el hook de sesión la recuerda y muestra
   las últimas), y `sessions.md`/monitor siguen funcionando igual. La única regla
-  dura que sobrevive es la de **secretos** (deny en settings + `reglas-secretos.yml`).
+  dura que sobrevive es la de **secretos**: deny de lectura en settings y el hook
+  `reglas-pr`, que deniega todo `git push` (incluidos los merges directos a `dev` y
+  `main`) que subiría un archivo de credenciales. `reglas-secretos.yml` solo corría
+  en PRs, así que nunca cubrió esos merges.
 
 `init` pregunta el modo (o recibe `--solo`/`--equipo`); queda persistido en
 `.claude/harness.json` y los upgrades lo respetan. Una instalación existente
@@ -331,12 +337,12 @@ El detalle de cada versión vive en `CHANGELOG.md`. Los hitos:
 `main` solo recibe merges desde `dev`: el trabajo entra a `dev` por PR de rama, y el
 release es un **PR de `dev` a `main`** (con la versión propuesta en el cuerpo). Tras
 ese merge, **el agente puede crear y pushear los tags** — no hace falta esperar al
-coordinador:
+coordinador. Mientras GitHub Actions esté en pausa (SHS-M36) `tag-release.yml` no se
+dispara, así que los crea siempre el agente, con el mismo script (tag anotado
+`vX.Y.Z` y `v3` movido al mismo commit; idempotente, sin cambiar de rama):
 
 ```bash
-git checkout main && git pull origin main
-git tag vX.Y.Z && git tag -f v3
-git push origin vX.Y.Z && git push -f origin v3
+git fetch origin && node scripts/tag-release.mjs --ref origin/main
 ```
 
 ### Migrar un proyecto a la serie 3

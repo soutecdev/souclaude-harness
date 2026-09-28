@@ -27,7 +27,9 @@
       "Bash(npx souclaude vault-sync:*)",
       "Bash(git push:*)",
       "Bash(git merge:*)",
-      "Bash(souclaude vault-sync:*)"
+      "Bash(souclaude vault-sync:*)",
+      "Bash(node scripts/check-pr-rules.mjs:*)",
+      "Bash(node .claude/hooks/reglas-pr.mjs:*)"
     ],
     "ask": [
       "Bash(git reset --hard:*)",
@@ -43,6 +45,54 @@
           {
             "type": "command",
             "command": "node .claude/hooks/declarar-milestone.mjs"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "PowerShell(git push:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 240
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "PowerShell(gh pr:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 240
           }
         ]
       }
