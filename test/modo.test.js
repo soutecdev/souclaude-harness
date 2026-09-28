@@ -140,6 +140,10 @@ test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin can
   const comandos = JSON.stringify(settings.hooks?.SessionStart ?? [])
   assert.ok(comandos.includes('worklog-solo.mjs'), 'el hook worklog-solo no quedo cableado en settings')
   assert.ok(!comandos.includes('declarar-milestone'), 'quedo cableado el hook de milestones')
+  // reglas-pr (SHS-M39) se instala en ambos modos pero solo se cablea en equipo.
+  assert.ok(has(dir, '.claude/hooks/reglas-pr.mjs'))
+  assert.equal(settings.hooks?.PreToolUse, undefined, 'se cableo reglas-pr en modo solo')
+  assert.equal(settings.hooks?.PostToolUse, undefined, 'se cableo reglas-pr en modo solo')
   // El protocolo de milestones (progress/README.md) es de equipo.
   assert.ok(!has(dir, 'progress/README.md'), 'se emitio el protocolo de milestones en solo')
 })
@@ -188,8 +192,25 @@ test('switch equipo -> solo: la skill de solo entra y las de equipo quedan obsol
   assert.ok(obsoletos.includes('progress/README.md'))
   assert.ok(obsoletos.includes('.github/workflows/reglas-rama-commits.yml'))
   assert.ok(obsoletos.includes('.github/pull_request_template.md'))
+  // reglas-pr es de ambos modos: su bloque en settings.json sobrevive al switch
+  // (merge-json nunca quita), asi que el archivo no puede quedar obsoleto.
+  assert.ok(!obsoletos.includes('.claude/hooks/reglas-pr.mjs'))
   const lock = JSON.parse(read(dir, '.claude/harness.json'))
   assert.ok(!lock.skills.includes('jira-sync'), 'el lockfile arrastro una skill del modo anterior')
+})
+
+test('switch equipo -> solo con --prune: ningun comando de reglas-pr apunta a un archivo borrado', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  await main(['init', ...YES], dir)
+  assert.equal(await main(['upgrade', ...YES, '--solo', '--prune'], dir), 0)
+
+  const settings = JSON.parse(read(dir, '.claude/settings.json'))
+  const comandos = [...(settings.hooks?.PreToolUse ?? []), ...(settings.hooks?.PostToolUse ?? [])]
+    .flatMap((grupo) => grupo.hooks ?? [])
+    .map((h) => h.command)
+    .filter((c) => c.includes('reglas-pr.mjs'))
+  assert.ok(comandos.length > 0, 'el bloque de equipo sigue en settings.json tras el switch')
+  assert.ok(has(dir, '.claude/hooks/reglas-pr.mjs'), 'el hook cableado fue borrado por --prune')
 })
 
 test('init --solo: CI minimo (solo el workflow de secretos) y sin artefactos de review', async () => {
@@ -246,6 +267,12 @@ test('init equipo: la superficie de siempre queda intacta', async () => {
   assert.ok(settings.permissions.deny.includes('Bash(gh pr merge:*)'))
   assert.ok(settings.permissions.ask.includes('Bash(git push --force*)'))
   assert.ok(settings.hooks.SessionStart, 'falta el hook declarar-milestone en equipo')
+  // SHS-M39: los checks de PR corren en la sesion (Actions en pausa).
+  assert.ok(has(dir, '.claude/hooks/reglas-pr.mjs'))
+  assert.match(JSON.stringify(settings.hooks.PreToolUse), /reglas-pr\.mjs/)
+  assert.match(JSON.stringify(settings.hooks.PostToolUse), /reglas-pr\.mjs/)
+  assert.ok(settings.permissions.allow.includes('Bash(node scripts/check-pr-rules.mjs:*)'))
+  assert.ok(settings.permissions.allow.includes('Bash(node .claude/hooks/reglas-pr.mjs:*)'))
 })
 
 test('--dry-run no persiste ni la decision del modo', async () => {
