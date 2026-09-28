@@ -16,9 +16,9 @@ El harness y el CLI se versionan juntos.
   evidencia para el revisor) y se lo devuelve al agente: bloquea si fallan `secretos`
   o `pr-metadata`; `rama-commits` sigue siendo informativo. Modo manual para después
   de un push correctivo: `node .claude/hooks/reglas-pr.mjs --pr <url>`. Falla abierto
-  ante problemas de infraestructura, pero lo avisa; no hace nada en modo solo ni en
-  repos sin el script. Tras el `upgrade`, hay que reiniciar Claude Code para que cargue
-  el hook. ADR `docs/decisions/20260928-checks-de-pr-en-la-sesion.md`.
+  ante problemas de infraestructura, pero lo avisa; no hace nada en repos sin el
+  script. Tras el `upgrade`, hay que reiniciar Claude Code para que cargue el hook. ADR
+  `docs/decisions/20260928-checks-de-pr-en-la-sesion.md`.
 
 ### Cambiado
 
@@ -37,6 +37,20 @@ El harness y el CLI se versionan juntos.
 
 ### Corregido
 
+- **Seguridad, modo solo: los merges directos a `dev`/`main` nunca se revisaban por
+  secretos** (SHS-M39-T006). `reglas-secretos.yml` solo se disparaba en `pull_request`, y
+  en modo solo el agente mergea y pushea sin PR, así que la única regla dura del modo
+  nunca se aplicó en ese camino (antes de la pausa tampoco). Ahora `settings-solo.json`
+  cablea el hook `reglas-pr` en el PreToolUse de `git push`: se deniega todo push que
+  subiría un archivo de credenciales, incluidos los commits que trae un merge local. El
+  flujo de PR sigue siendo solo de equipo.
+- **Endurecimiento de `reglas-pr` tras el security review** (SHS-M39-T006):
+  - el hook ejecuta siempre el `check-pr-rules.mjs` de su propio proyecto, nunca el del
+    repo destino del comando (`cd <repo ajeno> && git push` ya no ejecuta código ajeno
+    antes del prompt de permisos);
+  - los pushes de tags, `--tags`, `--all` y `--mirror` también se revisan;
+  - `--cabeza` no acepta opciones de git;
+  - el modo manual solo comenta en PRs del repo de `origin`.
 - **`tag-release.mjs` fallaba con el tag móvil local desactualizado** (SHS-M39-T002).
   `git fetch --tags` sin `--force` muere con «would clobber existing tag» (git ≥ 2.20)
   antes de crear nada; ahora usa `--force`. La opción nueva `--ref origin/main` taggea

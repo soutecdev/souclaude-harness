@@ -21,7 +21,8 @@
 // Uso:
 //   node scripts/check-pr-rules.mjs --grupo rama-commits [--pr <n|url>]
 //   node scripts/check-pr-rules.mjs --grupo secretos [--pr <n|url>]
-//   node scripts/check-pr-rules.mjs --grupo secretos --sin-pushear [--cabeza <ref>]
+//   node scripts/check-pr-rules.mjs --grupo secretos --sin-pushear [--cabeza=<ref>]
+//     (<ref> es una rama, un tag, o --branches / --tags para push --all/--tags)
 //   node scripts/check-pr-rules.mjs --grupo pr-metadata --pr <n|url>
 //
 // Con --pr, base, rama y cabeza salen del PR (gh pr view): el check mira lo que
@@ -469,6 +470,12 @@ function main() {
   }
   if (!GRUPOS.includes(values.grupo)) {
     console.log(`[ERROR] uso: --grupo debe ser uno de: ${GRUPOS.join(', ')}`)
+    process.exit(2)
+  }
+  // --cabeza es una rev para git log: nada que git pueda leer como opcion,
+  // salvo --branches/--tags (lo que suben git push --all/--mirror/--tags).
+  if (values.cabeza?.startsWith('-') && !['--branches', '--tags'].includes(values.cabeza)) {
+    console.log(`[ERROR] uso: --cabeza no admite "${values.cabeza}"`)
     process.exit(2)
   }
 

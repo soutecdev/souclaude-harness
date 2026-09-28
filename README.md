@@ -60,7 +60,10 @@ El harness instala una de dos superficies:
   trazabilidad no desaparece: cada bloque de trabajo deja una línea con fecha en
   `Project-<PREFIJO>/worklog.md` del Vault (el hook de sesión la recuerda y muestra
   las últimas), y `sessions.md`/monitor siguen funcionando igual. La única regla
-  dura que sobrevive es la de **secretos** (deny en settings + `reglas-secretos.yml`).
+  dura que sobrevive es la de **secretos**: deny de lectura en settings y el hook
+  `reglas-pr`, que deniega todo `git push` (incluidos los merges directos a `dev` y
+  `main`) que subiría un archivo de credenciales. `reglas-secretos.yml` solo corría
+  en PRs, así que nunca cubrió esos merges.
 
 `init` pregunta el modo (o recibe `--solo`/`--equipo`); queda persistido en
 `.claude/harness.json` y los upgrades lo respetan. Una instalación existente

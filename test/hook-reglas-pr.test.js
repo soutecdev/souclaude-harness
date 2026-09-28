@@ -16,6 +16,7 @@ import {
   postPR,
   salidaPostToolUse,
   procesar,
+  prDeEsteRepo,
 } from '../templates/base/claude/hooks/reglas-pr.mjs'
 
 // Hook PreToolUse/PostToolUse de SHS-M39: con Actions en pausa, los checks de
@@ -56,12 +57,20 @@ test('pushDelComando: pushes de ramas, con y sin refspec', () => {
   assert.deepEqual(pushDelComando('git push origin fix/M1-x 2>&1 | tail -n 3', CWD).cabezas, ['fix/M1-x'])
 })
 
-test('pushDelComando: tags, borrados y comandos sin push no llevan check', () => {
+// Security review de SHS-M39: un tag sobre un commit sin pushear lo sube, y
+// --all/--mirror suben ramas que no son HEAD. Todo eso tambien se revisa.
+test('pushDelComando: tags, --all y --mirror revisan lo que de verdad suben', () => {
+  assert.deepEqual(pushDelComando('git push origin v3.16.0', CWD).cabezas, ['v3.16.0'])
+  assert.deepEqual(pushDelComando('git push origin refs/tags/v1', CWD).cabezas, ['refs/tags/v1'])
+  assert.deepEqual(pushDelComando('git push --tags', CWD).cabezas, ['--tags'])
+  assert.deepEqual(pushDelComando('git push origin --tags', CWD).cabezas, ['--tags'])
+  assert.deepEqual(pushDelComando('git push --follow-tags', CWD).cabezas, ['HEAD', '--tags'])
+  assert.deepEqual(pushDelComando('git push --all origin', CWD).cabezas, ['--branches'])
+  assert.deepEqual(pushDelComando('git push --mirror origin', CWD).cabezas, ['--branches', '--tags'])
+})
+
+test('pushDelComando: borrados y comandos sin push no llevan check', () => {
   for (const comando of [
-    'git push origin v3.16.0',
-    'git push origin refs/tags/v1',
-    'git push --tags',
-    'git push origin --tags',
     'git push origin --delete fix/M1-x',
     'git push origin :fix/M1-x',
     'git commit -m "despues hago git push"',
@@ -162,7 +171,19 @@ test('prePush: revisa la rama nombrada en el refspec', () => {
   const { correr, llamadas } = correrFalso({ raiz })
   prePush({ push: { dir: raiz, cabezas: ['fix/M1-otra'] }, raiz, correr })
   const args = llamadas.find((l) => l.cmd === process.execPath).args
-  assert.deepEqual(args.slice(-2), ['--cabeza', 'fix/M1-otra'])
+  // Con "=": una ref que empiece con "-" no se lee como otra opcion.
+  assert.equal(args.at(-1), '--cabeza=fix/M1-otra')
+  // Y el script que se ejecuta es el del proyecto del hook, no el del repo destino.
+  assert.notEqual(path.resolve(args[0]), path.resolve(raiz, 'scripts', 'check-pr-rules.mjs'))
+})
+
+test('prDeEsteRepo: el modo manual solo acepta PRs del repo de origin', () => {
+  assert.equal(prDeEsteRepo('https://github.com/soutecdev/app/pull/3', 'soutecdev/app'), true)
+  assert.equal(prDeEsteRepo('https://github.com/SoutecDev/App/pull/3', 'soutecdev/app'), true)
+  assert.equal(prDeEsteRepo('https://github.com/otra/org/pull/3', 'soutecdev/app'), false)
+  assert.equal(prDeEsteRepo('https://github.com/soutecdev/app/pull/3', null), false)
+  assert.equal(prDeEsteRepo('12', 'soutecdev/app'), true)
+  assert.equal(prDeEsteRepo('http://evil.example/x', 'soutecdev/app'), false)
 })
 
 test('postPR: FAIL de pr-metadata -> block, comentario publicado con la tabla', () => {
@@ -233,11 +254,26 @@ test('postPR: si no se pudo comentar, el agente se entera', () => {
   assert.match(postPR({ objetivo: null, raiz, correr }).texto, /No se pudo publicar el comentario/)
 })
 
-test('procesar: modo solo, repo sin el script y comandos ajenos -> nada', () => {
+test('procesar: en modo solo corre el check de secretos del push, pero no el del PR', () => {
   const solo = repoFalso({ modo: 'solo' })
-  const entradaPush = (cwd) => ({ hook_event_name: 'PreToolUse', tool_name: 'Bash', cwd, tool_input: { command: 'git push' } })
-  assert.equal(procesar(entradaPush(solo), correrFalso({ raiz: solo }).correr), null)
+  const conSecreto = correrFalso({
+    raiz: solo,
+    grupos: { secretos: { status: 1, stdout: '[FAIL] sin-secretos: archivos sospechosos en commits sin pushear: .env\n' } },
+  })
+  const push = procesar({ hook_event_name: 'PreToolUse', tool_name: 'Bash', cwd: solo, tool_input: { command: 'git merge fix/x && git push origin main' } }, conSecreto.correr)
+  assert.equal(push.hookSpecificOutput.permissionDecision, 'deny', 'el merge directo a main que se pushea se revisa')
 
+  const pr = correrFalso({ raiz: solo })
+  const salida = procesar(
+    { hook_event_name: 'PostToolUse', tool_name: 'Bash', cwd: solo, tool_input: { command: 'gh pr create --fill' }, tool_response: { stdout: 'https://github.com/o/r/pull/3' } },
+    pr.correr,
+  )
+  assert.equal(salida, null, 'en solo no hay validacion de PR')
+  assert.ok(!pr.llamadas.some((l) => l.cmd === 'gh'), 'ni siquiera consulta el PR')
+})
+
+test('procesar: repo sin el script y comandos ajenos -> nada', () => {
+  const entradaPush = (cwd) => ({ hook_event_name: 'PreToolUse', tool_name: 'Bash', cwd, tool_input: { command: 'git push' } })
   const sinScript = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude sin script '))
   assert.equal(procesar(entradaPush(sinScript), correrFalso({ raiz: sinScript }).correr), null)
 
@@ -319,7 +355,7 @@ test('hook real: tambien desde una subcarpeta y desde la tool PowerShell', () =>
   assert.equal(powershell.hookSpecificOutput.permissionDecision, 'deny')
 })
 
-test('hook real: push limpio, push al Vault y modo solo -> stdout vacio', () => {
+test('hook real: push limpio y push al Vault -> stdout vacio; en modo solo el secreto se deniega igual', () => {
   const dir = repoReal()
   fs.writeFileSync(path.join(dir, '.env.example'), 'TOKEN=\n')
   git(dir, 'add', '-A')
@@ -340,7 +376,44 @@ test('hook real: push limpio, push al Vault y modo solo -> stdout vacio', () => 
   fs.writeFileSync(path.join(dir, '.env.local'), 'X=1\n')
   git(dir, 'add', '-A', '--force')
   git(dir, 'commit', '-q', '-m', 'feat: local')
-  assert.equal(push(dir), '', 'modo solo: el hook no hace nada')
+  // Modo solo: merge directo a dev y push, sin PR. Es justo el camino que
+  // reglas-secretos.yml (solo en pull_request) nunca cubrio.
+  git(dir, 'switch', '-q', 'dev')
+  git(dir, 'merge', '-q', '--no-ff', '-m', 'Merge fix/M1-algo', 'fix/M1-algo')
+  const salida = JSON.parse(push(dir, 'git push origin dev'))
+  assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny')
+  assert.match(salida.hookSpecificOutput.permissionDecisionReason, /\.env\.local/)
+})
+
+test('hook real: nunca ejecuta el check-pr-rules.mjs del repo destino (cd a un repo ajeno)', () => {
+  const dir = repoReal()
+  const ajeno = repoReal()
+  const marca = path.join(ajeno, 'ejecutado.txt')
+  // Un script "malicioso" en el repo ajeno: si el hook lo corriera, dejaria la marca.
+  fs.writeFileSync(
+    path.join(ajeno, 'scripts', 'check-pr-rules.mjs'),
+    `import fs from 'node:fs'\nfs.writeFileSync(${JSON.stringify(marca)}, 'x')\n`,
+  )
+  fs.writeFileSync(path.join(ajeno, '.env.staging'), 'X=1\n')
+  git(ajeno, 'add', '-A')
+  git(ajeno, 'commit', '-q', '-m', 'feat: x')
+
+  const salida = JSON.parse(push(dir, `cd "${ajeno}" && git push`))
+  assert.ok(!fs.existsSync(marca), 'se ejecuto el script del repo destino')
+  // Igual se revisa, con el script confiable del proyecto del hook.
+  assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny')
+})
+
+test('hook real: el push de un tag sobre un commit con secreto se deniega', () => {
+  const dir = repoReal()
+  fs.writeFileSync(path.join(dir, 'llave.pem'), 'x\n')
+  git(dir, 'add', '-A', '--force')
+  git(dir, 'commit', '-q', '-m', 'feat: llave')
+  git(dir, 'tag', 'v9.9.9')
+  git(dir, 'reset', '-q', '--hard', 'HEAD~1')
+  const salida = JSON.parse(push(dir, 'git push origin v9.9.9'))
+  assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny')
+  assert.match(salida.hookSpecificOutput.permissionDecisionReason, /llave\.pem/)
 })
 
 test('hook real: comandos que no son push ni PR no producen nada', () => {

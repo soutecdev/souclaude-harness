@@ -60,21 +60,37 @@ Restricciones:
    - **Modo manual**: `node .claude/hooks/reglas-pr.mjs --pr <url>`, para después de
      un push correctivo (que no vuelve a disparar el PostToolUse) o si el hook no
      corrió.
-   - **Registro**: se cablea solo en el `settings.json` de equipo, con `if`
-     (`Bash(git push:*)`, `Bash(gh pr:*)` y sus equivalentes `PowerShell(…)`) para
-     no lanzar Node en cada comando de shell. El hook además se filtra solo, por si
-     una versión de Claude Code ignora `if`.
+   - **Registro**: con `if` (`Bash(git push:*)`, `Bash(gh pr:*)` y sus
+     equivalentes `PowerShell(…)`) para no lanzar Node en cada comando de shell. El
+     hook además se filtra solo, por si una versión de Claude Code ignora `if`. En
+     equipo se cablean los dos eventos; en solo, solo el PreToolUse de `git push`,
+     con un bloque idéntico al de equipo para que un cambio de modo no lo duplique.
+   - **Modo solo** (SHS-M39-T006): el check de secretos antes del push es su única
+     regla dura. `reglas-secretos.yml` solo se disparaba en `pull_request`, y en
+     solo el agente mergea directo a `dev` y a `main` y pushea sin PR, así que ese
+     camino nunca se revisó, ni siquiera antes de la pausa. El hook lo cubre: revisa
+     todo commit que el push subiría, incluidos los que trae un merge local. El
+     flujo del PR no corre en solo, porque ahí no hay plantilla ni validación de
+     PR.
    - **La ruta del comando es `${CLAUDE_PROJECT_DIR}`**, no relativa como en
      `declarar-milestone`: los hooks de tool corren en el cwd **actual** de la
      sesión, que puede ser una subcarpeta. El repo se resuelve con
      `git rev-parse --show-toplevel` desde el cwd y el `cd`/`-C` del comando. Un
      repo sin el script (el Vault, por ejemplo) no lleva check.
+   - **Solo ejecuta el script de su propio proyecto** (`<raíz del hook>/scripts/check-pr-rules.mjs`),
+     nunca el del repo destino del comando: un PreToolUse corre antes del prompt de
+     permisos, y `cd <repo ajeno> && git push` no puede servir para ejecutar código
+     de terceros. Del repo destino solo se mira que exista el script, como señal de
+     que le corresponde el check. Los pushes de tags, `--tags`, `--all` y `--mirror`
+     también se revisan, porque también suben commits. El modo manual solo acepta
+     PRs del repo de `origin`, ya que corre sin prompt. Estos tres ajustes salieron
+     del security review del PR.
    - **Falla abierto** ante problemas de infraestructura (sin `gh`, sin red, sin
-     script), pero lo avisa. No hace nada en modo solo.
-   - **Se instala en los dos modos** (como `check-pr-rules.mjs`) aunque solo se
-     cablee en equipo. Al pasar de equipo a solo, `merge-json` no quita el bloque
-     `hooks`; si el archivo quedara atado a equipo, `--prune` lo borraría y cada
-     push o PR daría MODULE_NOT_FOUND.
+     script), pero lo avisa.
+   - **Se instala en los dos modos** (como `check-pr-rules.mjs`). Al pasar de
+     equipo a solo, `merge-json` no quita el `PostToolUse` de equipo; el hook lo
+     ignora en solo, y como el archivo existe en los dos modos, `--prune` no lo
+     borra y no queda MODULE_NOT_FOUND.
 2. **`check-pr-rules.mjs` corre bien en local** (el mismo script de los workflows):
    - `.env.example`, `sample`, `template` y `dist` quedan fuera de los secretos;
    - `core.quotePath=false -z`;

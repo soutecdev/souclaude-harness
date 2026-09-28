@@ -140,10 +140,12 @@ test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin can
   const comandos = JSON.stringify(settings.hooks?.SessionStart ?? [])
   assert.ok(comandos.includes('worklog-solo.mjs'), 'el hook worklog-solo no quedo cableado en settings')
   assert.ok(!comandos.includes('declarar-milestone'), 'quedo cableado el hook de milestones')
-  // reglas-pr (SHS-M39) se instala en ambos modos pero solo se cablea en equipo.
+  // reglas-pr (SHS-M39): en solo se cablea el check de secretos del push (la
+  // unica regla dura, y los merges directos no pasan por PR), no el del PR.
   assert.ok(has(dir, '.claude/hooks/reglas-pr.mjs'))
-  assert.equal(settings.hooks?.PreToolUse, undefined, 'se cableo reglas-pr en modo solo')
-  assert.equal(settings.hooks?.PostToolUse, undefined, 'se cableo reglas-pr en modo solo')
+  assert.match(JSON.stringify(settings.hooks?.PreToolUse ?? []), /git push.*reglas-pr\.mjs/)
+  assert.equal(settings.hooks?.PostToolUse, undefined, 'se cableo el check de PR en modo solo')
+  assert.ok(settings.permissions.allow.includes('Bash(node scripts/check-pr-rules.mjs:*)'))
   // El protocolo de milestones (progress/README.md) es de equipo.
   assert.ok(!has(dir, 'progress/README.md'), 'se emitio el protocolo de milestones en solo')
 })
@@ -197,6 +199,16 @@ test('switch equipo -> solo: la skill de solo entra y las de equipo quedan obsol
   assert.ok(!obsoletos.includes('.claude/hooks/reglas-pr.mjs'))
   const lock = JSON.parse(read(dir, '.claude/harness.json'))
   assert.ok(!lock.skills.includes('jira-sync'), 'el lockfile arrastro una skill del modo anterior')
+})
+
+test('switch solo -> equipo: el PreToolUse de reglas-pr no se duplica', async () => {
+  const dir = mkRepo({ 'README.md': '' })
+  await main(['init', ...YES, '--solo'], dir)
+  assert.equal(await main(['upgrade', ...YES, '--equipo'], dir), 0)
+  const settings = JSON.parse(read(dir, '.claude/settings.json'))
+  // Mismo bloque en settings.json y settings-solo.json: el merge los une en uno.
+  assert.equal(settings.hooks.PreToolUse.length, 2, 'un grupo por tool (Bash y PowerShell), sin duplicados')
+  assert.match(JSON.stringify(settings.hooks.PostToolUse), /reglas-pr\.mjs/)
 })
 
 test('switch equipo -> solo con --prune: ningun comando de reglas-pr apunta a un archivo borrado', async () => {

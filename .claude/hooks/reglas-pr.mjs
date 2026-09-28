@@ -20,13 +20,15 @@
 //
 // Es un hook de Claude Code, no un git hook. Falla abierto ante problemas de
 // infraestructura (sin gh, sin red, sin el script): no frena por no poder
-// verificar, pero lo avisa. No hace nada en modo solo ni en repos sin
-// scripts/check-pr-rules.mjs (el Vault, por ejemplo).
+// verificar, pero lo avisa. No hace nada en repos sin
+// scripts/check-pr-rules.mjs (el Vault, por ejemplo). En modo solo corre solo
+// el check de secretos antes del push: cubre tambien los merges directos a
+// dev/main, que en solo no pasan por ningun PR.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ENTORNO = { ...process.env, GIT_TERMINAL_PROMPT: '0', GH_PROMPT_DISABLED: '1' }
 const MARCA = '<!-- souclaude:reglas-pr -->'
@@ -132,7 +134,6 @@ export function palabras(segmento, shell = 'bash') {
 const ES_GIT = /(^|[\\/])git(\.exe)?$/i
 const ES_GH = /(^|[\\/])gh(\.exe)?$/i
 const ES_CD = /^(cd|pushd|chdir|set-location|sl)$/i
-const TAG = /^(refs\/tags\/.+|v\d+(\.\d+)*)$/
 const OPCIONES_PUSH_CON_VALOR = new Set(['--repo', '-o', '--push-option', '--receive-pack', '--exec'])
 
 function carpetaTrasCd(actual, destino) {
@@ -141,9 +142,11 @@ function carpetaTrasCd(actual, destino) {
   return path.resolve(actual, expandido)
 }
 
-// Lo que un `git push` subiria, o null si el comando no pushea ramas: pushes
-// de tags, borrados de ramas remotas y comandos sin push no llevan check.
-// `cabezas` son las refs cuyos commits sin pushear hay que revisar.
+// Lo que un `git push` subiria, o null si no sube commits: los borrados de
+// ramas remotas y los comandos sin push no llevan check. `cabezas` son las
+// revs cuyos commits sin pushear hay que revisar: la rama o el tag del
+// refspec, HEAD por defecto, y --branches / --tags para --all, --mirror y
+// --tags (un tag sobre un commit sin pushear tambien lo sube).
 export function pushDelComando(comando, cwd, shell = 'bash') {
   let carpeta = cwd
   for (const segmento of segmentos(comando, shell)) {
@@ -169,11 +172,13 @@ export function pushDelComando(comando, cwd, shell = 'bash') {
     if (p[i] !== 'push') continue
 
     const posicionales = []
-    let soloTags = false
+    const extra = []
     for (let j = i + 1; j < p.length; j++) {
       const arg = p[j]
       if (arg === '--delete' || arg === '-d') return null
-      if (arg === '--tags') soloTags = true
+      if (arg === '--tags' || arg === '--follow-tags') extra.push('--tags')
+      if (arg === '--all' || arg === '--branches') extra.push('--branches')
+      if (arg === '--mirror') extra.push('--branches', '--tags')
       if (OPCIONES_PUSH_CON_VALOR.has(arg)) {
         j++
       } else if (!arg.startsWith('-')) {
@@ -181,15 +186,17 @@ export function pushDelComando(comando, cwd, shell = 'bash') {
       }
     }
     const refspecs = posicionales.slice(1)
-    if (refspecs.length === 0) return soloTags ? null : { dir, cabezas: ['HEAD'] }
-
     const cabezas = []
     for (const refspec of refspecs) {
       if (refspec.startsWith(':')) continue // borrar la rama remota
       const origen = refspec.replace(/^\+/, '').split(':')[0]
-      if (TAG.test(origen)) continue
       cabezas.push(origen === '' || origen === '@' ? 'HEAD' : origen)
     }
+    // Sin refspec, push de la rama actual; --tags solo, en cambio, no la sube.
+    if (refspecs.length === 0 && !extra.includes('--branches') && !(extra.includes('--tags') && !p.includes('--follow-tags'))) {
+      cabezas.push('HEAD')
+    }
+    cabezas.push(...extra)
     return cabezas.length ? { dir, cabezas: [...new Set(cabezas)] } : null
   }
   return null
@@ -251,6 +258,13 @@ function rutaDelScript(raiz) {
   return path.join(raiz, 'scripts', 'check-pr-rules.mjs')
 }
 
+// El script que se EJECUTA es siempre el del proyecto al que pertenece este
+// hook (.claude/hooks/ -> la raiz), nunca el del repo destino del comando: un
+// PreToolUse corre antes del prompt de permisos, y `cd <repo ajeno> && git push`
+// no puede servir para ejecutar un check-pr-rules.mjs de terceros. El del repo
+// destino solo se mira (existencia) para decidir si le corresponde el check.
+const SCRIPT_CONFIABLE = rutaDelScript(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..'))
+
 function enModoSolo(raiz) {
   try {
     return JSON.parse(fs.readFileSync(path.join(raiz, '.claude', 'harness.json'), 'utf8')).modo === 'solo'
@@ -260,17 +274,22 @@ function enModoSolo(raiz) {
 }
 
 // El repo donde corre el comando, si le corresponde el check: con el script
-// del harness y en modo equipo. El Vault y cualquier otro repo quedan fuera.
-function repoConReglas(dir, correr) {
+// del harness. El Vault y cualquier otro repo quedan fuera. Los checks del PR
+// son solo de modo equipo (en solo no hay plantilla ni validacion de PR); el
+// de secretos antes del push corre en los dos modos: en solo es la unica regla
+// dura, y los merges directos a dev/main se pushean sin pasar por ningun PR.
+function repoConReglas(dir, correr, { tambienEnSolo = false } = {}) {
   const raiz = dir ? raizDelRepo(dir, correr) : null
-  if (!raiz || enModoSolo(raiz) || !fs.existsSync(rutaDelScript(raiz))) return null
+  if (!raiz || !fs.existsSync(rutaDelScript(raiz)) || !fs.existsSync(SCRIPT_CONFIABLE)) return null
+  if (!tambienEnSolo && enModoSolo(raiz)) return null
   return raiz
 }
 
 export function prePush({ push, raiz, correr }) {
   for (const cabeza of push.cabezas) {
-    const args = [rutaDelScript(raiz), '--grupo', 'secretos', '--sin-pushear']
-    if (cabeza !== 'HEAD') args.push('--cabeza', cabeza)
+    const args = [SCRIPT_CONFIABLE, '--grupo', 'secretos', '--sin-pushear']
+    // Con "=": una ref que empiece con "-" no puede leerse como otra opcion.
+    if (cabeza !== 'HEAD') args.push(`--cabeza=${cabeza}`)
     const r = correr(process.execPath, args, { cwd: raiz, timeout: 30_000 })
     const fail = (r.stdout ?? '').split('\n').find((l) => l.startsWith('[FAIL] sin-secretos'))
     if (r.status === 1 && fail) {
@@ -389,7 +408,7 @@ export function postPR({ objetivo, raiz, correr }) {
   correr('git', ['fetch', 'origin', '--quiet'], { cwd: raiz, timeout: 30_000 })
 
   const resultados = GRUPOS.map(({ grupo, bloqueante }) => {
-    const r = correr(process.execPath, [rutaDelScript(raiz), '--grupo', grupo, '--pr', pr.url], { cwd: raiz, timeout: 45_000 })
+    const r = correr(process.execPath, [SCRIPT_CONFIABLE, '--grupo', grupo, '--pr', pr.url], { cwd: raiz, timeout: 45_000 })
     const salida = (r.stdout ?? '').trim() || `[ERROR] ${primeraLinea(r)}`
     return { grupo, bloqueante, status: r.status === 0 || r.status === 1 ? r.status : 2, salida }
   })
@@ -406,6 +425,20 @@ export function postPR({ objetivo, raiz, correr }) {
     errorComentario: publicado.status === 0 ? null : primeraLinea(publicado),
   })
   return { estado, url: pr.url, texto }
+}
+
+// El modo manual corre sin prompt (regla allow): solo comenta en PRs del repo
+// propio, no en cualquier PR donde el token de gh pueda escribir.
+function repoDelOrigen(raiz, correr) {
+  const r = correr('git', ['remote', 'get-url', 'origin'], { cwd: raiz, timeout: 10_000 })
+  const m = r.status === 0 && r.stdout.trim().match(/[/:]([^/:]+\/[^/]+?)(?:\.git)?\/?$/)
+  return m ? m[1].toLowerCase() : null
+}
+
+export function prDeEsteRepo(objetivo, repoOrigen) {
+  const m = String(objetivo ?? '').match(/^https:\/\/[\w.-]+\/([\w.-]+\/[\w.-]+)\/pull\/\d+\/?$/)
+  if (!m) return !/^https?:/.test(String(objetivo ?? '')) // numero o rama: gh lo resuelve en este repo
+  return repoOrigen != null && m[1].toLowerCase() === repoOrigen
 }
 
 export function salidaPostToolUse({ estado, texto, url }) {
@@ -429,7 +462,7 @@ export function procesar(entrada, correr = correrReal) {
 
   if (entrada.hook_event_name === 'PreToolUse') {
     const push = pushDelComando(comando, cwd, shell)
-    const raiz = push && repoConReglas(push.dir, correr)
+    const raiz = push && repoConReglas(push.dir, correr, { tambienEnSolo: true })
     return raiz ? prePush({ push, raiz, correr }) : null
   }
   if (entrada.hook_event_name === 'PostToolUse') {
@@ -459,7 +492,12 @@ function main() {
       console.log('reglas-pr: este repo no tiene scripts/check-pr-rules.mjs del harness (o esta en modo solo).')
       process.exit(2)
     }
-    const { estado, texto } = postPR({ objetivo: process.argv[indicePr + 1] ?? null, raiz, correr: correrReal })
+    const objetivo = process.argv[indicePr + 1] ?? null
+    if (!prDeEsteRepo(objetivo, repoDelOrigen(raiz, correrReal))) {
+      console.log(`reglas-pr: ${objetivo} no es un PR de este repo (origin); no se corre ni se comenta.`)
+      process.exit(2)
+    }
+    const { estado, texto } = postPR({ objetivo, raiz, correr: correrReal })
     console.log(texto)
     process.exit(estado === 'ok' ? 0 : estado === 'fail' ? 1 : 2)
   }

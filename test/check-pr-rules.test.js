@@ -371,3 +371,14 @@ test('uso incorrecto: [ERROR] y exit 2', () => {
   assert.equal(r.status, 2)
   assert.match(r.stdout, /^\[ERROR\] uso: --grupo debe ser uno de/)
 })
+
+// --cabeza termina en git log: nada que git pueda leer como opcion
+// (--output=<archivo> escribiria un archivo), salvo --branches/--tags.
+test('--cabeza rechaza opciones de git, salvo --branches y --tags', () => {
+  const dir = repoConBase()
+  const r = correrCheck(dir, ['--grupo', 'secretos', '--sin-pushear', '--cabeza=--output=pwned.txt'])
+  assert.equal(r.status, 2)
+  assert.ok(!fs.existsSync(path.join(dir, 'pwned.txt')))
+  commitear(dir, { '.env.local': 'X=1\n' }, 'feat: x')
+  assert.equal(correrCheck(dir, ['--grupo', 'secretos', '--sin-pushear', '--cabeza=--branches']).status, 1)
+})
