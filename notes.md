@@ -206,3 +206,19 @@ de `vault-seeds.js` no cambió. Fue solo prosa en 4 copias (skill soutec-github,
 CLAUDE.md ×2, AGENTS.md) + progress/README.md + vault-milestones + PR template.
 Gotcha: el test de dogfood no compara contenido local vs templates/base (SHS-M26);
 verificar con `diff` a mano cada par antes de commitear.
+
+## 2026-09-29 — SHS-M40: Azure Boards como espejo activo de SHS
+
+Carga inicial en el proyecto `Harness` (proceso Basic): 13 Epics y 25 Issues, con el
+Epic #288 de M40 y los #290–#301 de los milestones abiertos. Gotchas:
+- `core_get_identity_ids` da HTTP 401 con el PAT (solo Work Items). No hace falta:
+  `System.AssignedTo` acepta el correo (`libarra@…`, `ialvarez@…`) y la respuesta trae
+  el nombre resuelto para verificar. El mapeo `@quien → correo` vive en `azdo.json`.
+- Los ids de work item son de toda la organización (tras el #13 vino el #288): no
+  asumas que los del proyecto son consecutivos.
+- `add_child` no admite tags: para respetar la idempotencia por tag se usa `create`
+  con `System.Tags` y luego `link` con `type: parent`.
+- Las escrituras en lote (`link`, `update_batch`) devuelven un JSON de ~100 KB que el
+  cliente vuelca a un archivo: verifica el resultado con `get_batch` y `fields`, no
+  leyendo esa respuesta.
+- Basic no tiene `Resolved`: En review se queda en Doing con comentario.
