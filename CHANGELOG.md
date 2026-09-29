@@ -2,7 +2,7 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Sin publicar]
+## [3.16.0] — 2026-09-29
 
 ### Agregado
 
