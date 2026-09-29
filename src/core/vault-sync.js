@@ -44,7 +44,7 @@ export async function pullRebaseSeguro({ vaultPath, git = gitReal }) {
  * Espejo al Vault: add -> commit -> pull --rebase -> push, en ese orden. El pull
  * va DESPUES del commit para que el rebase integre lo nuestro sobre lo remoto
  * (mismo modelo que el publisher). "Nothing to commit" no es un error: el Vault
- * ya dice lo mismo.
+ * ya dice lo mismo — salvo que tenga commits locales sin subir, que se empujan.
  * @param {object} p
  * @param {string} p.vaultPath ruta local del Vault
  * @param {string} p.mensaje mensaje de commit (convencion: `docs:` espejos, `chore:` kanban)
@@ -63,10 +63,13 @@ export async function pushSeguro({ vaultPath, mensaje, paths = null, git = gitRe
     await git(['-C', vaultPath, 'commit', '-m', mensaje])
   } catch {
     // commit sale con error tanto por "nothing to commit" como por un fallo real.
-    // El desempate es el status: limpio => no habia nada que espejar.
-    const limpio = await sinCambios(vaultPath, git)
-    if (limpio) return { ok: true, motivo: 'sin_cambios' }
-    return { ok: false, motivo: 'push_fallo' }
+    // El desempate es el status: sucio => fallo real. Limpio y sin commits
+    // locales por subir => no habia nada que espejar. Limpio pero adelantado del
+    // remoto => alguien commiteo a mano y nunca pusheo: se sigue al pull + push
+    // en vez de responder "sin_cambios" y dejar ese commit varado.
+    const { limpio, adelantado } = await estadoDelVault(vaultPath, git)
+    if (!limpio) return { ok: false, motivo: 'push_fallo' }
+    if (!adelantado) return { ok: true, motivo: 'sin_cambios' }
   }
 
   const pull = await pullRebaseSeguro({ vaultPath, git })
@@ -83,11 +86,20 @@ export async function pushSeguro({ vaultPath, mensaje, paths = null, git = gitRe
   return { ok: true, motivo: null }
 }
 
-async function sinCambios(vaultPath, git) {
+/**
+ * Estado del Vault con UNA llamada (`status --porcelain -b`): la primera linea es
+ * la cabecera de la rama (`## main...origin/main [ahead 1]`), el resto son los
+ * archivos modificados. Ante cualquier error se asume sucio (el camino seguro:
+ * el llamador lo trata como fallo, nunca como "nada que hacer").
+ * @returns {Promise<{limpio: boolean, adelantado: boolean}>}
+ */
+async function estadoDelVault(vaultPath, git) {
   try {
-    const status = await git(['-C', vaultPath, 'status', '--porcelain'])
-    return status.trim() === ''
+    const lineas = (await git(['-C', vaultPath, 'status', '--porcelain', '-b'])).split('\n')
+    const cabecera = lineas.find((l) => l.startsWith('## ')) ?? ''
+    const archivos = lineas.filter((l) => l.trim() !== '' && !l.startsWith('## '))
+    return { limpio: archivos.length === 0, adelantado: /\[ahead \d+/.test(cabecera) }
   } catch {
-    return false
+    return { limpio: false, adelantado: false }
   }
 }
