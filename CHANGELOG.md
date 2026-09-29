@@ -2,6 +2,26 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Sin publicar]
+
+### Corregido
+
+- **`souclaude vault-sync --push` ya no deja varados los commits locales del Vault**
+  (SHS-M40-T004). Con el árbol limpio, el comando respondía «nada que espejar» aunque
+  el Vault tuviera un commit hecho a mano sin subir, y ese commit nunca llegaba al
+  remoto. Ahora, si el árbol está limpio pero la rama va adelantada del remoto
+  (`ahead`), hace el `pull --rebase` y el `push`; solo responde «nada que espejar»
+  cuando de verdad no hay nada pendiente. Cubierto con pruebas (limpio al día,
+  limpio adelantado, adelantado y atrasado, push fallido, árbol sucio).
+
+### Cambiado
+
+- **Skill `soutec-github`: el hito de release se publica con `vault-sync --push`.**
+  La sección de la ficha del Observatorio indica el comando exacto, que el archivo se
+  edita sin commitear, la prohibición de `git add/commit/push` a mano sobre el Vault
+  y que, si `vault-sync` no publica, se averigua la causa y se repara en el harness
+  en vez de rodearlo. Ambas copias de la skill quedan idénticas.
+
 ## [3.16.1] — 2026-09-29
 
 ### Cambiado

@@ -413,7 +413,14 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
   la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
   versión propuesta en `package.json` y resumen del cambio principal —
-  CHANGELOG o descripción del PR de release). **En el mismo momento, revisa
+  CHANGELOG o descripción del PR de release). **El push al Vault va siempre por
+  `souclaude vault-sync --push -m "docs: hito vX.Y.Z en la ficha del Observatorio"
+  --paths Project-<PREFIJO>`**, con el archivo editado y **sin commitear**: ese
+  comando hace el ciclo completo (add → commit → pull → push). No uses
+  `git add/commit/push` a mano sobre el Vault. Si `vault-sync` falla o no publica,
+  no lo rodees con git manual: averigua por qué (`souclaude vault-sync` sin flags
+  hace solo el pull; `--push` necesita el CLI global) y repórtalo para arreglarlo
+  en el harness. **En el mismo momento, revisa
   toda "Próxima versión"** —no solo la línea que coincida en texto con el hito
   que acabas de agregar— contra lo que este release entrega de verdad
   (CHANGELOG o descripción del PR de release):
