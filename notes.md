@@ -206,3 +206,37 @@ de `vault-seeds.js` no cambió. Fue solo prosa en 4 copias (skill soutec-github,
 CLAUDE.md ×2, AGENTS.md) + progress/README.md + vault-milestones + PR template.
 Gotcha: el test de dogfood no compara contenido local vs templates/base (SHS-M26);
 verificar con `diff` a mano cada par antes de commitear.
+
+## 2026-09-29 — SHS-M40: Azure Boards como espejo activo de SHS
+
+Carga inicial en el proyecto `Harness` (proceso Basic): 13 Epics y 25 Issues, con el
+Epic #288 de M40 y los #290–#301 de los milestones abiertos. Gotchas:
+- `core_get_identity_ids` da HTTP 401 con el PAT (solo Work Items). No hace falta:
+  `System.AssignedTo` acepta el correo (`libarra@…`, `ialvarez@…`) y la respuesta trae
+  el nombre resuelto para verificar. El mapeo `@quien → correo` vive en `azdo.json`.
+- Los ids de work item son de toda la organización (tras el #13 vino el #288): no
+  asumas que los del proyecto son consecutivos.
+- `add_child` no admite tags: para respetar la idempotencia por tag se usa `create`
+  con `System.Tags` y luego `link` con `type: parent`.
+- Las escrituras en lote (`link`, `update_batch`) devuelven un JSON de ~100 KB que el
+  cliente vuelca a un archivo: verifica el resultado con `get_batch` y `fields`, no
+  leyendo esa respuesta.
+- Basic no tiene `Resolved`: En review se queda en Doing con comentario.
+
+## 2026-09-29 — SHS-M40-T003: consideraciones de Azure Boards aplicadas
+
+Se llevaron a la skill `azdo-sync` y al proyecto `Harness` las reglas del usuario (las
+de OBS). Gotchas de esta pasada:
+- El MCP no toca las columnas del tablero ni las áreas: van por REST con el mismo PAT
+  (`ADO_MCP_AUTH_TOKEN`, sin imprimirlo). `PUT …/{equipo}/_apis/work/boards/{tablero}/columns`
+  con TODAS las columnas y sus `id`; la nueva («En Review») se asocia al State Doing.
+- `wit_query` `wiql` devuelve solo ids: para ver campos usa `get_batch` con `fields` o
+  REST. Una consulta por REST devuelve también los campos de columna
+  (`WEF_<id>_Kanban.Column`, distinto por tablero).
+- Un work item se puede **crear directamente en Done** (`System.State` en el `create`),
+  con su padre en el mismo POST (`relations` con `Hierarchy-Reverse`): el respaldo del
+  historial no necesita `create` + `update` + `link`.
+- El texto de las tarjetas trae `@usuario-github` dentro de la descripción: el dueño se
+  extrae solo cuando `@quién` es un campo completo (` · @quién · `), no con un `@\w+` suelto.
+- El Vault tenía M35 y M37 «En curso» con todos sus PRs mergeados: el hook de sesión solo
+  detecta PRs mergeados de tarjetas En review, no de milestones. Revisar a mano.
