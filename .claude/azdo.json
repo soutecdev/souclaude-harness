@@ -6,11 +6,17 @@
   "epicWorkItemType": "Epic",
   "taskWorkItemType": "Issue",
   "estados": {
-    "_comentario": "Proceso Basic del proyecto Harness (To Do / Doing / Done, sin Resolved). Mapeo columna del Vault -> State acordado el 2026-09-29 (SHS-M40). En review no tiene estado propio: la tarea se queda en Doing con un comentario que anota el PR.",
+    "_comentario": "Proceso Basic del proyecto Harness (To Do / Doing / Done, sin Resolved). Mapeo columna del Vault -> State acordado el 2026-09-29 (SHS-M40). En review no tiene estado propio: es la columna En Review del tablero (ver tablero), asociada al State Doing. Solo los Epics la usan (todas sus tareas en Done y PR sin mergear); una tarea En review del Vault se queda en Doing con un comentario que anota el PR.",
     "Backlog": "To Do",
     "En curso": "Doing",
     "En review": "Doing",
     "Hecho": "Done"
+  },
+  "tablero": {
+    "_comentario": "Equipo Harness Team. Ambos tableros (Epics e Issues) tienen la columna En Review entre Doing y Done, asociada al State Doing: mover un item ahi es cambiar el campo de columna, el State sigue en Doing. El campo es distinto en cada tablero (se descubre leyendo un work item de cada uno).",
+    "columnaEnReview": "En Review",
+    "campoColumnaEpic": "WEF_CFE3FA1023F440B19C55ECF5921120C6_Kanban.Column",
+    "campoColumnaIssue": "WEF_A286BBE8329F418BAE5666BA44795A82_Kanban.Column"
   },
   "responsables": {
     "_comentario": "@quien de la tarjeta -> correo para System.AssignedTo. El conector no resuelve identidades (core_get_identity_ids da HTTP 401 con un PAT solo de Work Items), asi que se asigna por correo. @pendiente = sin asignar.",

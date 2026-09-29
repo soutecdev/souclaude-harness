@@ -222,3 +222,21 @@ Epic #288 de M40 y los #290–#301 de los milestones abiertos. Gotchas:
   cliente vuelca a un archivo: verifica el resultado con `get_batch` y `fields`, no
   leyendo esa respuesta.
 - Basic no tiene `Resolved`: En review se queda en Doing con comentario.
+
+## 2026-09-29 — SHS-M40-T003: consideraciones de Azure Boards aplicadas
+
+Se llevaron a la skill `azdo-sync` y al proyecto `Harness` las reglas del usuario (las
+de OBS). Gotchas de esta pasada:
+- El MCP no toca las columnas del tablero ni las áreas: van por REST con el mismo PAT
+  (`ADO_MCP_AUTH_TOKEN`, sin imprimirlo). `PUT …/{equipo}/_apis/work/boards/{tablero}/columns`
+  con TODAS las columnas y sus `id`; la nueva («En Review») se asocia al State Doing.
+- `wit_query` `wiql` devuelve solo ids: para ver campos usa `get_batch` con `fields` o
+  REST. Una consulta por REST devuelve también los campos de columna
+  (`WEF_<id>_Kanban.Column`, distinto por tablero).
+- Un work item se puede **crear directamente en Done** (`System.State` en el `create`),
+  con su padre en el mismo POST (`relations` con `Hierarchy-Reverse`): el respaldo del
+  historial no necesita `create` + `update` + `link`.
+- El texto de las tarjetas trae `@usuario-github` dentro de la descripción: el dueño se
+  extrae solo cuando `@quién` es un campo completo (` · @quién · `), no con un `@\w+` suelto.
+- El Vault tenía M35 y M37 «En curso» con todos sus PRs mergeados: el hook de sesión solo
+  detecta PRs mergeados de tarjetas En review, no de milestones. Revisar a mano.

@@ -2,6 +2,24 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Sin publicar]
+
+### Cambiado
+
+- **Skill `azdo-sync`: incorpora las consideraciones de Azure Boards del usuario**
+  (SHS-M40-T003). La skill dice ahora lo que el equipo ya hacía a mano en el tablero:
+  el Epic (no la tarea) pasa a la columna **En Review** cuando todas sus tareas están en
+  Done y su PR no está mergeado, y a Done solo con merge; las tareas pasan a Done al
+  subir su trabajo, nunca a En Review por falta de merge. Añade las secciones de
+  asignación (incluida la excepción de las tarjetas `@pendiente`), la creación de la
+  columna En Review por REST, los Epics de alcance abierto y fuera del tablero (por
+  subárea, no por columna), el espejo completo con su checklist de verificación, el
+  orden de las tareas, el formato de resumen de la descripción de los Epics y los
+  gotchas de Azure (escapar `<` y `>`, área por `AreaId`). Reemplaza dos reglas que
+  contradecían lo anterior («los estados son independientes» y «En review → Resolved
+  o Active con comentario»). Ambas copias de la skill quedan idénticas y `azdo.json` del
+  repo anota la columna En Review y los campos de columna de cada tablero.
+
 ## [3.16.0] — 2026-09-29
 
 ### Agregado
