@@ -104,7 +104,9 @@ Reglas que causan errores si se omiten. Agregar/quitar según el proyecto.
 
 La única regla dura del modo solo. Jamás commitear `.env`, `*.pem`, `*.key`,
 `*.pfx`, `credentials.json`, `secrets.json`, tokens ni contraseñas.
-`.claude/settings.json` ya deniega su lectura vía `permissions.deny`.
+`.claude/settings.json` ya deniega su lectura vía `permissions.deny`, y el hook
+`reglas-pr` deniega cualquier `git push` —incluidos los merges directos a `dev`
+y `main`— que subiría uno de esos archivos (skill `soutec-github-solo`).
 
 ## Referencias
 

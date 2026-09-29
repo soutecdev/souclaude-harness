@@ -2,6 +2,68 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.16.0] — 2026-09-29
+
+### Agregado
+
+- **Hook `reglas-pr`: los checks de PR corren en la sesión del agente** (SHS-M39-T003).
+  Con GitHub Actions en pausa (SHS-M36), nada validaba los PRs. Un hook de Claude Code
+  (`.claude/hooks/reglas-pr.mjs`, registrado en el `settings.json` de equipo) corre
+  `check-pr-rules.mjs` en el momento en que importa. Antes de cada `git push` revisa
+  el grupo `secretos` sobre cada commit que el push subiría y, si falla, deniega el
+  push. Al crear o editar un PR (`gh pr create`, `gh pr edit` con body o base) corre
+  los tres grupos contra el PR, publica el resultado como comentario en el PR (la
+  evidencia para el revisor) y se lo devuelve al agente: bloquea si fallan `secretos`
+  o `pr-metadata`; `rama-commits` sigue siendo informativo. Modo manual para después
+  de un push correctivo: `node .claude/hooks/reglas-pr.mjs --pr <url>`. Falla abierto
+  ante problemas de infraestructura, pero lo avisa; no hace nada en repos sin el
+  script. Tras el `upgrade`, hay que reiniciar Claude Code para que cargue el hook. ADR
+  `docs/decisions/20260928-checks-de-pr-en-la-sesion.md`.
+
+### Cambiado
+
+- **`check-pr-rules.mjs` corre bien fuera de Actions** (SHS-M39-T001). Con `--pr <n|url>`,
+  base, rama y cabeza (`headRefOid`) salen del PR, no del checkout local. El flag nuevo
+  `--sin-pushear` revisa commit por commit lo que un push subiría. `mergeable: UNKNOWN`
+  se relee mientras el PR está abierto. Si `gh` o `git` fallan, sale `[ERROR]` con exit 2,
+  distinto de un FAIL de regla (exit 1). La versión se compara con los tags del remoto
+  (`ls-remote`). Sin `--pr`, el comportamiento para los workflows no cambia.
+- **Las instrucciones dejan de atribuir checks y tags a Actions** (SHS-M39-T004). La skill
+  `soutec-github` explica el hook y qué hacer ante un FAIL, y dice que los tags los crea
+  el agente mientras dure la pausa. En `harness-upgrade`, el tag-release de stacks no
+  Node se genera pausado y el reporte pide reiniciar Claude Code si se sumaron hooks.
+  `CLAUDE.md`, README y MAINTAINERS se actualizaron en consecuencia. Los párrafos de la
+  pausa llevan el marcador `PAUSA TEMPORAL (SHS-M36)`.
+
+### Corregido
+
+- **Seguridad, modo solo: los merges directos a `dev`/`main` nunca se revisaban por
+  secretos** (SHS-M39-T006). `reglas-secretos.yml` solo se disparaba en `pull_request`, y
+  en modo solo el agente mergea y pushea sin PR, así que la única regla dura del modo
+  nunca se aplicó en ese camino (antes de la pausa tampoco). Ahora `settings-solo.json`
+  cablea el hook `reglas-pr` en el PreToolUse de `git push`: se deniega todo push que
+  subiría un archivo de credenciales, incluidos los commits que trae un merge local. El
+  flujo de PR sigue siendo solo de equipo.
+- **Endurecimiento de `reglas-pr` tras el security review** (SHS-M39-T006):
+  - el hook ejecuta siempre el `check-pr-rules.mjs` de su propio proyecto, nunca el del
+    repo destino del comando (`cd <repo ajeno> && git push` ya no ejecuta código ajeno
+    antes del prompt de permisos);
+  - los pushes de tags, `--tags`, `--all` y `--mirror` también se revisan;
+  - `--cabeza` no acepta opciones de git;
+  - el modo manual solo comenta en PRs del repo de `origin`.
+- **`tag-release.mjs` fallaba con el tag móvil local desactualizado** (SHS-M39-T002).
+  `git fetch --tags` sin `--force` muere con «would clobber existing tag» (git ≥ 2.20)
+  antes de crear nada; ahora usa `--force`. La opción nueva `--ref origin/main` taggea
+  ese commit sin cambiar de rama:
+  `git fetch origin && node scripts/tag-release.mjs --ref origin/main`.
+- **Falsos negativos y positivos del grupo `secretos`** (SHS-M39-T001). `.env.example`
+  (y `sample`/`template`/`dist`), que el propio harness siembra, dejó de contar como
+  secreto. Las rutas con tildes o ñ se detectan: git las escribía entre comillas y
+  ningún patrón las reconocía.
+- **La skill mandaba omitir secciones que el check exige** (SHS-M39-T004).
+  «Descripción del cambio», «Evidencia», «Impacto / Riesgos» y «Requiere versión /
+  release» van siempre en el PR.
+
 ## [3.15.2] — 2026-09-25
 
 ### Corregido

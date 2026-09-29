@@ -5,24 +5,34 @@
 // propio). #7 y #10 quedaron fuera por decision explicita (ver PR que agrego
 // este script): #7 no esta documentada en el skill, #10 no aplica a este repo.
 //
-// Las 7 reglas se agrupan en tres --grupo, cada uno con su propio workflow y
-// su propio check en GitHub (SHS-M33): un fallo de formato de commit no debe
-// verse igual de grave que un secreto filtrado. "CI opcional" abajo significa
-// que el check corre y puede quedar en rojo (visibilidad), pero
-// github-protect.js no lo suma a required_status_checks: no bloquea el merge.
+// Las 7 reglas se agrupan en tres --grupo (SHS-M33): un fallo de formato de
+// commit no debe verse igual de grave que un secreto filtrado. Mientras GitHub
+// Actions esta en pausa (SHS-M36) no las corre CI: las corre el hook de Claude
+// Code reglas-pr (.claude/hooks/reglas-pr.mjs, SHS-M39) en la sesion del
+// agente. "Bloqueante" = el hook deniega el push o le devuelve el FAIL al
+// agente (y, con Actions activo, github-protect.js lo exige como check
+// requerido); "informativo" = se reporta, pero no frena nada.
 //
-//   rama-commits  -> #1 rama-formato, #2 commits-formato          (CI opcional)
-//   secretos      -> #3 sin-secretos                              (CI required)
+//   rama-commits  -> #1 rama-formato, #2 commits-formato          (informativo)
+//   secretos      -> #3 sin-secretos                              (bloqueante)
 //   pr-metadata   -> #5 base=dev, #6 mergeable, #8 version,
-//                    #9 secciones-PR                              (CI required)
+//                    #9 secciones-PR                              (bloqueante)
 //
 // Uso:
-//   node scripts/check-pr-rules.mjs --grupo rama-commits
-//   node scripts/check-pr-rules.mjs --grupo secretos
-//   node scripts/check-pr-rules.mjs --grupo pr-metadata --pr <numero>
+//   node scripts/check-pr-rules.mjs --grupo rama-commits [--pr <n|url>]
+//   node scripts/check-pr-rules.mjs --grupo secretos [--pr <n|url>]
+//   node scripts/check-pr-rules.mjs --grupo secretos --sin-pushear [--cabeza=<ref>]
+//     (<ref> es una rama, un tag, o --branches / --tags para push --all/--tags)
+//   node scripts/check-pr-rules.mjs --grupo pr-metadata --pr <n|url>
 //
-// Sale con codigo 1 si alguna regla determinista en True/False dio False.
-// Las reglas en None (no medibles en este contexto) se reportan pero no rompen el build.
+// Con --pr, base, rama y cabeza salen del PR (gh pr view): el check mira lo que
+// ve GitHub, no el checkout local; corre antes `git fetch origin` para que la
+// cabeza del PR exista en local. --sin-pushear revisa cada commit que un push
+// subiria (los que no estan en ningun origin/*), no solo el arbol final.
+//
+// Exit 0: sin FAIL. Exit 1: alguna regla dio FAIL. Exit 2: no se pudo verificar
+// (gh o git fallaron, o el uso es incorrecto) y se imprime una linea [ERROR].
+// Las reglas en skip (no medibles en este contexto) se reportan pero no fallan.
 
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -52,10 +62,55 @@ const COMMIT_TIPOS = ['feat', 'fix', 'docs', 'chore', 'refactor', 'test', 'style
 const TIPOS_REGEX = COMMIT_TIPOS.map((t) => (t === 'revert' ? '[Rr]evert' : t)).join('|')
 const COMMIT_REGEX = new RegExp(`^(${TIPOS_REGEX}): [a-zA-ZÁÉÍÓÚÜÑáéíóúüñ].*[^.]$`)
 const COMMIT_MENSAJES_PROHIBIDOS = ['update', 'fix', 'cosas', 'ya', 'ahora si', 'ahora sí']
-const SECRETO_ARCHIVOS = [/(^|\/)\.env(\..+)?$/, /\.pem$/, /\.key$/, /\.pfx$/, /(^|\/)credentials\.json$/, /(^|\/)secrets\.json$/]
+// .env.example (y sus variantes sample/template/dist) es la plantilla sin
+// valores que la propia skill pide commitear y que el harness siembra: no es un
+// secreto. Cualquier otro .env.* si lo es (.env.local, .env.staging...).
+const SECRETO_ARCHIVOS = [
+  /(^|\/)\.env(?!\.(?:example|sample|template|dist)$)(\..+)?$/,
+  /\.pem$/,
+  /\.key$/,
+  /\.pfx$/,
+  /(^|\/)credentials\.json$/,
+  /(^|\/)secrets\.json$/,
+]
 
-function sh(args) {
-  return execFileSync(args[0], args.slice(1), { encoding: 'utf8' }).trim()
+// Sin prompts de credenciales: un check que se cuelga esperando un usuario
+// que no existe (hook, CI) es peor que uno que falla.
+const ENTORNO = { ...process.env, GIT_TERMINAL_PROMPT: '0', GH_PROMPT_DISABLED: '1' }
+
+function sh(args, { red = false } = {}) {
+  return execFileSync(args[0], args.slice(1), {
+    encoding: 'utf8',
+    env: ENTORNO,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: red ? 60_000 : undefined,
+  }).trim()
+}
+
+// core.quotePath=false + -z: con el default, git escribe una ruta con tildes o
+// enie ("configuración/.env") entre comillas y con escapes octales, y ningun
+// patron anclado con $ la reconoce.
+function rutas(args) {
+  const salida = execFileSync('git', ['-c', 'core.quotePath=false', ...args], {
+    encoding: 'utf8',
+    env: ENTORNO,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  return rutasDeSalidaZ(salida)
+}
+
+export function rutasDeSalidaZ(salida) {
+  return salida
+    .split('\0')
+    .map((s) => s.replace(/^\n+/, ''))
+    .filter(Boolean)
+}
+
+export function describeError(e) {
+  if (e?.code === 'ENOENT') return `no se encontro "${e.path ?? 'el comando'}" en el PATH`
+  if (e?.code === 'ETIMEDOUT' || e?.signal === 'SIGTERM') return 'se agoto el tiempo de espera'
+  const stderr = (e?.stderr ?? '').toString().trim()
+  return (stderr || String(e?.message ?? e)).split('\n')[0]
 }
 
 function ramaActual() {
@@ -79,8 +134,21 @@ function cabezaDeLaRama() {
   return 'HEAD'
 }
 
-function commitsDeLaRama(baseRef) {
-  const cabeza = cabezaDeLaRama()
+// Con --pr la cabeza es el commit que GitHub tiene como cabeza del PR, no el
+// checkout local (que puede ser otra rama o tener commits sin pushear). Si ese
+// commit no esta en local, las reglas que lo necesitan salen en skip: evaluar
+// HEAD en su lugar daria un resultado sobre algo que no es el PR.
+function cabezaDelPR(pr) {
+  if (!pr?.headRefOid) return null
+  try {
+    sh(['git', 'cat-file', '-e', `${pr.headRefOid}^{commit}`])
+    return pr.headRefOid
+  } catch {
+    return null
+  }
+}
+
+function commitsDeLaRama(baseRef, cabeza) {
   const log = sh(['git', 'log', `${baseRef}..${cabeza}`, '--no-merges', '--format=%H%x1f%s'])
   if (!log) return []
   return log.split('\n').map((linea) => {
@@ -89,21 +157,46 @@ function commitsDeLaRama(baseRef) {
   })
 }
 
-function archivosAgregados(baseRef) {
-  const cabeza = cabezaDeLaRama()
-  const salida = sh(['git', 'diff', `${baseRef}..${cabeza}`, '--diff-filter=A', '--name-only'])
-  return salida ? salida.split('\n') : []
+// Diff de arboles: lo que el PR agregaria a la base al mergearse.
+function archivosAgregados(baseRef, cabeza) {
+  return rutas(['diff', `${baseRef}..${cabeza}`, '--diff-filter=A', '--name-only', '-z'])
 }
 
+// Commit por commit, todo lo que un push subiria: un archivo agregado en un
+// commit y borrado en el siguiente no aparece en el diff de arboles, pero el
+// push sube igual el commit que lo contiene.
+function archivosSinPushear(cabeza) {
+  return rutas(['log', cabeza, '--not', '--remotes=origin', '--diff-filter=A', '--name-only', '-z', '--format='])
+}
+
+function tagsRemotos() {
+  return sh(['git', 'ls-remote', '--tags', '--refs', 'origin'], { red: true })
+    .split('\n')
+    .map((linea) => linea.split('\t')[1]?.replace(/^refs\/tags\//, ''))
+    .filter(Boolean)
+}
+
+function tagsLocales() {
+  return sh(['git', 'tag', '-l', 'v*']).split('\n').filter(Boolean)
+}
+
+export function ultimoTagDe(nombres) {
+  const semver = nombres.filter((t) => /^v\d+\.\d+\.\d+$/.test(t)).sort(compararSemver)
+  return semver.at(-1) ?? null
+}
+
+// Los tags del remoto, no los locales: en la maquina de un dev pueden estar
+// viejos, y un fetch para refrescarlos tocaria refs (y falla con el tag movil
+// vX desactualizado). ls-remote es de solo lectura. Sin red, los locales.
 function ultimoTag() {
   try {
-    const tags = sh(['git', 'tag', '-l', 'v[0-9]*.[0-9]*.[0-9]*'])
-      .split('\n')
-      .filter(Boolean)
-      .sort((a, b) => compararSemver(a, b))
-    return tags.at(-1) ?? null
+    return ultimoTagDe(tagsRemotos())
   } catch {
-    return null
+    try {
+      return ultimoTagDe(tagsLocales())
+    } catch {
+      return null
+    }
   }
 }
 
@@ -159,12 +252,16 @@ export function evaluaCommits(commits) {
   })
 }
 
-function evaluaSecretos(archivos) {
-  const encontrados = archivos.filter((ruta) => SECRETO_ARCHIVOS.some((patron) => patron.test(ruta)))
+export function esArchivoDeSecreto(ruta) {
+  return SECRETO_ARCHIVOS.some((patron) => patron.test(ruta))
+}
+
+export function evaluaSecretos(archivos, donde = 'agregados') {
+  const encontrados = archivos.filter(esArchivoDeSecreto)
   if (encontrados.length > 0) {
-    return { regla: 'sin-secretos', cumple: false, detalle: `archivos sospechosos agregados: ${encontrados.join(', ')}` }
+    return { regla: 'sin-secretos', cumple: false, detalle: `archivos sospechosos ${donde}: ${encontrados.join(', ')}` }
   }
-  return { regla: 'sin-secretos', cumple: true, detalle: 'sin archivos de credenciales agregados' }
+  return { regla: 'sin-secretos', cumple: true, detalle: `sin archivos de credenciales ${donde}` }
 }
 
 function evaluaBaseDev(baseRefName, nombreRama) {
@@ -195,6 +292,26 @@ function evaluaMergeable(pr) {
     cumple: pr.mergeable === 'MERGEABLE',
     detalle: `mergeable=${pr.mergeable}`,
   }
+}
+
+// Justo despues de gh pr create, GitHub todavia no calculo si el PR mergea
+// limpio (UNKNOWN) y la regla saldria en skip casi siempre. Se relee solo ese
+// campo unas veces antes de rendirse; si la relectura falla, queda el skip.
+export function esperaMergeable(pr, releer, dormir, { intentos = 4, esperaMs = 3000 } = {}) {
+  let actual = pr
+  for (let i = 0; i < intentos && actual?.mergeable === 'UNKNOWN'; i++) {
+    dormir(esperaMs)
+    try {
+      actual = { ...actual, mergeable: releer() }
+    } catch {
+      break
+    }
+  }
+  return actual
+}
+
+function dormir(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 }
 
 export function extraeSeccion(cuerpo, titulo) {
@@ -266,10 +383,25 @@ export function evaluaSeccionesCompletas(pr) {
   return { regla: 'sin-secciones-vacias', cumple: true, detalle: 'secciones clave con contenido' }
 }
 
-function obtenerPR(numero) {
-  if (numero == null) return null
-  const json = sh(['gh', 'pr', 'view', String(numero), '--json', 'baseRefName,body,mergeable'])
-  return JSON.parse(json)
+// --pr acepta el numero o la URL del PR. La URL evita que gh tenga que elegir
+// remoto (con varios remotos, pregunta o falla).
+function obtenerPR(pr) {
+  const campos = 'baseRefName,headRefName,headRefOid,body,mergeable,state'
+  return JSON.parse(sh(['gh', 'pr', 'view', String(pr), '--json', campos], { red: true }))
+}
+
+function releerMergeable(pr) {
+  return sh(['gh', 'pr', 'view', String(pr), '--json', 'mergeable', '--jq', '.mergeable'], { red: true })
+}
+
+// Con PR, base y rama salen del PR; sin PR, del entorno de Actions o del
+// checkout local. Un GITHUB_BASE_REF vacio (Actions lo define vacio fuera de
+// pull_request) cae a "dev".
+export function contextoDelCheck({ pr = null, envBase = '', ramaLocal = null } = {}) {
+  return {
+    base: pr?.baseRefName || envBase || 'dev',
+    rama: pr?.headRefName || ramaLocal,
+  }
 }
 
 function resuelveRef(nombre) {
@@ -281,32 +413,78 @@ function resuelveRef(nombre) {
   }
 }
 
+function sinCabeza(regla) {
+  return { regla, cumple: null, detalle: 'la cabeza del PR no esta en local (corre git fetch origin)' }
+}
+
 const GRUPOS = ['rama-commits', 'secretos', 'pr-metadata']
 
-function main() {
-  const { values } = parseArgs({ options: { pr: { type: 'string' }, grupo: { type: 'string' } } })
-  if (!GRUPOS.includes(values.grupo)) {
-    console.error(`--grupo debe ser uno de: ${GRUPOS.join(', ')}`)
-    process.exit(1)
-  }
-  const baseLocal = resuelveRef(process.env.GITHUB_BASE_REF || 'dev')
-
-  const pr = obtenerPR(values.pr)
-  const baseRefName = pr?.baseRefName ?? (values.pr ? null : baseLocal)
+function evaluar(values) {
+  let pr = values.pr ? obtenerPR(values.pr) : null
+  const { base, rama } = contextoDelCheck({
+    pr,
+    envBase: process.env.GITHUB_BASE_REF,
+    ramaLocal: pr?.headRefName ? null : ramaActual(),
+  })
+  const baseLocal = resuelveRef(base)
+  const cabeza = pr ? cabezaDelPR(pr) : values.cabeza || cabezaDeLaRama()
 
   const resultados = []
   if (values.grupo === 'rama-commits') {
-    resultados.push(evaluaRama(ramaActual(), pr?.baseRefName ?? null))
-    resultados.push(...evaluaCommits(commitsDeLaRama(baseLocal)))
+    resultados.push(evaluaRama(rama, pr?.baseRefName ?? null))
+    resultados.push(...(cabeza ? evaluaCommits(commitsDeLaRama(baseLocal, cabeza)) : [sinCabeza('commits-formato')]))
   }
   if (values.grupo === 'secretos') {
-    resultados.push(evaluaSecretos(archivosAgregados(baseLocal)))
+    if (values['sin-pushear']) {
+      resultados.push(evaluaSecretos(archivosSinPushear(values.cabeza || 'HEAD'), 'en commits sin pushear'))
+    } else {
+      resultados.push(cabeza ? evaluaSecretos(archivosAgregados(baseLocal, cabeza)) : sinCabeza('sin-secretos'))
+    }
   }
   if (values.grupo === 'pr-metadata') {
-    resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, ramaActual()))
+    // Un PR mergeado o cerrado reporta UNKNOWN para siempre: reintentar ahi es
+    // pura espera.
+    if (pr?.state === 'OPEN') pr = esperaMergeable(pr, () => releerMergeable(values.pr), dormir)
+    resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, rama))
     resultados.push(evaluaMergeable(pr))
-    resultados.push(evaluaVersion(pr, baseRefName))
+    resultados.push(evaluaVersion(pr, pr?.baseRefName ?? null))
     resultados.push(evaluaSeccionesCompletas(pr))
+  }
+  return resultados
+}
+
+function main() {
+  let values
+  try {
+    ;({ values } = parseArgs({
+      options: {
+        pr: { type: 'string' },
+        grupo: { type: 'string' },
+        cabeza: { type: 'string' },
+        'sin-pushear': { type: 'boolean' },
+      },
+    }))
+  } catch (e) {
+    console.log(`[ERROR] uso: ${describeError(e)}`)
+    process.exit(2)
+  }
+  if (!GRUPOS.includes(values.grupo)) {
+    console.log(`[ERROR] uso: --grupo debe ser uno de: ${GRUPOS.join(', ')}`)
+    process.exit(2)
+  }
+  // --cabeza es una rev para git log: nada que git pueda leer como opcion,
+  // salvo --branches/--tags (lo que suben git push --all/--mirror/--tags).
+  if (values.cabeza?.startsWith('-') && !['--branches', '--tags'].includes(values.cabeza)) {
+    console.log(`[ERROR] uso: --cabeza no admite "${values.cabeza}"`)
+    process.exit(2)
+  }
+
+  let resultados
+  try {
+    resultados = evaluar(values)
+  } catch (e) {
+    console.log(`[ERROR] ${values.grupo}: no se pudo verificar: ${describeError(e)}`)
+    process.exit(2)
   }
 
   let huboFalse = false

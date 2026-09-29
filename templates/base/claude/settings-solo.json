@@ -20,7 +20,8 @@
       "Bash(git push:*)",
       "Bash(git merge:*)",
       "Bash(gh pr merge:*)",
-      "Bash(souclaude vault-sync:*)"
+      "Bash(souclaude vault-sync:*)",
+      "Bash(node scripts/check-pr-rules.mjs:*)"
     ]
   },
   "hooks": {
@@ -30,6 +31,30 @@
           {
             "type": "command",
             "command": "node .claude/hooks/worklog-solo.mjs"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "PowerShell(git push:*)",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
+            "timeout": 60
           }
         ]
       }
