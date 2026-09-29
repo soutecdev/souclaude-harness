@@ -83,6 +83,52 @@ test('pushSeguro con nothing to commit: ok + sin_cambios, y no hay pull ni push'
   assert.deepEqual(git.subcomandos(), ['add', 'commit', 'status'])
 })
 
+test('pushSeguro con arbol limpio y al dia con el remoto: sin_cambios', async () => {
+  const git = gitFake({ commit: new Error('nothing to commit'), status: '## main...origin/main\n' })
+  const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
+
+  assert.deepEqual(r, { ok: true, motivo: 'sin_cambios' })
+  assert.deepEqual(git.subcomandos(), ['add', 'commit', 'status'])
+})
+
+test('pushSeguro con arbol limpio pero commit local sin subir (ahead): pull + push, no sin_cambios', async () => {
+  const git = gitFake({ commit: new Error('nothing to commit'), status: '## main...origin/main [ahead 1]\n' })
+  const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
+
+  assert.deepEqual(r, { ok: true, motivo: null })
+  assert.deepEqual(git.subcomandos(), ['add', 'commit', 'status', 'pull', 'push'])
+})
+
+test('pushSeguro con arbol limpio, ahead y behind: tambien pull + push', async () => {
+  const git = gitFake({ commit: new Error('nothing to commit'), status: '## main...origin/main [ahead 2, behind 1]\n' })
+  const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
+
+  assert.deepEqual(r, { ok: true, motivo: null })
+  assert.deepEqual(git.subcomandos(), ['add', 'commit', 'status', 'pull', 'push'])
+})
+
+test('pushSeguro con commit local sin subir y push fallido: push_fallo (no se declara sin_cambios)', async () => {
+  const git = gitFake({
+    commit: new Error('nothing to commit'),
+    status: '## main...origin/main [ahead 1]\n',
+    push: new Error('sin permisos'),
+  })
+  const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
+
+  assert.deepEqual(r, { ok: false, motivo: 'push_fallo' })
+})
+
+test('pushSeguro con archivos sucios y ahead: sigue siendo push_fallo (el commit fallo de verdad)', async () => {
+  const git = gitFake({
+    commit: new Error('hook rechazo el commit'),
+    status: '## main...origin/main [ahead 1]\n M Project-SHS/kanban.md\n',
+  })
+  const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
+
+  assert.deepEqual(r, { ok: false, motivo: 'push_fallo' })
+  assert.ok(!git.subcomandos().includes('push'))
+})
+
 test('pushSeguro con commit fallido de verdad (status sucio): push_fallo', async () => {
   const git = gitFake({ commit: new Error('hook rechazo el commit'), status: ' M Project-SHS/kanban.md\n' })
   const r = await pushSeguro({ vaultPath: VAULT, mensaje: 'docs: espejo X', git })
