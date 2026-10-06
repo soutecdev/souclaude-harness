@@ -193,9 +193,10 @@ PAUSA TEMPORAL (SHS-M36): con GitHub Actions en pausa, los checks de
   repo que no es el Vault (ni está en modo solo), queda denegado: `main` solo
   recibe merges desde `dev` por PR. El hook resuelve el repo real del push
   (`cd`, `git -C`) y reconoce el Vault por su ruta (`.claude/vault.local.json`,
-  `VAULT_PATH` o `~/.claude/souclaude/vault.json`). Si deniega un push al Vault,
-  la ruta no está configurada en esta máquina: `souclaude upgrade --vault-path
-  <ruta>`; y el espejo va siempre por `souclaude vault-sync --push`.
+  `VAULT_PATH` o `~/.claude/souclaude/vault.json`), por su remoto
+  (`soubunker-vault`) o por su carpeta `00-System`, en los dos modos. Si aun así
+  deniega un push al Vault, configúralo: `souclaude upgrade --vault-path <ruta>`;
+  y el espejo va siempre por `souclaude vault-sync --push`.
 - **Antes de cada `git push`, los secretos**: el grupo `secretos` sobre cada
   commit que el push subiría. Si falla, el push queda denegado con el motivo:
   sigue sus instrucciones (sacar el archivo de los commits sin pushear; si ya se

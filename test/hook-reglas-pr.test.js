@@ -21,6 +21,8 @@ import {
   destinosDelPush,
   prePushMain,
   rutasDelVault,
+  configDelVault,
+  repoCanonico,
   mismaCarpeta,
 } from '../templates/base/claude/hooks/reglas-pr.mjs'
 
@@ -486,6 +488,25 @@ test('destinosDelPush: la rama remota que cada push escribe o borra', () => {
   const dos = destinosDelPush('git push origin dev && cd "la vault" && git push origin main', CWD)
   assert.deepEqual(dos.map((p) => p.destinos), [['dev'], ['main']])
   assert.equal(dos[1].dir, path.resolve(CWD, 'la vault'))
+  // El remoto nombrado viaja con el push (null = el de la rama, normalmente origin).
+  assert.equal(dos[1].remoto, 'origin')
+  assert.equal(destinosDelPush('git push upstream dev:main', CWD)[0].remoto, 'upstream')
+  assert.equal(destinosDelPush('git push', CWD)[0].remoto, null)
+})
+
+test('repoCanonico: las formas de nombrar un mismo repo coinciden', () => {
+  const esperado = 'github.com/soutecdev/soubunker-vault'
+  for (const url of [
+    'https://github.com/soutecdev/soubunker-vault.git',
+    'git@github.com:soutecdev/soubunker-vault.git',
+    'ssh://git@github.com/soutecdev/soubunker-vault',
+    'HTTPS://GitHub.com/SoutecDev/soubunker-vault/',
+  ]) {
+    assert.equal(repoCanonico(url), esperado, url)
+  }
+  assert.equal(repoCanonico('C:\\clones\\soubunker-vault'), 'c:/clones/soubunker-vault')
+  assert.equal(repoCanonico('/home/x/soubunker-vault.git'), '/home/x/soubunker-vault')
+  assert.notEqual(repoCanonico('https://github.com/soutecdev/app.git'), esperado)
 })
 
 test('rutasDelVault: config del repo, VAULT_PATH y config de maquina, en ese orden', () => {
@@ -501,6 +522,15 @@ test('rutasDelVault: config del repo, VAULT_PATH y config de maquina, en ese ord
     'C:/env/vault',
     'C:/maquina/vault',
   ])
+  // Los `repo` declarados tambien: sirven para reconocer el Vault por su remoto.
+  fs.writeFileSync(
+    path.join(proyecto, '.claude', 'vault.local.json'),
+    JSON.stringify({ path: 'C:/repo/vault', repo: 'git@github.com:otra-org/vault-propio.git' }),
+  )
+  assert.deepEqual(configDelVault({ raizProyecto: proyecto, env: { SOUCLAUDE_CLAUDE_HOME: home } }), {
+    rutas: ['C:/repo/vault', 'C:/maquina/vault'],
+    repos: ['git@github.com:otra-org/vault-propio.git'],
+  })
   // Un JSON roto no rompe nada: se sigue con el resto.
   fs.writeFileSync(path.join(proyecto, '.claude', 'vault.local.json'), '{ roto')
   assert.deepEqual(rutasDelVault({ raizProyecto: proyecto, env: { SOUCLAUDE_CLAUDE_HOME: home } }), ['C:/maquina/vault'])
@@ -514,8 +544,9 @@ test('mismaCarpeta: barras, barra final y mayusculas en Windows', () => {
 })
 
 // `correr` falso para la proteccion de main: responde a los git que usa el hook
-// (raiz del repo, rama actual, upstream y existencia de main local).
-function gitFalso({ raiz, rama = 'fix/M1-x', upstream = null, mainLocal = true } = {}) {
+// (raiz del repo, rama actual, upstream, existencia de main local y URL del
+// remoto; por defecto, la de un proyecto cualquiera).
+function gitFalso({ raiz, rama = 'fix/M1-x', upstream = null, mainLocal = true, remoto = 'https://github.com/soutecdev/app.git' } = {}) {
   const llamadas = []
   const correr = (cmd, args, opciones = {}) => {
     llamadas.push({ cmd, args, opciones })
@@ -523,6 +554,7 @@ function gitFalso({ raiz, rama = 'fix/M1-x', upstream = null, mainLocal = true }
     if (args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
       return raiz ? { status: 0, stdout: `${raiz}\n`, stderr: '' } : { status: 128, stdout: '', stderr: 'fatal: not a git repository' }
     }
+    if (args[0] === 'remote') return remoto ? { status: 0, stdout: `${remoto}\n`, stderr: '' } : { status: 2, stdout: '', stderr: 'error: No such remote' }
     if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') return { status: 0, stdout: `${rama}\n`, stderr: '' }
     if (args[0] === 'rev-parse' && args[1] === '--verify') return { status: mainLocal ? 0 : 1, stdout: '', stderr: '' }
     if (args[0] === 'config') return upstream ? { status: 0, stdout: `refs/heads/${upstream}\n`, stderr: '' } : { status: 1, stdout: '', stderr: '' }
@@ -535,20 +567,20 @@ test('prePushMain: el push a main del proyecto se deniega con una razon accionab
   const proyecto = repoFalso()
   const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
   const { correr } = gitFalso({ raiz: proyecto })
-  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr, vault: [vault] })
+  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr, vault: { rutas: [vault], repos: [] } })
   assert.equal(salida.hookSpecificOutput.hookEventName, 'PreToolUse')
   assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny')
   assert.match(salida.hookSpecificOutput.permissionDecisionReason, /SHS-M42/)
   assert.match(salida.hookSpecificOutput.permissionDecisionReason, /vault-sync --push/)
   assert.ok(salida.hookSpecificOutput.permissionDecisionReason.includes(vault), 'dice donde esta el Vault configurado')
   // Otras ramas y tags pasan; y nunca se emite "allow" (no salta los ask de force-push).
-  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['dev'] }, correr, vault: [vault] }), null)
-  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['fix/M1-x', 'v1.0.0'] }, correr, vault: [vault] }), null)
+  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['dev'] }, correr, vault: { rutas: [vault], repos: [] } }), null)
+  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['fix/M1-x', 'v1.0.0'] }, correr, vault: { rutas: [vault], repos: [] } }), null)
 })
 
 test('prePushMain: sin Vault configurado, la razon dice como configurarlo', () => {
   const proyecto = repoFalso()
-  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr: gitFalso({ raiz: proyecto }).correr, vault: [] })
+  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr: gitFalso({ raiz: proyecto }).correr, vault: { rutas: [], repos: [] } })
   assert.match(salida.hookSpecificOutput.permissionDecisionReason, /--vault-path/)
 })
 
@@ -558,22 +590,48 @@ test('prePushMain: el Vault queda exento, por la carpeta del push o por la raiz 
   // La misma carpeta escrita distinto: barras, barra final y (en Windows) mayusculas.
   const otraForma = (process.platform === 'win32' ? vault.toUpperCase().replace(/\\/g, '/') : vault) + '/'
   const { correr } = gitFalso({ raiz: vault, rama: 'main' })
-  assert.equal(prePushMain({ push: { dir: vault, destinos: ['main'] }, correr, vault: [otraForma] }), null)
+  assert.equal(prePushMain({ push: { dir: vault, destinos: ['main'] }, correr, vault: { rutas: [otraForma], repos: [] } }), null)
   // Desde una subcarpeta del Vault: la raiz del repo es el Vault.
-  assert.equal(prePushMain({ push: { dir: path.join(vault, 'Project-X'), destinos: ['main'] }, correr, vault: [vault] }), null)
+  assert.equal(prePushMain({ push: { dir: path.join(vault, 'Project-X'), destinos: ['main'] }, correr, vault: { rutas: [vault], repos: [] } }), null)
   // Sin refspec, parado en main del Vault.
-  assert.equal(prePushMain({ push: { dir: vault, destinos: ['@rama-actual', '@upstream'] }, correr, vault: [vault] }), null)
+  assert.equal(prePushMain({ push: { dir: vault, destinos: ['@rama-actual', '@upstream'] }, correr, vault: { rutas: [vault], repos: [] } }), null)
+})
+
+test('prePushMain: un clon del Vault se reconoce sin configuracion, por su remoto o por 00-System', () => {
+  const clon = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude clon vault '))
+  const sinConfig = { rutas: [], repos: [] }
+  const decision = (git, vault = sinConfig) =>
+    prePushMain({ push: { dir: clon, remoto: null, destinos: ['main'] }, correr: gitFalso({ raiz: clon, rama: 'main', ...git }).correr, vault })
+      ?.hookSpecificOutput.permissionDecision ?? null
+  // Por el remoto de la organizacion, en cualquiera de sus formas.
+  assert.equal(decision({ remoto: 'https://github.com/soutecdev/soubunker-vault.git' }), null)
+  assert.equal(decision({ remoto: 'git@github.com:ialvarezsoutec/soubunker-vault.git' }), null)
+  // Por el repo declarado en la config, aunque se llame distinto.
+  assert.equal(decision({ remoto: 'https://github.com/otra-org/vault-propio.git' }, { rutas: [], repos: ['git@github.com:otra-org/vault-propio.git'] }), null)
+  // Un proyecto cualquiera, o un repo sin remoto, sigue denegado.
+  assert.equal(decision({ remoto: 'https://github.com/soutecdev/app.git' }), 'deny')
+  assert.equal(decision({ remoto: null }), 'deny')
+  // Por la carpeta 00-System, la senal con la que el CLI reconoce un Vault.
+  fs.mkdirSync(path.join(clon, '00-System'))
+  assert.equal(decision({ remoto: 'https://github.com/soutecdev/app.git' }), null)
+})
+
+test('prePushMain: el remoto que se consulta es el nombrado en el comando', () => {
+  const proyecto = repoFalso()
+  const { correr, llamadas } = gitFalso({ raiz: proyecto, remoto: 'https://github.com/soutecdev/soubunker-vault.git' })
+  assert.equal(prePushMain({ push: { dir: proyecto, remoto: 'vault', destinos: ['main'] }, correr, vault: { rutas: [], repos: [] } }), null)
+  assert.deepEqual(llamadas.find((l) => l.args[0] === 'remote')?.args, ['remote', 'get-url', 'vault'])
 })
 
 test('prePushMain: en modo solo el agente mergea y pushea main a proposito', () => {
   const solo = repoFalso({ modo: 'solo' })
-  assert.equal(prePushMain({ push: { dir: solo, destinos: ['main'] }, correr: gitFalso({ raiz: solo }).correr, vault: [] }), null)
+  assert.equal(prePushMain({ push: { dir: solo, destinos: ['main'] }, correr: gitFalso({ raiz: solo }).correr, vault: { rutas: [], repos: [] } }), null)
 })
 
 test('prePushMain: resuelve con git la rama actual, el upstream y las ramas de --all', () => {
   const proyecto = repoFalso()
   const decision = (destinos, git) =>
-    prePushMain({ push: { dir: proyecto, destinos }, correr: gitFalso({ raiz: proyecto, ...git }).correr, vault: [] })?.hookSpecificOutput.permissionDecision ?? null
+    prePushMain({ push: { dir: proyecto, destinos }, correr: gitFalso({ raiz: proyecto, ...git }).correr, vault: { rutas: [], repos: [] } })?.hookSpecificOutput.permissionDecision ?? null
   // `git push origin HEAD` parado en main deniega; en otra rama pasa aunque su upstream sea main.
   assert.equal(decision(['@rama-actual'], { rama: 'main' }), 'deny')
   assert.equal(decision(['@rama-actual'], { rama: 'fix/M1-x', upstream: 'main' }), null)
@@ -589,8 +647,8 @@ test('prePushMain: resuelve con git la rama actual, el upstream y las ramas de -
 test('prePushMain: una carpeta que no es repo tampoco deja pasar un main explicito (ese push fallaria igual)', () => {
   const sinRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude sin repo '))
   const { correr } = gitFalso({ raiz: null })
-  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['main'] }, correr, vault: [] })?.hookSpecificOutput.permissionDecision, 'deny')
-  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['dev'] }, correr, vault: [] }), null)
+  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['main'] }, correr, vault: { rutas: [], repos: [] } })?.hookSpecificOutput.permissionDecision, 'deny')
+  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['dev'] }, correr, vault: { rutas: [], repos: [] } }), null)
 })
 
 // --- Integracion SHS-M42: el hook instalado y git reales -------------------------
@@ -685,4 +743,41 @@ test('hook real: en modo solo el push a main pasa', () => {
   fs.writeFileSync(path.join(proyecto, '.claude', 'harness.json'), JSON.stringify({ modo: 'solo' }))
   git(proyecto, 'switch', '-q', '-c', 'main')
   assert.equal(correrHookInstalado(proyecto, 'git push origin main'), '')
+})
+
+// --- SHS-M42-T004: el Vault en los dos modos, con o sin configuracion ----------
+
+test('hook real: un clon del Vault sin configurar se reconoce por su remoto, en equipo y en solo', () => {
+  const vault = vaultReal()
+  git(vault, 'remote', 'add', 'origin', 'https://github.com/soutecdev/soubunker-vault.git')
+  for (const modo of ['equipo', 'solo']) {
+    const proyecto = proyectoConHook() // sin vault.local.json ni config de maquina
+    fs.writeFileSync(path.join(proyecto, '.claude', 'harness.json'), JSON.stringify({ modo }))
+    assert.equal(correrHookInstalado(proyecto, `cd "${vault}" && git push origin main`), '', modo)
+    assert.equal(correrHookInstalado(proyecto, `git -C "${vault}" push origin main`), '', modo)
+    assert.equal(correrHookInstalado(proyecto, 'git push', { cwd: vault }), '', modo)
+    assert.equal(correrHookInstalado(proyecto, 'git push origin HEAD:main', { cwd: path.join(vault, 'Project-X'), toolName: 'PowerShell' }), '', modo)
+  }
+})
+
+test('hook real: un Vault con remoto propio se reconoce por el repo declarado o por 00-System', () => {
+  const vault = vaultReal()
+  git(vault, 'remote', 'add', 'origin', 'https://github.com/otra-org/vault-propio.git')
+  const proyecto = proyectoConHook()
+  const comando = `git -C "${vault}" push origin main`
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, comando)).hookSpecificOutput.permissionDecision, 'deny', 'ni ruta, ni remoto conocido, ni 00-System: es un repo mas')
+  fs.writeFileSync(path.join(proyecto, '.claude', 'vault.local.json'), JSON.stringify({ path: 'C:/otra/ruta', repo: 'git@github.com:otra-org/vault-propio.git' }))
+  assert.equal(correrHookInstalado(proyecto, comando), '', 'por el repo declarado en vault.local.json')
+  fs.rmSync(path.join(proyecto, '.claude', 'vault.local.json'))
+  fs.mkdirSync(path.join(vault, '00-System'))
+  assert.equal(correrHookInstalado(proyecto, comando), '', 'por la carpeta 00-System')
+})
+
+test('hook real: en modo solo, el Vault configurado se pushea a main igual que en equipo', () => {
+  const vault = vaultReal()
+  const proyecto = proyectoConHook({ vaultPath: vault })
+  fs.writeFileSync(path.join(proyecto, '.claude', 'harness.json'), JSON.stringify({ modo: 'solo' }))
+  assert.equal(correrHookInstalado(proyecto, `cd "${vault}" && git add -A && git commit -m "docs: worklog" && git push origin main`), '')
+  assert.equal(correrHookInstalado(proyecto, `git -C "${vault}" push origin main`), '')
+  assert.equal(correrHookInstalado(proyecto, 'git push', { cwd: vault }), '')
 })

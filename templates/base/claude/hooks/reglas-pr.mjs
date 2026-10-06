@@ -236,7 +236,9 @@ const ramaCorta = (ref) => ref.replace(/^refs\/heads\//, '')
 // `HEAD:refs/heads/main`, `:main` y `--delete main` tocan main; `origin main`
 // sube main a main), TODAS para --all/--branches/--mirror y, con `HEAD` o sin
 // refspec, la rama actual (sin refspec, tambien su upstream: con
-// push.default=upstream iria a ella). Un push solo de tags no toca ramas.
+// push.default=upstream iria a ella). Un push solo de tags no toca ramas. Viaja
+// tambien el remoto nombrado (`remoto`; null = el de la rama, normalmente
+// origin), que sirve para reconocer el Vault por su URL.
 export function destinosDelPush(comando, cwd, shell = 'bash') {
   const salida = []
   for (const { dir, args } of pushes(comando, cwd, shell)) {
@@ -260,7 +262,7 @@ export function destinosDelPush(comando, cwd, shell = 'bash') {
       destinos.push(ref === 'HEAD' || ref === '@' ? RAMA_ACTUAL : ramaCorta(ref))
     }
     if (refspecs.length === 0 && destinos.length === 0 && !soloTags) destinos.push(RAMA_ACTUAL, UPSTREAM)
-    if (destinos.length) salida.push({ dir, destinos: [...new Set(destinos)] })
+    if (destinos.length) salida.push({ dir, remoto: posicionales[0] ?? null, destinos: [...new Set(destinos)] })
   }
   return salida
 }
@@ -357,9 +359,11 @@ function repoConReglas(dir, correr, { tambienEnSolo = false } = {}) {
 // es una violacion en el proyecto y es el protocolo en el Vault (push directo a
 // main, sin PR); y `git -C <ruta> push origin main` ni siquiera empieza por
 // `git push`. El hook resuelve la carpeta real del push (cwd, cd, -C) y exime al
-// Vault —la ruta de .claude/vault.local.json, VAULT_PATH o la config de maquina,
-// en el mismo orden que el CLI— y al modo solo, donde el agente mergea y pushea
-// main a proposito.
+// Vault —por su ruta configurada (.claude/vault.local.json, VAULT_PATH o la
+// config de maquina, en el mismo orden que el CLI), por su remoto o por su
+// carpeta 00-System, para que un clon del Vault se reconozca en los dos modos
+// aunque esta maquina no lo tenga configurado— y al modo solo, donde el agente
+// mergea y pushea main a proposito.
 
 const RAMA_PROTEGIDA = 'main'
 
@@ -371,16 +375,25 @@ function leerJson(ruta) {
   }
 }
 
-// Rutas donde esta el Vault en esta maquina, segun lo configurado.
-export function rutasDelVault({ raizProyecto = RAIZ_DEL_HOOK, env = process.env } = {}) {
+// Config del Vault en esta maquina: las rutas y las URLs de remoto (`repo`)
+// declaradas en .claude/vault.local.json del proyecto, VAULT_PATH y la config de
+// maquina, en el mismo orden que readVaultConfig del CLI.
+export function configDelVault({ raizProyecto = RAIZ_DEL_HOOK, env = process.env } = {}) {
   const rutas = []
-  const local = leerJson(path.join(raizProyecto, '.claude', 'vault.local.json'))
-  if (typeof local?.path === 'string' && local.path) rutas.push(local.path)
+  const repos = []
+  const sumar = (config) => {
+    if (typeof config?.path === 'string' && config.path) rutas.push(config.path)
+    if (typeof config?.repo === 'string' && config.repo) repos.push(config.repo)
+  }
+  sumar(leerJson(path.join(raizProyecto, '.claude', 'vault.local.json')))
   if (env.VAULT_PATH) rutas.push(env.VAULT_PATH)
   const home = env.SOUCLAUDE_CLAUDE_HOME ?? path.join(os.homedir(), '.claude')
-  const maquina = leerJson(path.join(home, 'souclaude', 'vault.json'))
-  if (typeof maquina?.path === 'string' && maquina.path) rutas.push(maquina.path)
-  return rutas
+  sumar(leerJson(path.join(home, 'souclaude', 'vault.json')))
+  return { rutas, repos }
+}
+
+export function rutasDelVault(opciones) {
+  return configDelVault(opciones).rutas
 }
 
 // Dos rutas apuntan a la misma carpeta: por realpath (resuelve enlaces, nombres
@@ -431,15 +444,57 @@ function ramasDestino(push, correr) {
   return ramas
 }
 
+// El repo del Vault de la organizacion (templates/harness.manifest.json ->
+// vault.repo): cualquier clon del Vault se reconoce por el nombre de su remoto,
+// tenga o no vault.local.json esta maquina.
+const REPO_DEL_VAULT = /\/soubunker-vault$/
+
+// `https://github.com/org/repo.git`, `git@github.com:org/repo.git` y
+// `ssh://git@github.com/org/repo` -> `github.com/org/repo`; `C:\clones\repo` ->
+// `c:/clones/repo`. Lo que vuelve comparables dos formas de nombrar un repo.
+export function repoCanonico(url) {
+  return String(url ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .replace(/^[^/@]+@/, '')
+    .replace(/^([^/:]+):(?![\\/])/, '$1/')
+    .replace(/\.git$/, '')
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '')
+}
+
+// URL del remoto al que va el push: el nombrado en el comando (o una URL o ruta
+// escrita directo) o, sin nombrar, origin.
+function urlDelRemoto(push, correr) {
+  const remoto = push.remoto ?? 'origin'
+  if (/[/\\:]/.test(remoto)) return remoto
+  return salidaDe(correr('git', ['remote', 'get-url', remoto], { cwd: push.dir, timeout: 10_000 })) || null
+}
+
+// El push va al Vault si su carpeta (o la raiz de su repo) es una ruta
+// configurada del Vault, si el repo tiene 00-System/ (la senal con la que el CLI
+// reconoce un Vault) o si su remoto es el repo del Vault: el de la organizacion
+// o uno declarado en la config. Asi un clon del Vault se reconoce aunque esta
+// maquina no tenga vault.local.json, en modo equipo y en modo solo.
+function esElVault({ push, raiz, correr, vault }) {
+  const carpetas = raiz ? [push.dir, raiz] : [push.dir]
+  if (carpetas.some((c) => vault.rutas.some((v) => mismaCarpeta(c, v)))) return true
+  if (raiz && fs.existsSync(path.join(raiz, '00-System'))) return true
+  const url = urlDelRemoto(push, correr)
+  if (!url) return false
+  const canon = repoCanonico(url)
+  return REPO_DEL_VAULT.test(canon) || vault.repos.some((r) => repoCanonico(r) === canon)
+}
+
 export function prePushMain({ push, correr, vault, enSolo = enModoSolo }) {
-  if (vault.some((v) => mismaCarpeta(push.dir, v))) return null
   const raiz = raizDelRepo(push.dir, correr)
-  if (raiz && vault.some((v) => mismaCarpeta(raiz, v))) return null
   if (raiz && enSolo(raiz)) return null
   if (!ramasDestino(push, correr).has(RAMA_PROTEGIDA)) return null
-  const sobreElVault = vault.length
-    ? `El Vault de esta maquina esta en ${vault[0]} y este push no apunta ahi. En el Vault el push directo a main es el protocolo y este hook lo deja pasar.`
-    : 'No hay Vault configurado en esta maquina (.claude/vault.local.json, VAULT_PATH o ~/.claude/souclaude/vault.json). Si este push era al Vault, configuralo: `souclaude upgrade --vault-path <ruta>`.'
+  if (esElVault({ push, raiz, correr, vault })) return null
+  const sobreElVault = vault.rutas.length
+    ? `El Vault de esta maquina esta en ${vault.rutas[0]} y este push no apunta ahi. En el Vault el push directo a main es el protocolo y este hook lo deja pasar.`
+    : 'No hay Vault configurado en esta maquina (.claude/vault.local.json, VAULT_PATH o ~/.claude/souclaude/vault.json); un clon del Vault se reconoce igual por su remoto (soubunker-vault) o por su carpeta 00-System. Si este push era al Vault y no se reconocio, configuralo: `souclaude upgrade --vault-path <ruta>`.'
   return {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
@@ -631,7 +686,7 @@ export function procesar(entrada, correr = correrReal) {
 
   if (entrada.hook_event_name === 'PreToolUse') {
     // Primero main: es la regla dura y no necesita el script. Despues secretos.
-    const vault = rutasDelVault()
+    const vault = configDelVault()
     for (const push of destinosDelPush(comando, cwd, shell)) {
       const negado = prePushMain({ push, correr, vault })
       if (negado) return negado

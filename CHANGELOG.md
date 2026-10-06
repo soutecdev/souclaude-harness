@@ -30,10 +30,14 @@ El harness y el CLI se versionan juntos.
   cada `git push`, el hook resuelve la carpeta real del push (cwd, `cd`, `-C`) y deniega
   —con una razón accionable— todo push que toque `main` (refspec, `HEAD:main`,
   `dev:main`, `:main`, `--delete`, `--all`/`--mirror`, o la rama actual y su upstream
-  cuando no hay refspec) salvo que el repo sea el Vault (la ruta de
-  `.claude/vault.local.json`, `VAULT_PATH` o `~/.claude/souclaude/vault.json`, en ese
-  orden) o esté en modo solo, donde el agente mergea y pushea `main` a propósito. Si el
-  Vault no está configurado, la razón dice cómo hacerlo. ADR
+  cuando no hay refspec) salvo que el repo sea el Vault o esté en modo solo, donde el
+  agente mergea y pushea `main` a propósito. El Vault se reconoce por su ruta
+  configurada (`.claude/vault.local.json`, `VAULT_PATH` o
+  `~/.claude/souclaude/vault.json`, en ese orden), por su remoto (`soubunker-vault`, el
+  repo que declara el manifest, o el `repo` de esa config) o por su carpeta
+  `00-System`: un clon del Vault se pushea a `main` en los dos modos, con cualquier
+  forma del comando, aunque la máquina no tenga `vault.local.json`. Si aun así un push
+  al Vault quedara denegado, la razón dice cómo configurarlo. ADR
   `docs/decisions/20261006-proteccion-de-main-por-repo-en-el-hook.md`.
 - `CLAUDE.md` (plantilla), skill `soutec-github` y `progress/README.md` describen la
   regla nueva. Tras el `upgrade` hay que reiniciar Claude Code para que cargue el hook

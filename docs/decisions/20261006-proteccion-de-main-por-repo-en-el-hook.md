@@ -64,9 +64,14 @@ solo agrega claves.
    rutas MSYS traducidas), calcula qué ramas remotas tocaría (refspec, `HEAD:main`,
    `dev:main`, `:main`, `--delete`, `--all`/`--mirror`, o la rama actual y su upstream
    cuando no hay refspec) y deniega con una razón accionable si alguna es `main`,
-   salvo que el repo sea **el Vault** —la ruta de `.claude/vault.local.json`,
-   `VAULT_PATH` o `~/.claude/souclaude/vault.json`, en el mismo orden que el CLI— o
-   esté en **modo solo**. Si no hay Vault configurado, la razón dice cómo configurarlo.
+   salvo que el repo sea **el Vault** o esté en **modo solo**. El Vault se reconoce
+   por tres señales, en orden: su ruta configurada (`.claude/vault.local.json`,
+   `VAULT_PATH` o `~/.claude/souclaude/vault.json`, como el CLI), su carpeta
+   `00-System` (la señal con la que el propio CLI distingue un Vault) y el remoto
+   del push (`soubunker-vault`, el repo que declara el manifest, o el `repo` de la
+   config). Así un clon del Vault se pushea a `main` en los dos modos aunque la
+   máquina no tenga `vault.local.json`; si aun así no se reconoce, la razón dice
+   cómo configurarlo.
    Nunca devuelve `allow`: un push al Vault sigue el flujo normal de permisos (`ask` o
    `allow` según settings), y `vault-sync --push` sigue siendo la vía sin confirmación.
 3. **El PreToolUse pierde el filtro `if`.** El hook corre en cada comando de shell y se
