@@ -53,6 +53,17 @@ test('docs-metodologia: el catálogo generado refleja el manifest', () => {
   assert.ok(bloques.instalacion.includes(`#v${f.version.split('.')[0]}`))
 })
 
+test('docs-metodologia: respeta el EOL del archivo (working tree con CRLF por autocrlf)', () => {
+  const bloques = renderBloques(leerFuentes(RAIZ))
+  const lf = 'x\n<!-- souclaude:gen version -->\n<!-- /souclaude:gen version -->\n'
+  const crlf = lf.replaceAll('\n', '\r\n')
+  const rLf = regenerar(lf, bloques).nuevo
+  const rCrlf = regenerar(crlf, bloques).nuevo
+  assert.ok(!rLf.includes('\r\n'), 'un archivo LF debe regenerarse en LF')
+  assert.ok(!rCrlf.replaceAll('\r\n', '').includes('\n'), 'un archivo CRLF debe regenerarse en CRLF')
+  assert.equal(rCrlf, rLf.replaceAll('\n', '\r\n'))
+})
+
 test('docs-metodologia: un marcador sin bloque definido corta con error', () => {
   const bloques = renderBloques(leerFuentes(RAIZ))
   const { desconocidos } = regenerar(

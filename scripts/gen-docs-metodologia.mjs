@@ -82,13 +82,17 @@ export function renderBloques(f) {
 const MARCADOR = /<!-- souclaude:gen ([a-z-]+) -->[\s\S]*?<!-- \/souclaude:gen \1 -->/g
 
 export function regenerar(contenido, bloques) {
+  // El EOL se hereda del archivo: con autocrlf de git el working tree puede
+  // estar en CRLF y el candado no debe acusar drift falso por eso.
+  const eol = contenido.includes('\r\n') ? '\r\n' : '\n'
   const desconocidos = []
   const nuevo = contenido.replace(MARCADOR, (todo, id) => {
     if (!(id in bloques)) {
       desconocidos.push(id)
       return todo
     }
-    return `<!-- souclaude:gen ${id} -->\n${bloques[id]}\n<!-- /souclaude:gen ${id} -->`
+    const cuerpo = bloques[id].replaceAll('\n', eol)
+    return `<!-- souclaude:gen ${id} -->${eol}${cuerpo}${eol}<!-- /souclaude:gen ${id} -->`
   })
   return { nuevo, desconocidos }
 }
