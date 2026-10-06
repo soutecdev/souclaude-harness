@@ -240,3 +240,29 @@ de OBS). Gotchas de esta pasada:
   extrae solo cuando `@quién` es un campo completo (` · @quién · `), no con un `@\w+` suelto.
 - El Vault tenía M35 y M37 «En curso» con todos sus PRs mergeados: el hook de sesión solo
   detecta PRs mergeados de tarjetas En review, no de milestones. Revisar a mano.
+
+## 2026-10-06 — SHS-M42: el push al Vault denegado por las reglas de `main`
+
+El análisis de DAlzuru (sesión R4 de RAM) acertó en lo central: las tres reglas `deny`
+por texto de `git push … main` no saben en qué repo corren y denegaban el push al Vault.
+Lo verificado antes de tocar nada (documentación oficial + pruebas `--dry-run` sobre un
+repo de scratch, con el hook vivo de la sesión):
+- Una regla `deny` se evalúa aunque un hook PreToolUse devuelva `allow`, y ninguna regla
+  de permisos mira el cwd. La única salida es quitar la regla por texto y decidir por
+  repo en el hook (ADR `20261006-proteccion-de-main-por-repo-en-el-hook.md`).
+- El filtro `if: Bash(git push:*)` del PreToolUse sí se dispara con `cd x && git push`
+  (semántica «algún subcomando»), pero **no** con `git -C x push`: esa forma esquivaba
+  el hook entero, incluido el check de secretos. Por eso el PreToolUse queda sin `if`.
+- Los comodines `*` de las reglas `deny` sí actúan en Claude Code 2.1.241 (la prueba
+  limpia la denegó la regla, no el hook). La «aleatoriedad» que veían los compañeros es
+  la forma del comando: `cd vault && git push origin main` denegado, `git -C vault push
+  origin main` pasa.
+- En Git Bash sobre Windows el agente escribe rutas MSYS (`/c/Users/...`); `path.resolve`
+  las vuelve `C:\c\Users\...` y el hook no resolvía la carpeta: ese push quedaba sin
+  revisar. Ahora se traducen antes de resolver.
+- La opción B del análisis (deny `git -C * push * main*` + allow con la ruta del Vault)
+  no funciona: `allow` nunca gana a `deny`, y el `*` del deny casa también con la ruta
+  literal del Vault.
+- El comando de la tool Bash en Windows tiene un límite de longitud: un heredoc de ~12 KB
+  se corta a mitad («unexpected EOF»). Para anexar bloques grandes, escribirlos a un
+  archivo y `cat`-earlos.

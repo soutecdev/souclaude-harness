@@ -189,10 +189,17 @@ PAUSA TEMPORAL (SHS-M36): con GitHub Actions en pausa, los checks de
 `scripts/check-pr-rules.mjs` no corren en CI. Los corre, solo, un hook de
 **Claude Code** (`.claude/hooks/reglas-pr.mjs`, SHS-M39 — no es un git hook):
 
-- **Antes de cada `git push`**: el grupo `secretos` sobre cada commit que el push
-  subiría. Si falla, el push queda denegado con el motivo: sigue sus
-  instrucciones (sacar el archivo de los commits sin pushear; si ya se había
-  pusheado, avisar al usuario para rotar la credencial).
+- **Antes de cada `git push`, la rama** (SHS-M42): si el push toca `main` de un
+  repo que no es el Vault (ni está en modo solo), queda denegado: `main` solo
+  recibe merges desde `dev` por PR. El hook resuelve el repo real del push
+  (`cd`, `git -C`) y reconoce el Vault por su ruta (`.claude/vault.local.json`,
+  `VAULT_PATH` o `~/.claude/souclaude/vault.json`). Si deniega un push al Vault,
+  la ruta no está configurada en esta máquina: `souclaude upgrade --vault-path
+  <ruta>`; y el espejo va siempre por `souclaude vault-sync --push`.
+- **Antes de cada `git push`, los secretos**: el grupo `secretos` sobre cada
+  commit que el push subiría. Si falla, el push queda denegado con el motivo:
+  sigue sus instrucciones (sacar el archivo de los commits sin pushear; si ya se
+  había pusheado, avisar al usuario para rotar la credencial).
 - **Al crear el PR o editar su body o su base**: los tres grupos contra el PR
   (`rama-commits` es informativo; `secretos` y `pr-metadata` bloquean). El
   resultado se publica como comentario en el PR — la evidencia para el revisor —
