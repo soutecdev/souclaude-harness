@@ -17,6 +17,11 @@ import {
   salidaPostToolUse,
   procesar,
   prDeEsteRepo,
+  rutaNativa,
+  destinosDelPush,
+  prePushMain,
+  rutasDelVault,
+  mismaCarpeta,
 } from '../templates/base/claude/hooks/reglas-pr.mjs'
 
 // Hook PreToolUse/PostToolUse de SHS-M39: con Actions en pausa, los checks de
@@ -323,12 +328,19 @@ function repoReal() {
   return dir
 }
 
-function correrHook(entrada) {
-  return execFileSync(process.execPath, [HOOK], { input: JSON.stringify(entrada), encoding: 'utf8' })
+// Sin el VAULT_PATH ni la config de maquina de quien corre los tests: el Vault
+// de cada test se declara por `env`.
+function correrHook(entrada, env = {}) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
+  return execFileSync(process.execPath, [HOOK], {
+    input: JSON.stringify(entrada),
+    encoding: 'utf8',
+    env: { ...process.env, VAULT_PATH: '', SOUCLAUDE_CLAUDE_HOME: home, ...env },
+  })
 }
 
-function push(cwd, comando = 'git push -u origin fix/M1-algo', toolName = 'Bash') {
-  return correrHook({ hook_event_name: 'PreToolUse', tool_name: toolName, cwd, tool_input: { command: comando } })
+function push(cwd, comando = 'git push -u origin fix/M1-algo', toolName = 'Bash', env = {}) {
+  return correrHook({ hook_event_name: 'PreToolUse', tool_name: toolName, cwd, tool_input: { command: comando } }, env)
 }
 
 test('hook real: un push que sube un .env.staging queda denegado', () => {
@@ -362,14 +374,17 @@ test('hook real: push limpio y push al Vault -> stdout vacio; en modo solo el se
   git(dir, 'commit', '-q', '-m', 'feat: plantilla de entorno')
   assert.equal(push(dir), '', 'check en verde: sin salida')
 
-  // Otro repo sin el script del harness (el Vault): no le corresponde el check.
+  // Otro repo sin el script del harness (el Vault): no le corresponde el check
+  // de secretos. Como esta parado en main, hay que declararlo Vault (SHS-M42):
+  // sin eso es un repo mas y su push a main se deniega.
   const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
   git(vault, 'init', '-q', '-b', 'main')
   fs.writeFileSync(path.join(vault, '.env'), 'X=1\n')
   git(vault, 'add', '-A', '--force')
   git(vault, 'commit', '-q', '-m', 'chore: tablero')
-  assert.equal(push(dir, `git -C "${vault}" push`), '')
-  assert.equal(push(dir, `cd "${vault}" && git push`), '')
+  assert.equal(push(dir, `git -C "${vault}" push`, 'Bash', { VAULT_PATH: vault }), '')
+  assert.equal(push(dir, `cd "${vault}" && git push`, 'Bash', { VAULT_PATH: vault }), '')
+  assert.match(JSON.parse(push(dir, `cd "${vault}" && git push`)).hookSpecificOutput.permissionDecisionReason, /SHS-M42/)
 
   fs.mkdirSync(path.join(dir, '.claude'))
   fs.writeFileSync(path.join(dir, '.claude', 'harness.json'), JSON.stringify({ modo: 'solo' }))
@@ -423,4 +438,251 @@ test('hook real: comandos que no son push ni PR no producen nada', () => {
     correrHook({ hook_event_name: 'PostToolUse', tool_name: 'Bash', cwd: dir, tool_input: { command: 'gh pr view 12' }, tool_response: {} }),
     '',
   )
+})
+
+// --- SHS-M42: proteccion de main por repo -------------------------------------
+//
+// Las reglas deny por texto de settings.json no sabian en que repo corria el
+// comando (denegaban el push al Vault, cuyo protocolo es push directo a main) y
+// `git -C <ruta> push` ni siquiera empieza por `git push`. La regla pasa al hook,
+// que resuelve el repo real del push y exime al Vault y al modo solo.
+
+test('rutaNativa: traduce rutas MSYS (/c/...) a su forma Windows, solo en win32', () => {
+  assert.equal(rutaNativa('/c/Users/x/repo', 'win32'), 'C:/Users/x/repo')
+  assert.equal(rutaNativa('/d', 'win32'), 'D:/')
+  assert.equal(rutaNativa('C:/Users/x', 'win32'), 'C:/Users/x')
+  assert.equal(rutaNativa('sub/carpeta', 'win32'), 'sub/carpeta')
+  assert.equal(rutaNativa('/home/x', 'win32'), '/home/x')
+  assert.equal(rutaNativa('/c/Users/x/repo', 'linux'), '/c/Users/x/repo')
+})
+
+test('pushDelComando y destinosDelPush: resuelven la carpeta de una ruta MSYS en Windows', { skip: process.platform !== 'win32' }, () => {
+  assert.equal(pushDelComando('cd /c/Users/x/vault && git push', CWD).dir, path.resolve('C:/Users/x/vault'))
+  assert.equal(destinosDelPush('git -C /c/Users/x/vault push origin main', CWD)[0].dir, path.resolve('C:/Users/x/vault'))
+})
+
+test('destinosDelPush: la rama remota que cada push escribe o borra', () => {
+  const d = (comando) => destinosDelPush(comando, CWD).map((p) => p.destinos)
+  assert.deepEqual(d('git push origin main'), [['main']])
+  assert.deepEqual(d('git push -u origin fix/M1-x'), [['fix/M1-x']])
+  assert.deepEqual(d('git push origin HEAD:main'), [['main']])
+  assert.deepEqual(d('git push origin dev:refs/heads/main'), [['main']])
+  assert.deepEqual(d('git push --force-with-lease origin +main'), [['main']])
+  assert.deepEqual(d('git push origin :main'), [['main']])
+  assert.deepEqual(d('git push origin --delete main'), [['main']])
+  assert.deepEqual(d('git push -o ci.skip origin main'), [['main']])
+  assert.deepEqual(d('git push origin v3.17.0'), [['v3.17.0']])
+  assert.deepEqual(d('git push origin HEAD'), [['@rama-actual']])
+  assert.deepEqual(d('git push'), [['@rama-actual', '@upstream']])
+  assert.deepEqual(d('git push origin'), [['@rama-actual', '@upstream']])
+  assert.deepEqual(d('git push --follow-tags'), [['@rama-actual', '@upstream']])
+  assert.deepEqual(d('git push --all origin'), [['*']])
+  assert.deepEqual(d('git push --mirror'), [['*']])
+  // Solo tags no toca ramas; sin push, nada.
+  assert.deepEqual(d('git push --tags'), [])
+  assert.deepEqual(d('git push origin --tags'), [])
+  assert.deepEqual(d('git status'), [])
+  // Varios pushes en un comando: uno por push, cada uno con su carpeta.
+  const dos = destinosDelPush('git push origin dev && cd "la vault" && git push origin main', CWD)
+  assert.deepEqual(dos.map((p) => p.destinos), [['dev'], ['main']])
+  assert.equal(dos[1].dir, path.resolve(CWD, 'la vault'))
+})
+
+test('rutasDelVault: config del repo, VAULT_PATH y config de maquina, en ese orden', () => {
+  const proyecto = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude proyecto '))
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
+  assert.deepEqual(rutasDelVault({ raizProyecto: proyecto, env: { SOUCLAUDE_CLAUDE_HOME: home } }), [])
+  fs.mkdirSync(path.join(home, 'souclaude'))
+  fs.writeFileSync(path.join(home, 'souclaude', 'vault.json'), JSON.stringify({ path: 'C:/maquina/vault' }))
+  fs.mkdirSync(path.join(proyecto, '.claude'))
+  fs.writeFileSync(path.join(proyecto, '.claude', 'vault.local.json'), JSON.stringify({ path: 'C:/repo/vault' }))
+  assert.deepEqual(rutasDelVault({ raizProyecto: proyecto, env: { SOUCLAUDE_CLAUDE_HOME: home, VAULT_PATH: 'C:/env/vault' } }), [
+    'C:/repo/vault',
+    'C:/env/vault',
+    'C:/maquina/vault',
+  ])
+  // Un JSON roto no rompe nada: se sigue con el resto.
+  fs.writeFileSync(path.join(proyecto, '.claude', 'vault.local.json'), '{ roto')
+  assert.deepEqual(rutasDelVault({ raizProyecto: proyecto, env: { SOUCLAUDE_CLAUDE_HOME: home } }), ['C:/maquina/vault'])
+})
+
+test('mismaCarpeta: barras, barra final y mayusculas en Windows', () => {
+  assert.equal(mismaCarpeta('C:/Users/x/vault', 'C:\\Users\\X\\vault\\', 'win32'), true)
+  assert.equal(mismaCarpeta('/home/x/vault', '/home/x/vault/', 'linux'), true)
+  assert.equal(mismaCarpeta('/home/x/vault', '/home/x/Vault', 'linux'), false)
+  assert.equal(mismaCarpeta('C:/Users/x/vault', 'C:/Users/x/vault/Project-X', 'win32'), false)
+})
+
+// `correr` falso para la proteccion de main: responde a los git que usa el hook
+// (raiz del repo, rama actual, upstream y existencia de main local).
+function gitFalso({ raiz, rama = 'fix/M1-x', upstream = null, mainLocal = true } = {}) {
+  const llamadas = []
+  const correr = (cmd, args, opciones = {}) => {
+    llamadas.push({ cmd, args, opciones })
+    if (cmd !== 'git') return { status: 0, stdout: '', stderr: '' }
+    if (args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+      return raiz ? { status: 0, stdout: `${raiz}\n`, stderr: '' } : { status: 128, stdout: '', stderr: 'fatal: not a git repository' }
+    }
+    if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') return { status: 0, stdout: `${rama}\n`, stderr: '' }
+    if (args[0] === 'rev-parse' && args[1] === '--verify') return { status: mainLocal ? 0 : 1, stdout: '', stderr: '' }
+    if (args[0] === 'config') return upstream ? { status: 0, stdout: `refs/heads/${upstream}\n`, stderr: '' } : { status: 1, stdout: '', stderr: '' }
+    return { status: 0, stdout: '', stderr: '' }
+  }
+  return { correr, llamadas }
+}
+
+test('prePushMain: el push a main del proyecto se deniega con una razon accionable', () => {
+  const proyecto = repoFalso()
+  const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
+  const { correr } = gitFalso({ raiz: proyecto })
+  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr, vault: [vault] })
+  assert.equal(salida.hookSpecificOutput.hookEventName, 'PreToolUse')
+  assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny')
+  assert.match(salida.hookSpecificOutput.permissionDecisionReason, /SHS-M42/)
+  assert.match(salida.hookSpecificOutput.permissionDecisionReason, /vault-sync --push/)
+  assert.ok(salida.hookSpecificOutput.permissionDecisionReason.includes(vault), 'dice donde esta el Vault configurado')
+  // Otras ramas y tags pasan; y nunca se emite "allow" (no salta los ask de force-push).
+  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['dev'] }, correr, vault: [vault] }), null)
+  assert.equal(prePushMain({ push: { dir: proyecto, destinos: ['fix/M1-x', 'v1.0.0'] }, correr, vault: [vault] }), null)
+})
+
+test('prePushMain: sin Vault configurado, la razon dice como configurarlo', () => {
+  const proyecto = repoFalso()
+  const salida = prePushMain({ push: { dir: proyecto, destinos: ['main'] }, correr: gitFalso({ raiz: proyecto }).correr, vault: [] })
+  assert.match(salida.hookSpecificOutput.permissionDecisionReason, /--vault-path/)
+})
+
+test('prePushMain: el Vault queda exento, por la carpeta del push o por la raiz de su repo', () => {
+  const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
+  fs.mkdirSync(path.join(vault, 'Project-X'))
+  // La misma carpeta escrita distinto: barras, barra final y (en Windows) mayusculas.
+  const otraForma = (process.platform === 'win32' ? vault.toUpperCase().replace(/\\/g, '/') : vault) + '/'
+  const { correr } = gitFalso({ raiz: vault, rama: 'main' })
+  assert.equal(prePushMain({ push: { dir: vault, destinos: ['main'] }, correr, vault: [otraForma] }), null)
+  // Desde una subcarpeta del Vault: la raiz del repo es el Vault.
+  assert.equal(prePushMain({ push: { dir: path.join(vault, 'Project-X'), destinos: ['main'] }, correr, vault: [vault] }), null)
+  // Sin refspec, parado en main del Vault.
+  assert.equal(prePushMain({ push: { dir: vault, destinos: ['@rama-actual', '@upstream'] }, correr, vault: [vault] }), null)
+})
+
+test('prePushMain: en modo solo el agente mergea y pushea main a proposito', () => {
+  const solo = repoFalso({ modo: 'solo' })
+  assert.equal(prePushMain({ push: { dir: solo, destinos: ['main'] }, correr: gitFalso({ raiz: solo }).correr, vault: [] }), null)
+})
+
+test('prePushMain: resuelve con git la rama actual, el upstream y las ramas de --all', () => {
+  const proyecto = repoFalso()
+  const decision = (destinos, git) =>
+    prePushMain({ push: { dir: proyecto, destinos }, correr: gitFalso({ raiz: proyecto, ...git }).correr, vault: [] })?.hookSpecificOutput.permissionDecision ?? null
+  // `git push origin HEAD` parado en main deniega; en otra rama pasa aunque su upstream sea main.
+  assert.equal(decision(['@rama-actual'], { rama: 'main' }), 'deny')
+  assert.equal(decision(['@rama-actual'], { rama: 'fix/M1-x', upstream: 'main' }), null)
+  // `git push` a secas: con el upstream en main (push.default=upstream) tambien deniega.
+  assert.equal(decision(['@rama-actual', '@upstream'], { rama: 'fix/M1-x', upstream: 'main' }), 'deny')
+  assert.equal(decision(['@rama-actual', '@upstream'], { rama: 'fix/M1-x', upstream: 'fix/M1-x' }), null)
+  assert.equal(decision(['@rama-actual', '@upstream'], { rama: 'HEAD' }), null, 'HEAD suelto: git fallaria solo')
+  // --all / --mirror: solo si hay un main local que subir.
+  assert.equal(decision(['*'], { mainLocal: true }), 'deny')
+  assert.equal(decision(['*'], { mainLocal: false }), null)
+})
+
+test('prePushMain: una carpeta que no es repo tampoco deja pasar un main explicito (ese push fallaria igual)', () => {
+  const sinRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude sin repo '))
+  const { correr } = gitFalso({ raiz: null })
+  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['main'] }, correr, vault: [] })?.hookSpecificOutput.permissionDecision, 'deny')
+  assert.equal(prePushMain({ push: { dir: sinRepo, destinos: ['dev'] }, correr, vault: [] }), null)
+})
+
+// --- Integracion SHS-M42: el hook instalado y git reales -------------------------
+
+// El hook copiado a `.claude/hooks/` de un proyecto de tmp, como lo deja el
+// harness: asi lee el vault.local.json de ESE proyecto.
+function proyectoConHook({ vaultPath = null } = {}) {
+  const dir = repoReal()
+  fs.mkdirSync(path.join(dir, '.claude', 'hooks'), { recursive: true })
+  fs.copyFileSync(HOOK, path.join(dir, '.claude', 'hooks', 'reglas-pr.mjs'))
+  if (vaultPath) fs.writeFileSync(path.join(dir, '.claude', 'vault.local.json'), JSON.stringify({ path: vaultPath }))
+  return dir
+}
+
+function vaultReal() {
+  const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
+  git(vault, 'init', '-q', '-b', 'main')
+  fs.mkdirSync(path.join(vault, 'Project-X'))
+  fs.writeFileSync(path.join(vault, 'Project-X', 'kanban.md'), '## Backlog\n')
+  git(vault, 'add', '-A')
+  git(vault, 'commit', '-q', '-m', 'chore: tablero')
+  return vault
+}
+
+function correrHookInstalado(proyecto, comando, { cwd = proyecto, toolName = 'Bash', env = {} } = {}) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
+  return execFileSync(process.execPath, [path.join(proyecto, '.claude', 'hooks', 'reglas-pr.mjs')], {
+    input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: toolName, cwd, tool_input: { command: comando } }),
+    encoding: 'utf8',
+    env: { ...process.env, VAULT_PATH: '', SOUCLAUDE_CLAUDE_HOME: home, ...env },
+  })
+}
+
+test('hook real: el push a main del proyecto queda denegado, en todas sus formas', () => {
+  const proyecto = proyectoConHook({ vaultPath: vaultReal() })
+  for (const comando of [
+    'git push origin main',
+    'git push -u origin HEAD:main',
+    'git push origin dev:main',
+    'git push origin :main',
+    `git -C "${proyecto}" push origin main`,
+    `cd "${proyecto}" && git push origin main`,
+    'git fetch origin && git merge origin/dev && git push origin main',
+  ]) {
+    const salida = JSON.parse(correrHookInstalado(proyecto, comando))
+    assert.equal(salida.hookSpecificOutput.permissionDecision, 'deny', comando)
+    assert.match(salida.hookSpecificOutput.permissionDecisionReason, /SHS-M42/, comando)
+  }
+  // Las ramas de trabajo siguen pasando (y el check de secretos sigue corriendo: en verde, sin salida).
+  assert.equal(correrHookInstalado(proyecto, 'git push -u origin fix/M1-algo'), '')
+  // Parado en main, hasta el push sin refspec, y tambien desde la tool PowerShell.
+  git(proyecto, 'switch', '-q', '-c', 'main')
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, 'git push')).hookSpecificOutput.permissionDecision, 'deny')
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, 'git push origin HEAD', { toolName: 'PowerShell' })).hookSpecificOutput.permissionDecision, 'deny')
+})
+
+test('hook real: el Vault se pushea a main sin deny: por cd, por -C, sin refspec y desde una subcarpeta', () => {
+  const vault = vaultReal()
+  const proyecto = proyectoConHook({ vaultPath: vault })
+  assert.equal(correrHookInstalado(proyecto, `cd "${vault}" && git add -A && git commit -m "chore: tablero" && git push origin main`), '')
+  assert.equal(correrHookInstalado(proyecto, `git -C "${vault}" push origin main`), '')
+  assert.equal(correrHookInstalado(proyecto, 'git push', { cwd: vault }), '')
+  assert.equal(correrHookInstalado(proyecto, 'git push origin HEAD:main', { cwd: path.join(vault, 'Project-X') }), '')
+  // Y el proyecto sigue protegido en la misma sesion.
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, 'git push origin main')).hookSpecificOutput.permissionDecision, 'deny')
+})
+
+test('hook real: el Vault tambien se reconoce por VAULT_PATH y por la config de maquina', () => {
+  const vault = vaultReal()
+  const proyecto = proyectoConHook()
+  const comando = `git -C "${vault}" push origin main`
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, comando)).hookSpecificOutput.permissionDecision, 'deny', 'sin configurar, el Vault es un repo mas')
+  assert.equal(correrHookInstalado(proyecto, comando, { env: { VAULT_PATH: vault } }), '')
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
+  fs.mkdirSync(path.join(home, 'souclaude'))
+  fs.writeFileSync(path.join(home, 'souclaude', 'vault.json'), JSON.stringify({ path: vault }))
+  assert.equal(correrHookInstalado(proyecto, comando, { env: { SOUCLAUDE_CLAUDE_HOME: home } }), '')
+})
+
+test('hook real: en Git Bash sobre Windows la ruta MSYS del Vault tambien se reconoce, y la del proyecto se deniega', { skip: process.platform !== 'win32' }, () => {
+  const msys = (ruta) => ruta.replace(/^([A-Za-z]):\\/, (_, unidad) => `/${unidad.toLowerCase()}/`).replace(/\\/g, '/')
+  const vault = vaultReal()
+  const proyecto = proyectoConHook({ vaultPath: vault })
+  assert.equal(correrHookInstalado(proyecto, `cd "${msys(vault)}" && git push origin main`), '')
+  assert.equal(correrHookInstalado(proyecto, `git -C "${msys(vault)}" push origin main`), '')
+  // Antes, la carpeta MSYS no se resolvia y el push quedaba sin revisar.
+  assert.equal(JSON.parse(correrHookInstalado(proyecto, `cd "${msys(proyecto)}" && git push origin main`)).hookSpecificOutput.permissionDecision, 'deny')
+})
+
+test('hook real: en modo solo el push a main pasa', () => {
+  const proyecto = proyectoConHook()
+  fs.writeFileSync(path.join(proyecto, '.claude', 'harness.json'), JSON.stringify({ modo: 'solo' }))
+  git(proyecto, 'switch', '-q', '-c', 'main')
+  assert.equal(correrHookInstalado(proyecto, 'git push origin main'), '')
 })
