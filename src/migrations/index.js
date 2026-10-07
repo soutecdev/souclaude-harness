@@ -50,6 +50,42 @@ export const migrations = [
         )
     },
   },
+  {
+    // Las reglas `deny` por texto de `git push … main` no distinguen repos:
+    // denegaban tambien el push al Vault, cuyo protocolo es push directo a main,
+    // y no cubrian `git -C <ruta> push origin main`. La proteccion de main pasa
+    // al hook reglas-pr (SHS-M42), que resuelve el repo real del push; y el
+    // PreToolUse pierde el filtro `if` que dejaba pasar `git -C`. merge-json
+    // solo agrega: sin esta migracion, las tres reglas y el `if` viejo seguirian
+    // en los consumidores para siempre (y el bloque nuevo quedaria duplicado).
+    id: 'v3-settings-main-por-hook',
+    to: '3.17.0',
+    dest: '.claude/settings.json',
+    describe:
+      'settings.json: la protección de `main` pasa al hook reglas-pr — se quitan las reglas deny por texto de `git push … main` (denegaban también el Vault) y el filtro `if` del PreToolUse que dejaba pasar `git -C`',
+    transform(content) {
+      const json = parseJson(content, '.claude/settings.json')
+      if (json == null) return content
+      const REGLAS = ['Bash(git push origin main*)', 'Bash(git push * main)', 'Bash(git push * *:main*)']
+      let changed = false
+      if (Array.isArray(json.permissions?.deny)) {
+        const deny = json.permissions.deny.filter((r) => !REGLAS.includes(r))
+        if (deny.length !== json.permissions.deny.length) {
+          json.permissions.deny = deny
+          changed = true
+        }
+      }
+      for (const grupo of json.hooks?.PreToolUse ?? []) {
+        for (const hook of grupo?.hooks ?? []) {
+          if (/^(Bash|PowerShell)\(git push:\*\)$/.test(hook?.if ?? '') && /reglas-pr\.mjs/.test(hook?.command ?? '')) {
+            delete hook.if
+            changed = true
+          }
+        }
+      }
+      return changed ? stringifyJson(json) : content
+    },
+  },
 ]
 
 // Devuelve las migraciones aplicables a `dest` para pasar de `fromVersion` al

@@ -143,7 +143,8 @@ test('init --solo: emite la superficie solo (CLAUDE.md fluido y settings sin can
   // reglas-pr (SHS-M39): en solo se cablea el check de secretos del push (la
   // unica regla dura, y los merges directos no pasan por PR), no el del PR.
   assert.ok(has(dir, '.claude/hooks/reglas-pr.mjs'))
-  assert.match(JSON.stringify(settings.hooks?.PreToolUse ?? []), /git push.*reglas-pr\.mjs/)
+  // Sin filtro `if` desde SHS-M42: `git -C <ruta> push` no empieza por `git push`.
+  assert.match(JSON.stringify(settings.hooks?.PreToolUse ?? []), /reglas-pr\.mjs/)
   assert.equal(settings.hooks?.PostToolUse, undefined, 'se cableo el check de PR en modo solo')
   assert.ok(settings.permissions.allow.includes('Bash(node scripts/check-pr-rules.mjs:*)'))
   // El protocolo de milestones (progress/README.md) es de equipo.

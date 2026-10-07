@@ -41,7 +41,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git push:*)",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
             "timeout": 60
           }
@@ -52,7 +51,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "PowerShell(git push:*)",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
             "timeout": 60
           }
