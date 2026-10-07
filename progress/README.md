@@ -144,7 +144,12 @@ force) sobre la ruta de `vault.local.json`, y `settings.json` lo permite sin ped
 confirmación. Úsalo en vez de `git -C "<vault>"` a mano: esos comandos sí piden
 confirmación. Requiere el CLI global (`npm install -g github:soutecdev/souclaude-harness#v3`,
 una vez por máquina); no uses `npx souclaude`, que fuera de este repo baja del registro un
-paquete que no es el del harness.
+paquete que no es el del harness. El hook `reglas-pr` deniega todo `git push` que toque
+`main` de un repo que no sea el Vault (SHS-M42). Reconoce el Vault por la ruta de
+`vault.local.json` (o `VAULT_PATH`), por su remoto (`soubunker-vault`) o por su
+carpeta `00-System`, en modo equipo y en modo solo; si aun así deniega un push al
+Vault con «push a `main` denegado», configúralo en esta máquina:
+`souclaude upgrade --vault-path <ruta>` escribe la ruta.
 
 **Durante el trabajo**, el flujo constante es: adoptar un plan → espejarlo a `plans/`
 y anotarlo en la tarjeta del milestone → crear la rama del milestone desde `dev` →

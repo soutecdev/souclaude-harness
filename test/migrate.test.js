@@ -312,3 +312,61 @@ test('migracion v3: despues del upgrade no se vuelve a migrar ni a escribir el C
   assert.equal(await main(['upgrade', ...YES], dir), 0)
   assert.equal(read(dir, 'CLAUDE.md'), despues)
 })
+
+// SHS-M42: un consumidor instalado con la v3.11.0–v3.16.2 tiene en settings.json
+// las tres reglas deny por texto de `git push … main` (denegaban tambien el push
+// al Vault) y el PreToolUse de reglas-pr filtrado con `if` (que dejaba pasar
+// `git -C`). merge-json solo agrega: sin la migracion, las dos cosas vivirian
+// para siempre y el bloque nuevo del hook quedaria duplicado al lado del viejo.
+const DENY_POR_TEXTO = ['Bash(git push origin main*)', 'Bash(git push * main)', 'Bash(git push * *:main*)']
+
+async function instaladoEnV316({ solo = false } = {}) {
+  const dir = mkRepo({ 'package.json': '{"name":"consumidor"}' })
+  assert.equal(await main(['init', ...YES, ...(solo ? ['--solo'] : [])], dir), 0)
+  const settings = JSON.parse(read(dir, '.claude/settings.json'))
+  settings.permissions.deny.push(...DENY_POR_TEXTO, 'Bash(rm -rf:*)') // la ultima es del dev
+  for (const grupo of settings.hooks.PreToolUse) {
+    // Mismo orden de claves que emitia la 3.16.x: type, if, command, timeout.
+    grupo.hooks = grupo.hooks.map((h) => ({ type: h.type, if: `${grupo.matcher}(git push:*)`, command: h.command, timeout: h.timeout }))
+  }
+  write(dir, '.claude/settings.json', JSON.stringify(settings, null, 2))
+  const lock = JSON.parse(read(dir, '.claude/harness.json'))
+  lock.harnessVersion = '3.16.2'
+  write(dir, '.claude/harness.json', JSON.stringify(lock, null, 2))
+  return dir
+}
+
+for (const solo of [false, true]) {
+  const modo = solo ? 'solo' : 'equipo'
+  test(`migracion v3 (SHS-M42, ${modo}): las reglas deny de push a main y el if del PreToolUse se quitan; lo del dev queda`, async () => {
+    const dir = await instaladoEnV316({ solo })
+
+    assert.equal(await main(['upgrade', ...YES], dir), 0)
+
+    const settings = JSON.parse(read(dir, '.claude/settings.json'))
+    for (const regla of DENY_POR_TEXTO) assert.ok(!settings.permissions.deny.includes(regla), `sobrevivio ${regla}`)
+    assert.ok(settings.permissions.deny.includes('Bash(rm -rf:*)'), 'se perdio el deny del dev')
+    assert.ok(settings.permissions.deny.includes('Read(./.env)'))
+    const pre = settings.hooks.PreToolUse
+    assert.equal(pre.length, 2, 'un grupo por tool (Bash y PowerShell): el bloque nuevo no se duplica al lado del viejo')
+    for (const grupo of pre) for (const h of grupo.hooks) assert.equal(h.if, undefined, 'quedo el if en el PreToolUse')
+    assert.match(JSON.stringify(pre), /reglas-pr\.mjs/)
+    if (!solo) for (const grupo of settings.hooks.PostToolUse) for (const h of grupo.hooks) assert.match(h.if, /gh pr/, 'el if del PostToolUse no se toca')
+
+    // Idempotente: el segundo upgrade no vuelve a escribirlo.
+    const estable = read(dir, '.claude/settings.json')
+    assert.equal(await main(['upgrade', ...YES], dir), 0)
+    assert.equal(read(dir, '.claude/settings.json'), estable)
+  })
+}
+
+test('plantillas: settings.json (equipo y solo) ya no traen las reglas deny por texto ni el if del PreToolUse', async () => {
+  for (const solo of [false, true]) {
+    const dir = mkRepo({ 'package.json': '{"name":"nuevo"}' })
+    assert.equal(await main(['init', ...YES, ...(solo ? ['--solo'] : [])], dir), 0)
+    const settings = JSON.parse(read(dir, '.claude/settings.json'))
+    for (const regla of DENY_POR_TEXTO) assert.ok(!settings.permissions.deny.includes(regla), `${regla} sigue en la plantilla de ${solo ? 'solo' : 'equipo'}`)
+    for (const grupo of settings.hooks.PreToolUse) for (const h of grupo.hooks) assert.equal(h.if, undefined, `quedo un if en el PreToolUse de ${solo ? 'solo' : 'equipo'}`)
+    assert.match(JSON.stringify(settings.hooks.PreToolUse), /reglas-pr\.mjs/)
+  }
+})

@@ -67,11 +67,12 @@ por PR.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
 - **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
-  Claude Code deniega el `git push` que sube archivos de secretos y, al crear o
-  editar el PR con `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs`
-  y publica el resultado como comentario en el PR. Un FAIL de `secretos` o
-  `pr-metadata` se corrige antes de dar el PR por listo, y el hook no se rodea
-  (skill `soutec-github`).
+  Claude Code deniega el `git push` que toca `main` de cualquier repo que no sea el
+  Vault (SHS-M42) o que sube archivos de secretos y, al crear o editar el PR con
+  `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs` y publica el
+  resultado como comentario en el PR. Un FAIL de `secretos` o `pr-metadata` se
+  corrige antes de dar el PR por listo, y el hook no se rodea (skill
+  `soutec-github`).
 - **GitHub Actions: solo los workflows que instala el harness.** No crees ni
   modifiques workflows en `.github/workflows/` por proyecto ni por funcionalidad
   (tests, lint, build, deploy, ni checks extra en los PRs). Si un proyecto necesita
