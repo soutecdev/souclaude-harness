@@ -540,6 +540,40 @@ export function prePush({ push, raiz, correr }) {
   return null
 }
 
+// --- Frescura de docs/metodologia (SHS-M16) ----------------------------------
+//
+// La carpeta publicable de la metodologia lleva secciones generadas desde
+// package.json y el manifest; un push con esas secciones desactualizadas
+// publicaria documentacion vieja. Solo aplica al repo del generador: el script
+// no se distribuye a consumidores ni va en el paquete publicado, asi que en
+// cualquier otro repo este paso es un no-op. Igual que SCRIPT_CONFIABLE, se
+// ejecuta siempre el script del proyecto del hook, nunca el del repo destino.
+const SCRIPT_DOCS = path.join(RAIZ_DEL_HOOK, 'scripts', 'gen-docs-metodologia.mjs')
+
+export function preDocsMetodologia(correr, { script = SCRIPT_DOCS, raizPush = RAIZ_DEL_HOOK, raizHook = RAIZ_DEL_HOOK } = {}) {
+  if (!raizPush || !mismaCarpeta(raizPush, raizHook)) return null
+  if (!fs.existsSync(script)) return null
+  const r = correr(process.execPath, [script, '--check'], { cwd: raizHook, timeout: 30_000 })
+  if (r.status === 1) {
+    const fails = (r.stdout ?? '').split('\n').filter((l) => l.startsWith('[FAIL]'))
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: [
+          'reglas-pr (SHS-M16): docs/metodologia esta desactualizada respecto del instalador y este push publicaria documentacion vieja.',
+          ...(fails.length ? fails : ['[FAIL] docs-metodologia: drift en las secciones generadas']),
+          'Corre `node scripts/gen-docs-metodologia.mjs`, revisa la prosa si el cambio lo amerita, commitea y vuelve a pushear. No intentes rodear este hook.',
+        ].join('\n'),
+      },
+    }
+  }
+  if (r.status !== 0) {
+    return { systemMessage: `reglas-pr: no se pudo verificar la frescura de docs/metodologia (${primeraLinea(r)}); el push sigue sin validar.` }
+  }
+  return null
+}
+
 function estadoDe(r) {
   if (r.status === 0) return 'OK'
   if (r.status === 1) return 'FAIL'
@@ -693,7 +727,10 @@ export function procesar(entrada, correr = correrReal) {
     }
     const push = pushDelComando(comando, cwd, shell)
     const raiz = push && repoConReglas(push.dir, correr, { tambienEnSolo: true })
-    return raiz ? prePush({ push, raiz, correr }) : null
+    if (!raiz) return null
+    // Secretos primero; con eso en orden, la frescura de docs/metodologia
+    // (solo en el repo del generador, SHS-M16).
+    return prePush({ push, raiz, correr }) ?? preDocsMetodologia(correr, { raizPush: raiz })
   }
   if (entrada.hook_event_name === 'PostToolUse') {
     const cambio = cambioDePR(comando, cwd, shell)
