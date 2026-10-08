@@ -138,9 +138,16 @@ función chica. **Nada de un DSL de migraciones.**
    ```bash
    git fetch origin && node scripts/tag-release.mjs --ref origin/main
    ```
-6. Los devs corren `npx github:soutecdev/souclaude-harness#v3 upgrade` y reciben la
-   nueva versión. No hay registry ni publicación de npm. Para cambiar de major, editan
-   la ref y corren `upgrade --prune`.
+6. **El aviso a los devs es automático** (SHS-M43): al abrir la siguiente sesión, el
+   hook de SessionStart de cada consumidor compara su lockfile contra el último tag
+   `vX.Y.Z` (git ls-remote con caché por máquina, TTL 24 h) y anuncia la versión
+   nueva proponiendo la skill `harness-upgrade` — no hace falta avisar por mensaje
+   privado. El upgrade lo corre cada dev
+   (`npx github:soutecdev/souclaude-harness#v3 upgrade`, o con el tag exacto si el
+   aviso ya dijo la versión). No hay registry ni publicación de npm. Para cambiar de
+   major, editan la ref y corren `upgrade --prune` — la major nueva también se
+   anuncia, con mensaje aparte, porque su migración es manual. ADR:
+   `docs/decisions/20261008-aviso-de-version-en-sesion.md`.
 
    **La migración real de la organización es `#v1` → `#v3`.** El tag móvil `v2` nunca
    se creó: la serie 2 solo tiene el inmutable `v2.4.0`, así que todo proyecto

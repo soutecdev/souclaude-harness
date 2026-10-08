@@ -278,3 +278,27 @@ repo de scratch, con el hook vivo de la sesión):
   la rama bajo la sesión de M42 y sus 10 archivos sin commitear quedaron sobre mi
   rama hasta que esa sesión migró a la suya. Para trabajo paralelo en este repo:
   `git worktree` o turnarse.
+
+## 2026-10-08 — SHS-M43: aviso de versión nueva en sesión
+
+- El canal de "hay versión nueva" ya no es un mensaje privado: los hooks de
+  SessionStart comparan el lockfile contra el último tag `vX.Y.Z` del repo del
+  harness (`git ls-remote`) con caché por máquina en
+  `~/.claude/souclaude/version-check.json` (TTL 24 h, backoff 1 h, silencio ante
+  cualquier falla). Para tests: `SOUCLAUDE_HARNESS_REMOTO` apunta el "repo del
+  harness" a un repo local con tags y `SOUCLAUDE_CLAUDE_HOME` redirige la caché.
+- El aviso corta **antes** de tocar la red si no hay lockfile (o es `0.0.0`) o si
+  el repo es el generador (`templates/harness.manifest.json` presente) — por eso
+  los tests viejos de los hooks siguen sin pegarle a GitHub.
+- Gotcha confirmado: la caché de npx puede servir un CLI viejo del tag móvil
+  `#v3`; ese CLI decía "al día" comparando contra su propio manifest. Mitigación:
+  `status`/`upgrade` leen la caché del hook y delatan el atraso, y la skill
+  `harness-upgrade` pasa al tag exacto (`#vX.Y.Z`) cuando el aviso ya dijo la
+  versión.
+- **Pendiente espejo Azure Boards (conector caído)**: SHS-M43 (En curso) y
+  T001–T003 quedaron sin Epic/Issues — el MCP `azure-devops` no conectó y la
+  máquina no tenía `ADO_MCP_AUTH_TOKEN` para el fallback REST. Crear el Epic y
+  los 3 Issues hijos (tags `SHS-M43`, `SHS-M43-T00n`) en la próxima sesión con
+  conector; las tarjetas del Vault no llevan anotación de work item todavía.
+- La corrección de la infografía 05 ("mientras el tag v3 no esté publicado…")
+  NO se hizo aquí a propósito: pertenece a SHS-M16-T005 (Backlog, @pendiente).
