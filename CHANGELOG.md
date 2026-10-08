@@ -2,10 +2,24 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Sin publicar]
+## [3.18.0] — 2026-10-08
 
 ### Agregado
 
+- **Aviso automático de versión nueva al inicio de sesión** (SHS-M43). Los hooks de
+  SessionStart (equipo y solo) comparan la versión instalada del lockfile contra el
+  último tag `vX.Y.Z` del repo del harness — `git ls-remote` de solo lectura, con
+  caché por máquina en `~/.claude/souclaude/version-check.json` (TTL 24 h; ante
+  fallo, backoff de 1 h y se usa lo último conocido) — y, si hay versión nueva, la
+  anuncian proponiendo la skill `harness-upgrade`. La major nueva lleva mensaje
+  aparte (su migración es manual). Silencio total sin red, sin credenciales, sin
+  lockfile o en el repo del propio generador: la sesión jamás se corta por el
+  aviso. Con esto, el canal de difusión de releases deja de ser el mensaje privado.
+  ADR `docs/decisions/20261008-aviso-de-version-en-sesion.md`.
+- **`status` y `upgrade` delatan al CLI atrasado** (`src/core/version-remota.js`):
+  leen esa misma caché y avisan cuando el CLI en ejecución quedó detrás del último
+  release publicado — el caso de la caché de npx del tag móvil `#v3`, con el que
+  `status` decía «al día» comparando contra su propio manifest.
 - **`docs/metodologia/`: la carpeta publicable de la metodología, con candado de
   frescura** (SHS-M16-P2). Tres artefactos — la guía, la infografía master (mudada
   desde `docs/infografias/`) y el prompt de instalación — llevan secciones generadas
@@ -16,6 +30,21 @@ El harness y el CLI se versionan juntos.
   repo del generador — exigen regenerarla en el mismo cambio que toca el instalador.
   La difusión a SharePoint queda manual, copiando la carpeta (SHS-M8 sigue en
   Backlog).
+
+### Cambiado
+
+- La skill `harness-upgrade` se activa también desde el aviso de sesión, usa el tag
+  exacto (`#vX.Y.Z`) en sus comandos cuando el aviso ya dijo cuál es la última
+  versión (esquiva la caché de npx del tag móvil) y suma ese caso a su tabla de
+  problemas; dos referencias de pasos desfasadas desde M38 quedan corregidas.
+  Tras este `upgrade`, reinicia Claude Code: cambian los dos hooks de SessionStart.
+
+### Corregido
+
+- `package.json` pasa a `"private": true`: el repo no se publica en npm y nada
+  impedía un `npm publish` accidental (la instalación por `npx github:…` y el CLI
+  global no cambian).
+- README: la versión mínima real de Node es 22.4 (como exige `engines`), no 20.
 
 ## [3.17.0] — 2026-10-06
 
