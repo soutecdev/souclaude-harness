@@ -3,6 +3,7 @@ import { loadManifest } from '../core/manifest.js'
 import { resolveDetected } from '../core/detect.js'
 import { readLockfile } from '../core/lockfile.js'
 import { migrationsFor, migrations } from '../migrations/index.js'
+import { avisoCliDesactualizado } from '../core/version-remota.js'
 import { resolveVars, planAndApply, vaultStep, githubProtectionStep, cliGlobalStep } from './_shared.js'
 
 export async function upgrade(flags, cwd) {
@@ -11,6 +12,11 @@ export async function upgrade(flags, cwd) {
   const detected = resolveDetected(cwd, lock)
 
   ui.intro(`souclaude upgrade — harness v${manifest.harnessVersion}`)
+
+  // Un upgrade corrido por un CLI atrasado (cache de npx del tag movil)
+  // "actualizaria" a una version vieja creyendola la ultima (SHS-M43).
+  const atraso = avisoCliDesactualizado(manifest.harnessVersion)
+  if (atraso) ui.log.warn(atraso)
 
   const from = lock?.harnessVersion ?? '0.0.0'
   if (!lock) {
