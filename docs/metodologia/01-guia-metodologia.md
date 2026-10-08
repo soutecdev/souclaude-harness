@@ -5,7 +5,7 @@ repo de SOUTEC. En una lectura sabes qué instala, cómo se trabaja y dónde est
 detalle de cada cosa.
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.18.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.17.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 ## La idea en una frase

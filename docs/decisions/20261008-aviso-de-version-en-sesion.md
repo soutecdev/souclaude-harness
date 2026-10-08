@@ -109,8 +109,8 @@ organización.
 
 ## References
 
-- Milestone SHS-M43 del Vault (tarjeta y tareas T001–T003).
-- CHANGELOG `[3.18.0]` y `templates/base/claude/hooks/*.mjs` (implementación).
+- Milestone SHS-M43 del Vault (tarjeta y tareas T001–T004).
+- CHANGELOG `[3.17.0]` y `templates/base/claude/hooks/*.mjs` (implementación).
 - `src/core/version-remota.js`, `src/commands/status.js`,
   `src/commands/upgrade.js` (CLI atrasado).
 - `docs/decisions/20260921-pausa-github-actions.md` (por qué sin workflows).

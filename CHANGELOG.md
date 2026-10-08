@@ -2,7 +2,7 @@
 
 El harness y el CLI se versionan juntos.
 
-## [3.18.0] — 2026-10-08
+## [3.17.0] — 2026-10-08
 
 ### Agregado
 
@@ -20,6 +20,12 @@ El harness y el CLI se versionan juntos.
   leen esa misma caché y avisan cuando el CLI en ejecución quedó detrás del último
   release publicado — el caso de la caché de npx del tag móvil `#v3`, con el que
   `status` decía «al día» comparando contra su propio manifest.
+- **Las novedades del release, a la vista al terminar el `upgrade`** (SHS-M43-T004):
+  el CHANGELOG viaja dentro del paquete y, cuando el upgrade deja instalada una
+  versión más nueva, el CLI imprime en un recuadro las entradas de las versiones
+  recién instaladas (hasta 3; si quedan más, lo dice); la skill `harness-upgrade`
+  abre su reporte final con esas novedades en una caja de guiones, para que lo
+  nuevo no pase inadvertido.
 - **`docs/metodologia/`: la carpeta publicable de la metodología, con candado de
   frescura** (SHS-M16-P2). Tres artefactos — la guía, la infografía master (mudada
   desde `docs/infografias/`) y el prompt de instalación — llevan secciones generadas
@@ -38,6 +44,22 @@ El harness y el CLI se versionan juntos.
   versión (esquiva la caché de npx del tag móvil) y suma ese caso a su tabla de
   problemas; dos referencias de pasos desfasadas desde M38 quedan corregidas.
   Tras este `upgrade`, reinicia Claude Code: cambian los dos hooks de SessionStart.
+- **La protección de `main` vive en el hook `reglas-pr`, por repo** (SHS-M42). Antes de
+  cada `git push`, el hook resuelve la carpeta real del push (cwd, `cd`, `-C`) y deniega
+  —con una razón accionable— todo push que toque `main` (refspec, `HEAD:main`,
+  `dev:main`, `:main`, `--delete`, `--all`/`--mirror`, o la rama actual y su upstream
+  cuando no hay refspec) salvo que el repo sea el Vault o esté en modo solo, donde el
+  agente mergea y pushea `main` a propósito. El Vault se reconoce por su ruta
+  configurada (`.claude/vault.local.json`, `VAULT_PATH` o
+  `~/.claude/souclaude/vault.json`, en ese orden), por su remoto (`soubunker-vault`, el
+  repo que declara el manifest, o el `repo` de esa config) o por su carpeta
+  `00-System`: un clon del Vault se pushea a `main` en los dos modos, con cualquier
+  forma del comando, aunque la máquina no tenga `vault.local.json`. Si aun así un push
+  al Vault quedara denegado, la razón dice cómo configurarlo. ADR
+  `docs/decisions/20261006-proteccion-de-main-por-repo-en-el-hook.md`.
+- `CLAUDE.md` (plantilla), skill `soutec-github` y `progress/README.md` describen la
+  regla nueva. Tras el `upgrade` hay que reiniciar Claude Code para que cargue el hook
+  y los permisos nuevos.
 
 ### Corregido
 
@@ -45,11 +67,6 @@ El harness y el CLI se versionan juntos.
   impedía un `npm publish` accidental (la instalación por `npx github:…` y el CLI
   global no cambian).
 - README: la versión mínima real de Node es 22.4 (como exige `engines`), no 20.
-
-## [3.17.0] — 2026-10-06
-
-### Corregido
-
 - **El push al Vault ya no queda denegado por las reglas de `main` del `settings.json`**
   (SHS-M42). Las tres reglas `deny` por texto (`Bash(git push origin main*)`,
   `Bash(git push * main)`, `Bash(git push * *:main*)`) no saben en qué repo corre el
@@ -67,25 +84,6 @@ El harness y el CLI se versionan juntos.
 - **Rutas MSYS en Git Bash sobre Windows**: `cd /c/Users/… && git push` dejaba la
   carpeta sin resolver (`C:\c\Users\…`) y el push sin revisar. El hook las traduce a su
   forma nativa antes de resolverlas.
-
-### Cambiado
-
-- **La protección de `main` vive en el hook `reglas-pr`, por repo** (SHS-M42). Antes de
-  cada `git push`, el hook resuelve la carpeta real del push (cwd, `cd`, `-C`) y deniega
-  —con una razón accionable— todo push que toque `main` (refspec, `HEAD:main`,
-  `dev:main`, `:main`, `--delete`, `--all`/`--mirror`, o la rama actual y su upstream
-  cuando no hay refspec) salvo que el repo sea el Vault o esté en modo solo, donde el
-  agente mergea y pushea `main` a propósito. El Vault se reconoce por su ruta
-  configurada (`.claude/vault.local.json`, `VAULT_PATH` o
-  `~/.claude/souclaude/vault.json`, en ese orden), por su remoto (`soubunker-vault`, el
-  repo que declara el manifest, o el `repo` de esa config) o por su carpeta
-  `00-System`: un clon del Vault se pushea a `main` en los dos modos, con cualquier
-  forma del comando, aunque la máquina no tenga `vault.local.json`. Si aun así un push
-  al Vault quedara denegado, la razón dice cómo configurarlo. ADR
-  `docs/decisions/20261006-proteccion-de-main-por-repo-en-el-hook.md`.
-- `CLAUDE.md` (plantilla), skill `soutec-github` y `progress/README.md` describen la
-  regla nueva. Tras el `upgrade` hay que reiniciar Claude Code para que cargue el hook
-  y los permisos nuevos.
 
 ## [3.16.2] — 2026-09-29
 
