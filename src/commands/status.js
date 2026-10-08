@@ -5,6 +5,7 @@ import { resolveDetected } from '../core/detect.js'
 import { readLockfile } from '../core/lockfile.js'
 import { readIfExists } from '../core/fsx.js'
 import { computePlan, writeActions, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { avisoCliDesactualizado } from '../core/version-remota.js'
 import { resolveVars } from './_shared.js'
 
 // Claves que Claude Code ignora en silencio. Estaban en el Kit v0 y son la razon
@@ -17,6 +18,12 @@ export async function status(flags, cwd) {
   const detected = resolveDetected(cwd, lock)
 
   ui.intro('souclaude status')
+
+  // "Disponible" sale del manifest de ESTE CLI: si el CLI quedo atras del
+  // ultimo release (cache de npx del tag movil, global viejo), avisarlo —
+  // sin este aviso, status diria "al dia" sin estarlo (SHS-M43).
+  const atraso = avisoCliDesactualizado(manifest.harnessVersion)
+  if (atraso) ui.log.warn(atraso)
 
   if (!lock) {
     ui.log.warn('Este repo no tiene harness (.claude/harness.json no existe).')

@@ -62,8 +62,12 @@ la superficie Claude, no toca tu código. Qué hace, en orden:
 5. **Ofrece instalar el CLI global** `souclaude`, para el monitor y el
    `vault-sync` desde cualquier terminal.
 
-Para actualizar más adelante no se repite nada de esto: se le pide al agente
-("actualiza el harness") y la skill `harness-upgrade` corre el flujo completo.
+Para actualizar más adelante no se repite nada de esto — y no hace falta estar
+pendiente de los anuncios: al abrir una sesión en un repo con el harness, el
+hook de inicio compara la versión instalada con el último release publicado y,
+si hay una nueva, la avisa ahí mismo (una consulta por máquina y por día; en
+silencio si no hay red). Basta decirle al agente "actualiza el harness" — o
+aceptar su ofrecimiento — y la skill `harness-upgrade` corre el flujo completo.
 
 ## Las skills que puede instalar
 
