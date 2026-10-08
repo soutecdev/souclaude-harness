@@ -1,6 +1,6 @@
 ---
 name: harness-upgrade
-description: Actualiza el harness CCEM de este repo (skills, comandos, templates SDD, settings) a la última versión publicada, sin pisar nada que hayas editado tú. Actívate cuando el usuario pida actualizar, upgradear o traer la última versión del harness (ej. "actualiza el harness", "hay una versión nueva del harness", "upgradea el harness").
+description: Actualiza el harness CCEM de este repo (skills, comandos, templates SDD, settings) a la última versión publicada, sin pisar nada que hayas editado tú. Actívate cuando el usuario pida actualizar, upgradear o traer la última versión del harness (ej. "actualiza el harness", "hay una versión nueva del harness", "upgradea el harness"), y también cuando el aviso del harness al inicio de la sesión anuncie una versión nueva y el usuario acepte actualizar.
 ---
 
 # /harness-upgrade
@@ -16,6 +16,16 @@ No hace falta que el usuario pida cada paso por separado.
    ```
    npx -y github:soutecdev/souclaude-harness#v3 status
    ```
+
+   **El harness avisa solo**: al inicio de cada sesión, el hook de SessionStart
+   compara la versión instalada con el último tag publicado y, si hay una
+   nueva, la anuncia (SHS-M43). Si ese aviso ya te dijo cuál es la última
+   versión (ej. `v3.18.0`), usa el **tag exacto** en todos los comandos de este
+   flujo — `npx -y github:soutecdev/souclaude-harness#v3.18.0 …` — en lugar del
+   tag móvil `#v3`: la caché de npx puede servir un CLI viejo del tag móvil y
+   hacer que `status` diga "al día" sin estarlo. Por lo mismo, si `status` o
+   `upgrade` avisan "este CLI es vX, pero el último release publicado es vY",
+   repite el comando con `#vY`.
 
    Si ya está en la última versión y no hay archivos obsoletos ni `.new`
    pendientes, avisa eso en una línea y termina — no hay nada más que hacer,
@@ -45,7 +55,7 @@ No hace falta que el usuario pida cada paso por separado.
    Esto actualiza los archivos que no editaste, deja `.new` al lado de los que sí
    editaste y **borra sin preguntar** los obsoletos que nunca tocaste. Los
    obsoletos que sí editaste **no se borran solos**: quedan reportados para que
-   los revises en el paso 4.
+   los revises en el paso 6 (reporte final).
 
    El mismo `upgrade` instala o actualiza solo el CLI global `souclaude` si
    falta o está en otra versión. Apenas termine, verifícalo según la sección
@@ -103,7 +113,23 @@ No hace falta que el usuario pida cada paso por separado.
    el proyecto no es una Roca, no la tiene a mano o prefiere dejarla para
    después, sigue sin más: no es un error ni un bloqueo.
 
-6. **Reporte final.** Avísale al usuario, en un resumen corto:
+6. **Reporte final.** Ábrelo con las novedades de la versión instalada en una
+   caja de guiones, dentro de un bloque de código (así se ve monoespaciada y
+   distinta del resto del mensaje). Una línea por novedad, resumida desde el
+   recuadro «Novedades del harness» que el `upgrade` imprime al terminar (sale
+   del CHANGELOG empaquetado) — no pegues las entradas completas:
+
+   ```
+   ------------------------------------------------------------
+     NOVEDADES DEL HARNESS vX.Y.Z
+   ------------------------------------------------------------
+     - Primera novedad, en una línea
+     - Segunda novedad, en una línea
+   ------------------------------------------------------------
+   ```
+
+   Si el upgrade cruzó varias versiones, una caja por versión (las que mostró
+   el `upgrade`). Después de la caja, el resumen corto:
    - versión anterior → versión nueva.
    - CLI global `souclaude`: ya estaba al día, se instaló o actualizó (con qué
      versión), o qué quedó sin resolver y por qué.
@@ -148,6 +174,7 @@ Si falla, diagnostica y resuelve; no te quedes en el aviso. Causas conocidas:
 | Error de `git` o `Repository not found` / `403` | Falta `git` o no hay credenciales de GitHub con acceso a `soutecdev/souclaude-harness` | Con `git ls-remote https://github.com/soutecdev/souclaude-harness.git` confirma el acceso. Si falta autenticación, pide al usuario que corra `! gh auth login`. |
 | `ETIMEDOUT` / `ENOTFOUND` | Sin red o con proxy | Reintenta una vez. Si sigue, revisa `npm config get proxy` y repórtalo. |
 | La instalación termina pero `souclaude --version` sigue viejo | Otro `souclaude` gana en el `PATH` (un `npm link`, otra instalación) o quedó una versión en caché | `where souclaude` (Windows) o `which -a souclaude` para ver cuál gana; `npm uninstall -g souclaude-harness` y reinstala. |
+| El aviso de inicio de sesión anuncia una versión nueva, pero `status` dice que está al día | La caché de npx sirvió un CLI viejo del tag móvil `#v3` | Corre el flujo con el tag exacto de esa versión (`npx -y github:soutecdev/souclaude-harness#v<versión> …`) y reinstala el CLI global con ese mismo tag. |
 | `Unsupported engine` o errores de sintaxis al correr | Node menor a 22.4 | Actualizar Node es decisión del usuario: repórtalo con la versión actual (`node --version`). |
 
 Después de cada corrección, vuelve a correr `souclaude --version`. Si tras dos
@@ -157,7 +184,7 @@ repo quedó bien igual, lo que falta es la máquina.
 ## Único punto donde SÍ hay que parar
 
 - Un obsoleto que el usuario editó no se borra sin que él lo apruebe. Repórtalo
-  en el paso 5 y pregúntale si quiere que lo borres.
+  en el paso 6 y pregúntale si quiere que lo borres.
 - Un hunk ambiguo de un `.new` no se resuelve solo: se deja como está y se
   reporta.
 - Sin Roca vigente, pregúntale al usuario al final si el proyecto tiene una

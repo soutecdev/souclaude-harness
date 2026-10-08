@@ -1,12 +1,15 @@
-// Hook de Claude Code del harness (managed): reglas de PR en la sesion (SHS-M39).
+// Hook de Claude Code del harness (managed): reglas de PR en la sesion (SHS-M39)
+// y proteccion de `main` por repo (SHS-M42).
 //
 // Con GitHub Actions en pausa (SHS-M36), los checks de
 // scripts/check-pr-rules.mjs ya no corren en CI: los corre este hook dentro de
 // la sesion del agente, en el momento en que importan.
 //
-//   PreToolUse  · git push              -> grupo secretos sobre los commits que
-//                                          el push subiria; si falla, deniega el
-//                                          push.
+//   PreToolUse  · git push              -> (1) deniega el push que toca `main` de
+//                                          cualquier repo que no sea el Vault ni
+//                                          este en modo solo; (2) grupo secretos
+//                                          sobre los commits que el push subiria;
+//                                          si falla, deniega el push.
 //   PostToolUse · gh pr create / edit   -> los tres grupos contra el PR, un
 //                                          comentario con el resultado en el PR
 //                                          (la evidencia para el revisor) y el
@@ -18,12 +21,14 @@
 //                                          vuelve a disparar el hook) o si el
 //                                          hook no corrio.
 //
-// Es un hook de Claude Code, no un git hook. Falla abierto ante problemas de
-// infraestructura (sin gh, sin red, sin el script): no frena por no poder
-// verificar, pero lo avisa. No hace nada en repos sin
-// scripts/check-pr-rules.mjs (el Vault, por ejemplo). En modo solo corre solo
-// el check de secretos antes del push: cubre tambien los merges directos a
-// dev/main, que en solo no pasan por ningun PR.
+// Es un hook de Claude Code, no un git hook. Corre en cada comando de shell, sin
+// filtro `if` en settings.json (`git -C <ruta> push` no empieza por `git push` y
+// se le escapaba), y se filtra solo: sin push ni PR en el comando termina sin
+// hacer nada. Falla abierto ante problemas de infraestructura (sin gh, sin red,
+// sin el script): no frena por no poder verificar, pero lo avisa. El check de
+// secretos no aplica en repos sin scripts/check-pr-rules.mjs (el Vault, por
+// ejemplo). En modo solo corre solo el check de secretos antes del push: cubre
+// tambien los merges directos a dev/main, que en solo no pasan por ningun PR.
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -136,18 +141,25 @@ const ES_GH = /(^|[\\/])gh(\.exe)?$/i
 const ES_CD = /^(cd|pushd|chdir|set-location|sl)$/i
 const OPCIONES_PUSH_CON_VALOR = new Set(['--repo', '-o', '--push-option', '--receive-pack', '--exec'])
 
+// En Git Bash sobre Windows el agente escribe rutas MSYS (`/c/Users/...`), que
+// path.resolve leeria como relativas a la raiz de la unidad actual
+// (`C:\c\Users\...`): la carpeta no existiria y el push quedaria sin revisar.
+// Se traducen a su forma nativa (`C:/Users/...`) antes de resolverlas.
+export function rutaNativa(ruta, plataforma = process.platform) {
+  const m = plataforma === 'win32' ? ruta.match(/^\/([a-zA-Z])(\/.*)?$/) : null
+  return m ? `${m[1].toUpperCase()}:${m[2] ?? '/'}` : ruta
+}
+
 function carpetaTrasCd(actual, destino) {
   if (!destino || destino === '-') return actual
-  const expandido = destino === '~' || destino.startsWith('~/') ? path.join(os.homedir(), destino.slice(1)) : destino
+  const expandido = destino === '~' || destino.startsWith('~/') ? path.join(os.homedir(), destino.slice(1)) : rutaNativa(destino)
   return path.resolve(actual, expandido)
 }
 
-// Lo que un `git push` subiria, o null si no sube commits: los borrados de
-// ramas remotas y los comandos sin push no llevan check. `cabezas` son las
-// revs cuyos commits sin pushear hay que revisar: la rama o el tag del
-// refspec, HEAD por defecto, y --branches / --tags para --all, --mirror y
-// --tags (un tag sobre un commit sin pushear tambien lo sube).
-export function pushDelComando(comando, cwd, shell = 'bash') {
+// Cada `git push` del comando, con la carpeta efectiva en la que corre (el cwd
+// mas los cd y -C previos) y sus argumentos: sin `git`, sus opciones globales
+// ni `push`.
+function* pushes(comando, cwd, shell = 'bash') {
   let carpeta = cwd
   for (const segmento of segmentos(comando, shell)) {
     const p = palabras(segmento, shell)
@@ -161,7 +173,7 @@ export function pushDelComando(comando, cwd, shell = 'bash') {
     let dir = carpeta
     while (i < p.length && p[i].startsWith('-')) {
       if (p[i] === '-C') {
-        dir = path.resolve(dir, p[i + 1] ?? '.')
+        dir = path.resolve(dir, rutaNativa(p[i + 1] ?? '.'))
         i += 2
       } else if (['-c', '--git-dir', '--work-tree', '--namespace'].includes(p[i])) {
         i += 2
@@ -170,11 +182,21 @@ export function pushDelComando(comando, cwd, shell = 'bash') {
       }
     }
     if (p[i] !== 'push') continue
+    yield { dir, args: p.slice(i + 1) }
+  }
+}
 
+// Lo que el primer `git push` del comando subiria, o null si no sube commits:
+// los borrados de ramas remotas y los comandos sin push no llevan check de
+// secretos. `cabezas` son las revs cuyos commits sin pushear hay que revisar:
+// la rama o el tag del refspec, HEAD por defecto, y --branches / --tags para
+// --all, --mirror y --tags (un tag sobre un commit sin pushear tambien lo sube).
+export function pushDelComando(comando, cwd, shell = 'bash') {
+  for (const { dir, args } of pushes(comando, cwd, shell)) {
     const posicionales = []
     const extra = []
-    for (let j = i + 1; j < p.length; j++) {
-      const arg = p[j]
+    for (let j = 0; j < args.length; j++) {
+      const arg = args[j]
       if (arg === '--delete' || arg === '-d') return null
       if (arg === '--tags' || arg === '--follow-tags') extra.push('--tags')
       if (arg === '--all' || arg === '--branches') extra.push('--branches')
@@ -193,13 +215,56 @@ export function pushDelComando(comando, cwd, shell = 'bash') {
       cabezas.push(origen === '' || origen === '@' ? 'HEAD' : origen)
     }
     // Sin refspec, push de la rama actual; --tags solo, en cambio, no la sube.
-    if (refspecs.length === 0 && !extra.includes('--branches') && !(extra.includes('--tags') && !p.includes('--follow-tags'))) {
+    if (refspecs.length === 0 && !extra.includes('--branches') && !(extra.includes('--tags') && !args.includes('--follow-tags'))) {
       cabezas.push('HEAD')
     }
     cabezas.push(...extra)
     return cabezas.length ? { dir, cabezas: [...new Set(cabezas)] } : null
   }
   return null
+}
+
+// Comodines de destinosDelPush que resuelve git en la carpeta del push.
+const RAMA_ACTUAL = '@rama-actual'
+const UPSTREAM = '@upstream'
+const TODAS = '*'
+
+const ramaCorta = (ref) => ref.replace(/^refs\/heads\//, '')
+
+// Ramas remotas que cada `git push` del comando escribiria o borraria, para la
+// proteccion de main: el lado destino de cada refspec (`dev:main`,
+// `HEAD:refs/heads/main`, `:main` y `--delete main` tocan main; `origin main`
+// sube main a main), TODAS para --all/--branches/--mirror y, con `HEAD` o sin
+// refspec, la rama actual (sin refspec, tambien su upstream: con
+// push.default=upstream iria a ella). Un push solo de tags no toca ramas. Viaja
+// tambien el remoto nombrado (`remoto`; null = el de la rama, normalmente
+// origin), que sirve para reconocer el Vault por su URL.
+export function destinosDelPush(comando, cwd, shell = 'bash') {
+  const salida = []
+  for (const { dir, args } of pushes(comando, cwd, shell)) {
+    const posicionales = []
+    const destinos = []
+    let soloTags = false
+    for (let j = 0; j < args.length; j++) {
+      const arg = args[j]
+      if (arg === '--all' || arg === '--branches' || arg === '--mirror') destinos.push(TODAS)
+      if (arg === '--tags') soloTags = true
+      if (OPCIONES_PUSH_CON_VALOR.has(arg)) {
+        j++
+      } else if (!arg.startsWith('-')) {
+        posicionales.push(arg)
+      }
+    }
+    const refspecs = posicionales.slice(1)
+    for (const refspec of refspecs) {
+      const [origen, destino] = refspec.replace(/^\+/, '').split(':')
+      const ref = destino ?? origen
+      destinos.push(ref === 'HEAD' || ref === '@' ? RAMA_ACTUAL : ramaCorta(ref))
+    }
+    if (refspecs.length === 0 && destinos.length === 0 && !soloTags) destinos.push(RAMA_ACTUAL, UPSTREAM)
+    if (destinos.length) salida.push({ dir, remoto: posicionales[0] ?? null, destinos: [...new Set(destinos)] })
+  }
+  return salida
 }
 
 const FLAGS_DE_METADATA = /^(--body|-b|--body-file|-F|--base|-B)(=|$)/
@@ -263,7 +328,8 @@ function rutaDelScript(raiz) {
 // PreToolUse corre antes del prompt de permisos, y `cd <repo ajeno> && git push`
 // no puede servir para ejecutar un check-pr-rules.mjs de terceros. El del repo
 // destino solo se mira (existencia) para decidir si le corresponde el check.
-const SCRIPT_CONFIABLE = rutaDelScript(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..'))
+const RAIZ_DEL_HOOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const SCRIPT_CONFIABLE = rutaDelScript(RAIZ_DEL_HOOK)
 
 function enModoSolo(raiz) {
   try {
@@ -283,6 +349,164 @@ function repoConReglas(dir, correr, { tambienEnSolo = false } = {}) {
   if (!raiz || !fs.existsSync(rutaDelScript(raiz)) || !fs.existsSync(SCRIPT_CONFIABLE)) return null
   if (!tambienEnSolo && enModoSolo(raiz)) return null
   return raiz
+}
+
+// --- Proteccion de main por repo (SHS-M42) -----------------------------------
+//
+// `main` del proyecto solo recibe merges desde `dev` por PR: ningun push la
+// toca. La regla vive aca y no en permissions.deny de settings.json porque una
+// regla por texto no sabe en que repo corre el comando: `git push origin main`
+// es una violacion en el proyecto y es el protocolo en el Vault (push directo a
+// main, sin PR); y `git -C <ruta> push origin main` ni siquiera empieza por
+// `git push`. El hook resuelve la carpeta real del push (cwd, cd, -C) y exime al
+// Vault —por su ruta configurada (.claude/vault.local.json, VAULT_PATH o la
+// config de maquina, en el mismo orden que el CLI), por su remoto o por su
+// carpeta 00-System, para que un clon del Vault se reconozca en los dos modos
+// aunque esta maquina no lo tenga configurado— y al modo solo, donde el agente
+// mergea y pushea main a proposito.
+
+const RAMA_PROTEGIDA = 'main'
+
+function leerJson(ruta) {
+  try {
+    return JSON.parse(fs.readFileSync(ruta, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+// Config del Vault en esta maquina: las rutas y las URLs de remoto (`repo`)
+// declaradas en .claude/vault.local.json del proyecto, VAULT_PATH y la config de
+// maquina, en el mismo orden que readVaultConfig del CLI.
+export function configDelVault({ raizProyecto = RAIZ_DEL_HOOK, env = process.env } = {}) {
+  const rutas = []
+  const repos = []
+  const sumar = (config) => {
+    if (typeof config?.path === 'string' && config.path) rutas.push(config.path)
+    if (typeof config?.repo === 'string' && config.repo) repos.push(config.repo)
+  }
+  sumar(leerJson(path.join(raizProyecto, '.claude', 'vault.local.json')))
+  if (env.VAULT_PATH) rutas.push(env.VAULT_PATH)
+  const home = env.SOUCLAUDE_CLAUDE_HOME ?? path.join(os.homedir(), '.claude')
+  sumar(leerJson(path.join(home, 'souclaude', 'vault.json')))
+  return { rutas, repos }
+}
+
+export function rutasDelVault(opciones) {
+  return configDelVault(opciones).rutas
+}
+
+// Dos rutas apuntan a la misma carpeta: por realpath (resuelve enlaces, nombres
+// 8.3 y la forma de las barras) y sin distinguir mayusculas en Windows.
+export function mismaCarpeta(a, b, plataforma = process.platform) {
+  const canon = (ruta) => {
+    let r
+    try {
+      r = fs.realpathSync.native(ruta)
+    } catch {
+      r = path.resolve(ruta)
+    }
+    r = r.replace(/[\\/]+$/, '')
+    return plataforma === 'win32' ? r.replace(/\\/g, '/').toLowerCase() : r
+  }
+  return canon(a) === canon(b)
+}
+
+function salidaDe(r) {
+  return r.status === 0 ? r.stdout.trim() : ''
+}
+
+// Ramas remotas concretas que tocaria el push: resuelve los comodines de
+// destinosDelPush con git en la carpeta del push. Si git no responde (la
+// carpeta no existe, no es un repo), se queda con lo explicito: ese push
+// fallaria igual.
+function ramasDestino(push, correr) {
+  const ramas = new Set()
+  const git = (args) => salidaDe(correr('git', args, { cwd: push.dir, timeout: 10_000 }))
+  let actual = null
+  const ramaActual = () => (actual ??= git(['rev-parse', '--abbrev-ref', 'HEAD']))
+  for (const destino of push.destinos) {
+    if (destino === TODAS) {
+      // --all/--mirror suben main si existe en local; si git no responde, se asume que si.
+      const r = correr('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${RAMA_PROTEGIDA}`], { cwd: push.dir, timeout: 10_000 })
+      if (r.status === 0 || r.status == null) ramas.add(RAMA_PROTEGIDA)
+    } else if (destino === RAMA_ACTUAL) {
+      const rama = ramaActual()
+      if (rama && rama !== 'HEAD') ramas.add(rama)
+    } else if (destino === UPSTREAM) {
+      const rama = ramaActual()
+      const merge = rama && rama !== 'HEAD' ? git(['config', '--get', `branch.${rama}.merge`]) : ''
+      if (merge) ramas.add(ramaCorta(merge))
+    } else {
+      ramas.add(destino)
+    }
+  }
+  return ramas
+}
+
+// El repo del Vault de la organizacion (templates/harness.manifest.json ->
+// vault.repo): cualquier clon del Vault se reconoce por el nombre de su remoto,
+// tenga o no vault.local.json esta maquina.
+const REPO_DEL_VAULT = /\/soubunker-vault$/
+
+// `https://github.com/org/repo.git`, `git@github.com:org/repo.git` y
+// `ssh://git@github.com/org/repo` -> `github.com/org/repo`; `C:\clones\repo` ->
+// `c:/clones/repo`. Lo que vuelve comparables dos formas de nombrar un repo.
+export function repoCanonico(url) {
+  return String(url ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .replace(/^[^/@]+@/, '')
+    .replace(/^([^/:]+):(?![\\/])/, '$1/')
+    .replace(/\.git$/, '')
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '')
+}
+
+// URL del remoto al que va el push: el nombrado en el comando (o una URL o ruta
+// escrita directo) o, sin nombrar, origin.
+function urlDelRemoto(push, correr) {
+  const remoto = push.remoto ?? 'origin'
+  if (/[/\\:]/.test(remoto)) return remoto
+  return salidaDe(correr('git', ['remote', 'get-url', remoto], { cwd: push.dir, timeout: 10_000 })) || null
+}
+
+// El push va al Vault si su carpeta (o la raiz de su repo) es una ruta
+// configurada del Vault, si el repo tiene 00-System/ (la senal con la que el CLI
+// reconoce un Vault) o si su remoto es el repo del Vault: el de la organizacion
+// o uno declarado en la config. Asi un clon del Vault se reconoce aunque esta
+// maquina no tenga vault.local.json, en modo equipo y en modo solo.
+function esElVault({ push, raiz, correr, vault }) {
+  const carpetas = raiz ? [push.dir, raiz] : [push.dir]
+  if (carpetas.some((c) => vault.rutas.some((v) => mismaCarpeta(c, v)))) return true
+  if (raiz && fs.existsSync(path.join(raiz, '00-System'))) return true
+  const url = urlDelRemoto(push, correr)
+  if (!url) return false
+  const canon = repoCanonico(url)
+  return REPO_DEL_VAULT.test(canon) || vault.repos.some((r) => repoCanonico(r) === canon)
+}
+
+export function prePushMain({ push, correr, vault, enSolo = enModoSolo }) {
+  const raiz = raizDelRepo(push.dir, correr)
+  if (raiz && enSolo(raiz)) return null
+  if (!ramasDestino(push, correr).has(RAMA_PROTEGIDA)) return null
+  if (esElVault({ push, raiz, correr, vault })) return null
+  const sobreElVault = vault.rutas.length
+    ? `El Vault de esta maquina esta en ${vault.rutas[0]} y este push no apunta ahi. En el Vault el push directo a main es el protocolo y este hook lo deja pasar.`
+    : 'No hay Vault configurado en esta maquina (.claude/vault.local.json, VAULT_PATH o ~/.claude/souclaude/vault.json); un clon del Vault se reconoce igual por su remoto (soubunker-vault) o por su carpeta 00-System. Si este push era al Vault y no se reconocio, configuralo: `souclaude upgrade --vault-path <ruta>`.'
+  return {
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: [
+        `reglas-pr (SHS-M42): push a \`${RAMA_PROTEGIDA}\` denegado en ${raiz ?? push.dir}.`,
+        '`main` del proyecto solo recibe merges desde `dev` por PR: trabaja en la rama del milestone (`tipo/M<n>-slug`, desde `dev`) y pushea esa rama.',
+        sobreElVault,
+        'Para escribir en el Vault usa `souclaude vault-sync --push -m "<mensaje>" --paths Project-<PREFIJO>`, que corre sin confirmacion. No intentes rodear este hook.',
+      ].join('\n'),
+    },
+  }
 }
 
 export function prePush({ push, raiz, correr }) {
@@ -312,6 +536,40 @@ export function prePush({ push, raiz, correr }) {
     if (r.status !== 0) {
       return { systemMessage: `reglas-pr: no se pudo validar secretos antes del push (${primeraLinea(r)}); el push sigue sin validar.` }
     }
+  }
+  return null
+}
+
+// --- Frescura de docs/metodologia (SHS-M16) ----------------------------------
+//
+// La carpeta publicable de la metodologia lleva secciones generadas desde
+// package.json y el manifest; un push con esas secciones desactualizadas
+// publicaria documentacion vieja. Solo aplica al repo del generador: el script
+// no se distribuye a consumidores ni va en el paquete publicado, asi que en
+// cualquier otro repo este paso es un no-op. Igual que SCRIPT_CONFIABLE, se
+// ejecuta siempre el script del proyecto del hook, nunca el del repo destino.
+const SCRIPT_DOCS = path.join(RAIZ_DEL_HOOK, 'scripts', 'gen-docs-metodologia.mjs')
+
+export function preDocsMetodologia(correr, { script = SCRIPT_DOCS, raizPush = RAIZ_DEL_HOOK, raizHook = RAIZ_DEL_HOOK } = {}) {
+  if (!raizPush || !mismaCarpeta(raizPush, raizHook)) return null
+  if (!fs.existsSync(script)) return null
+  const r = correr(process.execPath, [script, '--check'], { cwd: raizHook, timeout: 30_000 })
+  if (r.status === 1) {
+    const fails = (r.stdout ?? '').split('\n').filter((l) => l.startsWith('[FAIL]'))
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: [
+          'reglas-pr (SHS-M16): docs/metodologia esta desactualizada respecto del instalador y este push publicaria documentacion vieja.',
+          ...(fails.length ? fails : ['[FAIL] docs-metodologia: drift en las secciones generadas']),
+          'Corre `node scripts/gen-docs-metodologia.mjs`, revisa la prosa si el cambio lo amerita, commitea y vuelve a pushear. No intentes rodear este hook.',
+        ].join('\n'),
+      },
+    }
+  }
+  if (r.status !== 0) {
+    return { systemMessage: `reglas-pr: no se pudo verificar la frescura de docs/metodologia (${primeraLinea(r)}); el push sigue sin validar.` }
   }
   return null
 }
@@ -461,9 +719,18 @@ export function procesar(entrada, correr = correrReal) {
   const shell = /powershell/i.test(entrada.tool_name ?? '') ? 'powershell' : 'bash'
 
   if (entrada.hook_event_name === 'PreToolUse') {
+    // Primero main: es la regla dura y no necesita el script. Despues secretos.
+    const vault = configDelVault()
+    for (const push of destinosDelPush(comando, cwd, shell)) {
+      const negado = prePushMain({ push, correr, vault })
+      if (negado) return negado
+    }
     const push = pushDelComando(comando, cwd, shell)
     const raiz = push && repoConReglas(push.dir, correr, { tambienEnSolo: true })
-    return raiz ? prePush({ push, raiz, correr }) : null
+    if (!raiz) return null
+    // Secretos primero; con eso en orden, la frescura de docs/metodologia
+    // (solo en el repo del generador, SHS-M16).
+    return prePush({ push, raiz, correr }) ?? preDocsMetodologia(correr, { raizPush: raiz })
   }
   if (entrada.hook_event_name === 'PostToolUse') {
     const cambio = cambioDePR(comando, cwd, shell)

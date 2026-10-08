@@ -240,3 +240,65 @@ de OBS). Gotchas de esta pasada:
   extrae solo cuando `@quién` es un campo completo (` · @quién · `), no con un `@\w+` suelto.
 - El Vault tenía M35 y M37 «En curso» con todos sus PRs mergeados: el hook de sesión solo
   detecta PRs mergeados de tarjetas En review, no de milestones. Revisar a mano.
+
+## 2026-10-06 — SHS-M42: el push al Vault denegado por las reglas de `main`
+
+El análisis de DAlzuru (sesión R4 de RAM) acertó en lo central: las tres reglas `deny`
+por texto de `git push … main` no saben en qué repo corren y denegaban el push al Vault.
+Lo verificado antes de tocar nada (documentación oficial + pruebas `--dry-run` sobre un
+repo de scratch, con el hook vivo de la sesión):
+- Una regla `deny` se evalúa aunque un hook PreToolUse devuelva `allow`, y ninguna regla
+  de permisos mira el cwd. La única salida es quitar la regla por texto y decidir por
+  repo en el hook (ADR `20261006-proteccion-de-main-por-repo-en-el-hook.md`).
+- El filtro `if: Bash(git push:*)` del PreToolUse sí se dispara con `cd x && git push`
+  (semántica «algún subcomando»), pero **no** con `git -C x push`: esa forma esquivaba
+  el hook entero, incluido el check de secretos. Por eso el PreToolUse queda sin `if`.
+- Los comodines `*` de las reglas `deny` sí actúan en Claude Code 2.1.241 (la prueba
+  limpia la denegó la regla, no el hook). La «aleatoriedad» que veían los compañeros es
+  la forma del comando: `cd vault && git push origin main` denegado, `git -C vault push
+  origin main` pasa.
+- En Git Bash sobre Windows el agente escribe rutas MSYS (`/c/Users/...`); `path.resolve`
+  las vuelve `C:\c\Users\...` y el hook no resolvía la carpeta: ese push quedaba sin
+  revisar. Ahora se traducen antes de resolver.
+- La opción B del análisis (deny `git -C * push * main*` + allow con la ruta del Vault)
+  no funciona: `allow` nunca gana a `deny`, y el `*` del deny casa también con la ruta
+  literal del Vault.
+- El comando de la tool Bash en Windows tiene un límite de longitud: un heredoc de ~12 KB
+  se corta a mitad («unexpected EOF»). Para anexar bloques grandes, escribirlos a un
+  archivo y `cat`-earlos.
+- SHS-M16-P2 (2026-10-07): el candado de `docs/metodologia` debutó en su primer merge
+  real — el bump a 3.17.0 de M42 dejó los cuatro artefactos con drift y `--check` lo
+  acusó antes del push; `node scripts/gen-docs-metodologia.mjs` + commit y en verde.
+  El patrón «sección generada + candado» rinde más que cualquier aviso de "mantener
+  actualizado".
+- Un generador de docs en Windows debe heredar el EOL de cada archivo (`autocrlf`
+  deja el working tree en CRLF): si regenera siempre con LF, el candado acusa drift
+  falso en la máquina de al lado.
+- Dos sesiones de Claude sobre la misma working copy se pisan: mi `checkout -b` movió
+  la rama bajo la sesión de M42 y sus 10 archivos sin commitear quedaron sobre mi
+  rama hasta que esa sesión migró a la suya. Para trabajo paralelo en este repo:
+  `git worktree` o turnarse.
+
+## 2026-10-08 — SHS-M43: aviso de versión nueva en sesión
+
+- El canal de "hay versión nueva" ya no es un mensaje privado: los hooks de
+  SessionStart comparan el lockfile contra el último tag `vX.Y.Z` del repo del
+  harness (`git ls-remote`) con caché por máquina en
+  `~/.claude/souclaude/version-check.json` (TTL 24 h, backoff 1 h, silencio ante
+  cualquier falla). Para tests: `SOUCLAUDE_HARNESS_REMOTO` apunta el "repo del
+  harness" a un repo local con tags y `SOUCLAUDE_CLAUDE_HOME` redirige la caché.
+- El aviso corta **antes** de tocar la red si no hay lockfile (o es `0.0.0`) o si
+  el repo es el generador (`templates/harness.manifest.json` presente) — por eso
+  los tests viejos de los hooks siguen sin pegarle a GitHub.
+- Gotcha confirmado: la caché de npx puede servir un CLI viejo del tag móvil
+  `#v3`; ese CLI decía "al día" comparando contra su propio manifest. Mitigación:
+  `status`/`upgrade` leen la caché del hook y delatan el atraso, y la skill
+  `harness-upgrade` pasa al tag exacto (`#vX.Y.Z`) cuando el aviso ya dijo la
+  versión.
+- **Pendiente espejo Azure Boards (conector caído)**: SHS-M43 (En curso) y
+  T001–T003 quedaron sin Epic/Issues — el MCP `azure-devops` no conectó y la
+  máquina no tenía `ADO_MCP_AUTH_TOKEN` para el fallback REST. Crear el Epic y
+  los 3 Issues hijos (tags `SHS-M43`, `SHS-M43-T00n`) en la próxima sesión con
+  conector; las tarjetas del Vault no llevan anotación de work item todavía.
+- La corrección de la infografía 05 ("mientras el tag v3 no esté publicado…")
+  NO se hizo aquí a propósito: pertenece a SHS-M16-T005 (Backlog, @pendiente).

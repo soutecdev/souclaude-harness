@@ -25,6 +25,12 @@ export function cancelled(message = 'Cancelado. No se escribio nada.') {
   p.cancel(message)
 }
 
+// Recuadro destacado (mismo estilo que el Plan): para contenido que no debe
+// perderse entre los logs, como las novedades del release recien instalado.
+export function note(message, title) {
+  p.note(message, title)
+}
+
 async function guard(value) {
   if (p.isCancel(value)) {
     cancelled()

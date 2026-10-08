@@ -1,6 +1,6 @@
 {
   "name": "souclaude-harness",
-  "version": "3.16.2",
+  "version": "3.17.0",
   "description": "CLI para inicializar y migrar el harness de Claude Code de SOUTEC",
   "type": "module",
   "bin": {
@@ -9,7 +9,8 @@
   "files": [
     "bin",
     "src",
-    "templates"
+    "templates",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=22.4"
@@ -27,5 +28,5 @@
     "url": "git+https://github.com/soutecdev/souclaude-harness.git"
   },
   "license": "UNLICENSED",
-  "private": false
+  "private": true
 }

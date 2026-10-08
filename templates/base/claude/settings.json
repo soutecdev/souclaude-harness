@@ -15,9 +15,6 @@
       "Read(~/.claude/.credentials.json)",
       "Read(~/.aws/credentials)",
       "Read(~/.ssh/**)",
-      "Bash(git push origin main*)",
-      "Bash(git push * main)",
-      "Bash(git push * *:main*)",
       "Bash(gh pr merge:*)",
       "Bash(gh pr review:*)",
       "Bash(gh release:*)"
@@ -53,7 +50,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git push:*)",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
             "timeout": 60
           }
@@ -64,7 +60,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "PowerShell(git push:*)",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/reglas-pr.mjs\"",
             "timeout": 60
           }

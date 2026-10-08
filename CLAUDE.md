@@ -9,7 +9,7 @@ organización.
 
 ## Harness
 
-Harness `3.16.2`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
+Harness `3.17.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
 viven en `.claude/skills/` y se aplican solas cuando el contexto lo amerita (en un
 proyecto consumidor se eligen al instalar con `npx souclaude`; `soutec-github` es
 obligatoria y siempre está):
@@ -67,11 +67,12 @@ por PR.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
 - **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
-  Claude Code deniega el `git push` que sube archivos de secretos y, al crear o
-  editar el PR con `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs`
-  y publica el resultado como comentario en el PR. Un FAIL de `secretos` o
-  `pr-metadata` se corrige antes de dar el PR por listo, y el hook no se rodea
-  (skill `soutec-github`).
+  Claude Code deniega el `git push` que toca `main` de cualquier repo que no sea el
+  Vault (SHS-M42) o que sube archivos de secretos y, al crear o editar el PR con
+  `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs` y publica el
+  resultado como comentario en el PR. Un FAIL de `secretos` o `pr-metadata` se
+  corrige antes de dar el PR por listo, y el hook no se rodea (skill
+  `soutec-github`).
 - **GitHub Actions: solo los workflows que instala el harness.** No crees ni
   modifiques workflows en `.github/workflows/` por proyecto ni por funcionalidad
   (tests, lint, build, deploy, ni checks extra en los PRs). Si un proyecto necesita
@@ -136,6 +137,11 @@ infraestructura y todo lo que toca frameworks, en inglés.
   sin eso, la lectura utf8 y la normalización LF corrompen los bytes.
 - Escritura de archivos: siempre plana (nada de write-temp-then-rename): OneDrive y
   antivirus rompen el patrón "atómico" con EPERM.
+- `docs/metodologia/` es la carpeta publicable de la metodología: sus secciones
+  `souclaude:gen` se regeneran con `node scripts/gen-docs-metodologia.mjs`, y la
+  frescura la exigen `souclaude verify`, el test-candado de la suite y el hook
+  `reglas-pr` (deniega el push con drift). En cada release `dev` → `main`, revisa
+  también la prosa de la carpeta.
 - Tests: `npm test` (Node >= 22.4). Quita `NO_COLOR` del entorno antes de correr los
   tests de monitor-render.
 

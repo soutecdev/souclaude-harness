@@ -6,6 +6,7 @@
 // lineas del worklog para retomar contexto. No valida ni bloquea: la sesion
 // nunca se corta por el Vault — exit 0 siempre.
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 
@@ -76,9 +77,135 @@ function ultimasLineasWorklog(rutaMd) {
   return lineas.slice(-ULTIMAS)
 }
 
+// --- Aviso de version nueva del harness (SHS-M43) ---------------------------
+//
+// El canal de "hay version nueva" deja de ser un mensaje privado: este hook
+// compara la version instalada (harnessVersion del lockfile .claude/harness.json)
+// contra el ultimo tag vX.Y.Z del repo del harness y lo anuncia al inicio de la
+// sesion. La consulta es un git ls-remote de solo lectura con cache por maquina
+// (TTL 24 h; ante fallo, backoff de 1 h y se usa lo ultimo conocido): cuesta una
+// consulta por dia, no una por sesion. Nunca interrumpe: sin red, sin
+// credenciales, sin lockfile o en el repo del propio generador (su lockfile
+// dogfood corre atras del manifest a proposito), silencio y listo. Mismo bloque
+// que el hook declarar-milestone.mjs del modo equipo.
+const VERSION_TTL_MS = 24 * 60 * 60 * 1000
+const VERSION_BACKOFF_MS = 60 * 60 * 1000
+const HARNESS_REMOTO =
+  process.env.SOUCLAUDE_HARNESS_REMOTO ?? 'https://github.com/soutecdev/souclaude-harness.git'
+
+function compararSemver(a, b) {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] !== pb[i]) return pa[i] - pb[i]
+  }
+  return 0
+}
+
+// Ultimo tag vX.Y.Z por major ({ "3": "3.16.2", ... }). Los tags moviles de
+// major (v1, v3) no son versiones y quedan afuera.
+function ultimaPorMajor(tags) {
+  const porMajor = {}
+  for (const tag of tags) {
+    const m = tag.match(/^v(\d+\.\d+\.\d+)$/)
+    if (!m) continue
+    const major = m[1].split('.')[0]
+    if (!porMajor[major] || compararSemver(m[1], porMajor[major]) > 0) porMajor[major] = m[1]
+  }
+  return porMajor
+}
+
+function tagsDelRemoto() {
+  const salida = execFileSync('git', ['ls-remote', '--tags', '--refs', HARNESS_REMOTO], {
+    encoding: 'utf8',
+    timeout: REFRESCO_TIMEOUT_MS,
+    stdio: ['ignore', 'pipe', 'ignore'],
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  })
+  return salida
+    .split('\n')
+    .map((linea) => linea.split('\t')[1]?.replace(/^refs\/tags\//, ''))
+    .filter(Boolean)
+}
+
+// Cache por maquina, junto al resto del estado de souclaude. El home se
+// resuelve como en src/core/vault.js (os.homedir(), nunca $HOME;
+// SOUCLAUDE_CLAUDE_HOME lo redirige en tests).
+function rutaCacheVersion() {
+  const home = process.env.SOUCLAUDE_CLAUDE_HOME ?? path.join(os.homedir(), '.claude')
+  return path.join(home, 'souclaude', 'version-check.json')
+}
+
+function escribirCacheVersion(ruta, datos) {
+  try {
+    fs.mkdirSync(path.dirname(ruta), { recursive: true })
+    fs.writeFileSync(ruta, JSON.stringify(datos, null, 2) + '\n')
+  } catch {
+    // La cache es mejor-esfuerzo: sin ella solo se consulta mas seguido.
+  }
+}
+
+function ultimaConocidaPorMajor(ahoraMs) {
+  const ruta = rutaCacheVersion()
+  const cache = leerJson(ruta) ?? {}
+  const fresca = cache.consultadoEn != null && ahoraMs - Date.parse(cache.consultadoEn) < VERSION_TTL_MS
+  if (fresca && cache.ultimaPorMajor) return cache.ultimaPorMajor
+  const enBackoff = cache.falloEn != null && ahoraMs - Date.parse(cache.falloEn) < VERSION_BACKOFF_MS
+  if (enBackoff) return cache.ultimaPorMajor ?? null
+  try {
+    const porMajor = ultimaPorMajor(tagsDelRemoto())
+    escribirCacheVersion(ruta, { consultadoEn: new Date(ahoraMs).toISOString(), ultimaPorMajor: porMajor })
+    return porMajor
+  } catch {
+    escribirCacheVersion(ruta, { ...cache, falloEn: new Date(ahoraMs).toISOString() })
+    return cache.ultimaPorMajor ?? null
+  }
+}
+
+function avisoVersionNueva(root) {
+  try {
+    // El repo del propio generador no se avisa a si mismo.
+    if (fs.existsSync(path.join(root, 'templates', 'harness.manifest.json'))) return []
+    const lock = leerJson(path.join(root, '.claude', 'harness.json'))
+    const instalada =
+      typeof lock?.harnessVersion === 'string' && /^\d+\.\d+\.\d+$/.test(lock.harnessVersion)
+        ? lock.harnessVersion
+        : null
+    if (!instalada || instalada === '0.0.0') return []
+    const porMajor = ultimaConocidaPorMajor(Date.now())
+    if (!porMajor) return []
+    // Lo que viene de la cache se revalida antes de entrar al banner: una
+    // cache corrupta o editada a mano no inyecta texto en la sesion.
+    const esVersion = (v) => typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v)
+    const lineas = []
+    const major = instalada.split('.')[0]
+    const ultima = porMajor[major]
+    if (esVersion(ultima) && compararSemver(ultima, instalada) > 0) {
+      lineas.push(`Version nueva del harness: v${ultima} (instalada: v${instalada}).`)
+      lineas.push('Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.')
+    }
+    const majorsNuevas = Object.keys(porMajor)
+      .map(Number)
+      .filter((m) => m > Number(major))
+    if (majorsNuevas.length) {
+      const mayor = String(Math.max(...majorsNuevas))
+      if (esVersion(porMajor[mayor])) {
+        lineas.push(
+          `Major nueva del harness: v${porMajor[mayor]} (instalada: v${instalada}). La migracion de major es manual: mencionasela al usuario (README del harness, "Versionado y publicacion").`
+        )
+      }
+    }
+    return lineas
+  } catch {
+    // El aviso jamas rompe una sesion.
+    return []
+  }
+}
+
 function main() {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const salida = [...REGLA]
+  salida.push(...avisoVersionNueva(root))
 
   const config = leerJson(path.join(root, '.claude', 'vault.local.json'))
   const vaultPath = config?.path ?? process.env.VAULT_PATH ?? null

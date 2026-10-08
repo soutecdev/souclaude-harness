@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.16.2**
+**v3.17.0**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.
@@ -11,7 +11,7 @@ Sin agentes ni flujos fijos: el modelo trabaja directo, con las skills de SOUTEC
 npx github:soutecdev/souclaude-harness#v3
 ```
 
-Sin registry, sin `.npmrc`, sin token. Solo hace falta git y Node ≥20.
+Sin registry, sin `.npmrc`, sin token. Solo hace falta git y Node ≥22.4.
 
 ## Qué instala
 

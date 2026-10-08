@@ -2,6 +2,89 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.17.0] — 2026-10-08
+
+### Agregado
+
+- **Aviso automático de versión nueva al inicio de sesión** (SHS-M43). Los hooks de
+  SessionStart (equipo y solo) comparan la versión instalada del lockfile contra el
+  último tag `vX.Y.Z` del repo del harness — `git ls-remote` de solo lectura, con
+  caché por máquina en `~/.claude/souclaude/version-check.json` (TTL 24 h; ante
+  fallo, backoff de 1 h y se usa lo último conocido) — y, si hay versión nueva, la
+  anuncian proponiendo la skill `harness-upgrade`. La major nueva lleva mensaje
+  aparte (su migración es manual). Silencio total sin red, sin credenciales, sin
+  lockfile o en el repo del propio generador: la sesión jamás se corta por el
+  aviso. Con esto, el canal de difusión de releases deja de ser el mensaje privado.
+  ADR `docs/decisions/20261008-aviso-de-version-en-sesion.md`.
+- **`status` y `upgrade` delatan al CLI atrasado** (`src/core/version-remota.js`):
+  leen esa misma caché y avisan cuando el CLI en ejecución quedó detrás del último
+  release publicado — el caso de la caché de npx del tag móvil `#v3`, con el que
+  `status` decía «al día» comparando contra su propio manifest.
+- **Las novedades del release, a la vista al terminar el `upgrade`** (SHS-M43-T004):
+  el CHANGELOG viaja dentro del paquete y, cuando el upgrade deja instalada una
+  versión más nueva, el CLI imprime en un recuadro las entradas de las versiones
+  recién instaladas (hasta 3; si quedan más, lo dice); la skill `harness-upgrade`
+  abre su reporte final con esas novedades en una caja de guiones, para que lo
+  nuevo no pase inadvertido.
+- **`docs/metodologia/`: la carpeta publicable de la metodología, con candado de
+  frescura** (SHS-M16-P2). Tres artefactos — la guía, la infografía master (mudada
+  desde `docs/infografias/`) y el prompt de instalación — llevan secciones generadas
+  desde `package.json` y el manifest entre marcadores `souclaude:gen`
+  (`scripts/gen-docs-metodologia.mjs`, determinista y EOL-agnóstico, con `--check`).
+  La documentación vieja no se publica: el test-candado de la suite, `souclaude
+  verify` y el hook `reglas-pr` — que deniega el `git push` con drift, solo en el
+  repo del generador — exigen regenerarla en el mismo cambio que toca el instalador.
+  La difusión a SharePoint queda manual, copiando la carpeta (SHS-M8 sigue en
+  Backlog).
+
+### Cambiado
+
+- La skill `harness-upgrade` se activa también desde el aviso de sesión, usa el tag
+  exacto (`#vX.Y.Z`) en sus comandos cuando el aviso ya dijo cuál es la última
+  versión (esquiva la caché de npx del tag móvil) y suma ese caso a su tabla de
+  problemas; dos referencias de pasos desfasadas desde M38 quedan corregidas.
+  Tras este `upgrade`, reinicia Claude Code: cambian los dos hooks de SessionStart.
+- **La protección de `main` vive en el hook `reglas-pr`, por repo** (SHS-M42). Antes de
+  cada `git push`, el hook resuelve la carpeta real del push (cwd, `cd`, `-C`) y deniega
+  —con una razón accionable— todo push que toque `main` (refspec, `HEAD:main`,
+  `dev:main`, `:main`, `--delete`, `--all`/`--mirror`, o la rama actual y su upstream
+  cuando no hay refspec) salvo que el repo sea el Vault o esté en modo solo, donde el
+  agente mergea y pushea `main` a propósito. El Vault se reconoce por su ruta
+  configurada (`.claude/vault.local.json`, `VAULT_PATH` o
+  `~/.claude/souclaude/vault.json`, en ese orden), por su remoto (`soubunker-vault`, el
+  repo que declara el manifest, o el `repo` de esa config) o por su carpeta
+  `00-System`: un clon del Vault se pushea a `main` en los dos modos, con cualquier
+  forma del comando, aunque la máquina no tenga `vault.local.json`. Si aun así un push
+  al Vault quedara denegado, la razón dice cómo configurarlo. ADR
+  `docs/decisions/20261006-proteccion-de-main-por-repo-en-el-hook.md`.
+- `CLAUDE.md` (plantilla), skill `soutec-github` y `progress/README.md` describen la
+  regla nueva. Tras el `upgrade` hay que reiniciar Claude Code para que cargue el hook
+  y los permisos nuevos.
+
+### Corregido
+
+- `package.json` pasa a `"private": true`: el repo no se publica en npm y nada
+  impedía un `npm publish` accidental (la instalación por `npx github:…` y el CLI
+  global no cambian).
+- README: la versión mínima real de Node es 22.4 (como exige `engines`), no 20.
+- **El push al Vault ya no queda denegado por las reglas de `main` del `settings.json`**
+  (SHS-M42). Las tres reglas `deny` por texto (`Bash(git push origin main*)`,
+  `Bash(git push * main)`, `Bash(git push * *:main*)`) no saben en qué repo corre el
+  comando: `cd <vault> && git push origin main` quedaba denegado aunque en el Vault el
+  push directo a `main` es el protocolo, y una regla `deny` no la anula ningún hook ni
+  un permiso dado por chat. Según el agente escribiera `cd … &&` (denegado) o `git -C …`
+  (pasaba), el bloqueo parecía aleatorio. Las reglas salen de las plantillas (equipo y
+  solo) y la migración `v3-settings-main-por-hook` las quita de los `settings.json` ya
+  instalados al correr `upgrade`.
+- **`git -C <ruta> push` esquivaba el hook `reglas-pr`** y, con él, el check de
+  secretos: el filtro `if: Bash(git push:*)` del PreToolUse solo ve los subcomandos que
+  empiezan por `git push`. El hook pasa a correr en cada comando de shell (se filtra
+  solo; cuesta unas decenas de milisegundos de Node por comando) y la misma migración
+  quita el `if` viejo para que el bloque nuevo no quede duplicado al lado.
+- **Rutas MSYS en Git Bash sobre Windows**: `cd /c/Users/… && git push` dejaba la
+  carpeta sin resolver (`C:\c\Users\…`) y el push sin revisar. El hook las traduce a su
+  forma nativa antes de resolverlas.
+
 ## [3.16.2] — 2026-09-29
 
 ### Corregido
