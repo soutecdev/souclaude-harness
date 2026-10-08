@@ -223,10 +223,13 @@ function avisoVersionNueva(root) {
     if (!instalada || instalada === '0.0.0') return []
     const porMajor = ultimaConocidaPorMajor(Date.now())
     if (!porMajor) return []
+    // Lo que viene de la cache se revalida antes de entrar al banner: una
+    // cache corrupta o editada a mano no inyecta texto en la sesion.
+    const esVersion = (v) => typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v)
     const lineas = []
     const major = instalada.split('.')[0]
     const ultima = porMajor[major]
-    if (ultima && compararSemver(ultima, instalada) > 0) {
+    if (esVersion(ultima) && compararSemver(ultima, instalada) > 0) {
       lineas.push(`Version nueva del harness: v${ultima} (instalada: v${instalada}).`)
       lineas.push('Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.')
     }
@@ -235,9 +238,11 @@ function avisoVersionNueva(root) {
       .filter((m) => m > Number(major))
     if (majorsNuevas.length) {
       const mayor = String(Math.max(...majorsNuevas))
-      lineas.push(
-        `Major nueva del harness: v${porMajor[mayor]} (instalada: v${instalada}). La migracion de major es manual: mencionasela al usuario (README del harness, "Versionado y publicacion").`
-      )
+      if (esVersion(porMajor[mayor])) {
+        lineas.push(
+          `Major nueva del harness: v${porMajor[mayor]} (instalada: v${instalada}). La migracion de major es manual: mencionasela al usuario (README del harness, "Versionado y publicacion").`
+        )
+      }
     }
     return lineas
   } catch {
