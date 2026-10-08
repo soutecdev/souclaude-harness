@@ -113,7 +113,23 @@ No hace falta que el usuario pida cada paso por separado.
    el proyecto no es una Roca, no la tiene a mano o prefiere dejarla para
    después, sigue sin más: no es un error ni un bloqueo.
 
-6. **Reporte final.** Avísale al usuario, en un resumen corto:
+6. **Reporte final.** Ábrelo con las novedades de la versión instalada en una
+   caja de guiones, dentro de un bloque de código (así se ve monoespaciada y
+   distinta del resto del mensaje). Una línea por novedad, resumida desde el
+   recuadro «Novedades del harness» que el `upgrade` imprime al terminar (sale
+   del CHANGELOG empaquetado) — no pegues las entradas completas:
+
+   ```
+   ------------------------------------------------------------
+     NOVEDADES DEL HARNESS vX.Y.Z
+   ------------------------------------------------------------
+     - Primera novedad, en una línea
+     - Segunda novedad, en una línea
+   ------------------------------------------------------------
+   ```
+
+   Si el upgrade cruzó varias versiones, una caja por versión (las que mostró
+   el `upgrade`). Después de la caja, el resumen corto:
    - versión anterior → versión nueva.
    - CLI global `souclaude`: ya estaba al día, se instaló o actualizó (con qué
      versión), o qué quedó sin resolver y por qué.

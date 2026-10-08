@@ -2,8 +2,10 @@ import * as ui from '../ui.js'
 import { loadManifest } from '../core/manifest.js'
 import { resolveDetected } from '../core/detect.js'
 import { readLockfile } from '../core/lockfile.js'
+import { lt } from '../core/lockfile.js'
 import { migrationsFor, migrations } from '../migrations/index.js'
 import { avisoCliDesactualizado } from '../core/version-remota.js'
+import { leerChangelog, novedadesEntre } from '../core/novedades.js'
 import { resolveVars, planAndApply, vaultStep, githubProtectionStep, cliGlobalStep } from './_shared.js'
 
 export async function upgrade(flags, cwd) {
@@ -32,7 +34,34 @@ export async function upgrade(flags, cwd) {
 
   const vars = await resolveVars({ flags, lock, detected, cwd, manifest })
   const code = await planAndApply({ manifest, cwd, lock, vars, detected, flags, title: 'upgrade' })
+  mostrarNovedades({ code, cwd, from, manifest, lock })
   const code2 = await vaultStep({ code, cwd, flags, manifest, lock })
   const code3 = githubProtectionStep({ code: code2, cwd, flags })
   return cliGlobalStep({ code: code3, flags, manifest })
+}
+
+// SHS-M43-T004: que trae la version recien instalada, en un recuadro para que
+// no se pierda entre los logs. Solo cuando ESTA corrida dejo instalada una
+// version mas nueva — el lockfile reescrito lo confirma (ni --dry-run, ni
+// cancelado, ni "nada que hacer"). Con muchas versiones de distancia se
+// muestran las 3 mas nuevas y se dice cuantas quedaron afuera.
+const NOVEDADES_MAX = 3
+
+function mostrarNovedades({ code, cwd, from, manifest, lock }) {
+  try {
+    if (code !== 0 || !lock || !lt(from, manifest.harnessVersion)) return
+    if (readLockfile(cwd)?.harnessVersion !== manifest.harnessVersion) return
+    const secciones = novedadesEntre(leerChangelog(), from, manifest.harnessVersion)
+    if (!secciones.length) return
+    for (const s of secciones.slice(0, NOVEDADES_MAX).reverse()) {
+      ui.note(s.lineas.join('\n'), `Novedades del harness v${s.version}`)
+    }
+    if (secciones.length > NOVEDADES_MAX) {
+      ui.log.info(
+        `Quedaron ${secciones.length - NOVEDADES_MAX} version(es) intermedia(s) sin mostrar: CHANGELOG.md completo en el repo del harness.`
+      )
+    }
+  } catch {
+    // Las novedades son informativas: jamas rompen un upgrade que ya aplico.
+  }
 }
