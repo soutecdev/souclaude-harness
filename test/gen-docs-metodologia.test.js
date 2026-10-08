@@ -72,3 +72,12 @@ test('docs-metodologia: un marcador sin bloque definido corta con error', () => 
   )
   assert.deepEqual(desconocidos, ['inexistente'])
 })
+
+test('docs-metodologia: un id heredado del prototipo (constructor) no cuenta como bloque', () => {
+  const bloques = renderBloques(leerFuentes(RAIZ))
+  const { desconocidos } = regenerar(
+    '<!-- souclaude:gen constructor -->\nx\n<!-- /souclaude:gen constructor -->',
+    bloques
+  )
+  assert.deepEqual(desconocidos, ['constructor'])
+})

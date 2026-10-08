@@ -87,7 +87,7 @@ export function regenerar(contenido, bloques) {
   const eol = contenido.includes('\r\n') ? '\r\n' : '\n'
   const desconocidos = []
   const nuevo = contenido.replace(MARCADOR, (todo, id) => {
-    if (!(id in bloques)) {
+    if (!Object.hasOwn(bloques, id)) {
       desconocidos.push(id)
       return todo
     }

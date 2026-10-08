@@ -22,12 +22,16 @@ export async function verify(flags, _cwd) {
   const raizGenerador = fileURLToPath(new URL('../../', import.meta.url))
   const genDocs = path.join(raizGenerador, 'scripts', 'gen-docs-metodologia.mjs')
   if (existsSync(genDocs) && existsSync(path.join(raizGenerador, 'docs', 'metodologia'))) {
-    const { correr } = await import(pathToFileURL(genDocs).href)
-    const r = correr({ check: true, raiz: raizGenerador })
-    for (const linea of r.lineas) {
-      if (linea.startsWith('[FAIL]') || linea.startsWith('[ERROR]')) {
-        errors.push({ code: 'stale-docs-metodologia', message: linea })
+    try {
+      const { correr } = await import(pathToFileURL(genDocs).href)
+      const r = correr({ check: true, raiz: raizGenerador })
+      for (const linea of r.lineas) {
+        if (linea.startsWith('[FAIL]') || linea.startsWith('[ERROR]')) {
+          errors.push({ code: 'stale-docs-metodologia', message: linea })
+        }
       }
+    } catch (e) {
+      errors.push({ code: 'stale-docs-metodologia', message: `[ERROR] docs-metodologia: ${e?.message ?? e}` })
     }
   }
 
