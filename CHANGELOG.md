@@ -2,6 +2,21 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Sin publicar]
+
+### Agregado
+
+- **`docs/metodologia/`: la carpeta publicable de la metodología, con candado de
+  frescura** (SHS-M16-P2). Tres artefactos — la guía, la infografía master (mudada
+  desde `docs/infografias/`) y el prompt de instalación — llevan secciones generadas
+  desde `package.json` y el manifest entre marcadores `souclaude:gen`
+  (`scripts/gen-docs-metodologia.mjs`, determinista y EOL-agnóstico, con `--check`).
+  La documentación vieja no se publica: el test-candado de la suite, `souclaude
+  verify` y el hook `reglas-pr` — que deniega el `git push` con drift, solo en el
+  repo del generador — exigen regenerarla en el mismo cambio que toca el instalador.
+  La difusión a SharePoint queda manual, copiando la carpeta (SHS-M8 sigue en
+  Backlog).
+
 ## [3.17.0] — 2026-10-06
 
 ### Corregido

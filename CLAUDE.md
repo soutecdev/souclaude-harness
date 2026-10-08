@@ -137,6 +137,11 @@ infraestructura y todo lo que toca frameworks, en inglés.
   sin eso, la lectura utf8 y la normalización LF corrompen los bytes.
 - Escritura de archivos: siempre plana (nada de write-temp-then-rename): OneDrive y
   antivirus rompen el patrón "atómico" con EPERM.
+- `docs/metodologia/` es la carpeta publicable de la metodología: sus secciones
+  `souclaude:gen` se regeneran con `node scripts/gen-docs-metodologia.mjs`, y la
+  frescura la exigen `souclaude verify`, el test-candado de la suite y el hook
+  `reglas-pr` (deniega el push con drift). En cada release `dev` → `main`, revisa
+  también la prosa de la carpeta.
 - Tests: `npm test` (Node >= 22.4). Quita `NO_COLOR` del entorno antes de correr los
   tests de monitor-render.
 

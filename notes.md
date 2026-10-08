@@ -266,3 +266,15 @@ repo de scratch, con el hook vivo de la sesión):
 - El comando de la tool Bash en Windows tiene un límite de longitud: un heredoc de ~12 KB
   se corta a mitad («unexpected EOF»). Para anexar bloques grandes, escribirlos a un
   archivo y `cat`-earlos.
+- SHS-M16-P2 (2026-10-07): el candado de `docs/metodologia` debutó en su primer merge
+  real — el bump a 3.17.0 de M42 dejó los cuatro artefactos con drift y `--check` lo
+  acusó antes del push; `node scripts/gen-docs-metodologia.mjs` + commit y en verde.
+  El patrón «sección generada + candado» rinde más que cualquier aviso de "mantener
+  actualizado".
+- Un generador de docs en Windows debe heredar el EOL de cada archivo (`autocrlf`
+  deja el working tree en CRLF): si regenera siempre con LF, el candado acusa drift
+  falso en la máquina de al lado.
+- Dos sesiones de Claude sobre la misma working copy se pisan: mi `checkout -b` movió
+  la rama bajo la sesión de M42 y sus 10 archivos sin commitear quedaron sobre mi
+  rama hasta que esa sesión migró a la suya. Para trabajo paralelo en este repo:
+  `git worktree` o turnarse.
