@@ -2,6 +2,31 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+### Agregado
+
+- **El release se cierra solo tras el merge** (SHS-M44). Aprobar el PR de release
+  `dev` → `main` es lo único que hace el desarrollador: el agente cierra el tag, el
+  GitHub Release, el hito en la ficha `OBSERVATORIO.md` del Vault y el espejo del
+  tablero. El texto sale de una sola fuente, la sección `## Release en GitHub` del
+  cuerpo del PR (título de hasta 6 palabras y descripción de menos de 30).
+  - `scripts/release-publicar.mjs` (managed, stack Node): valida el texto y crea o
+    actualiza el GitHub Release de forma idempotente; `--desde-pr` lo lee del PR y
+    `--dry-run` imprime el release y el hito sin tocar GitHub.
+  - `tag-release.yml` crea además el GitHub Release tras el tag (sigue en pausa,
+    SHS-M36, con el resto de los workflows).
+  - El hook de SessionStart de equipo detecta un release mergeado sin cerrar (falta
+    el tag, el GitHub Release o el hito; ventana de 14 días) y ordena lanzar el
+    subagente de cierre.
+  - La skill `soutec-github` define el «Cierre del release» y el subagente: revisa
+    los hitos de la ficha y, si algo está fuera de formato, pregunta en vez de tocar;
+    si todo está en regla agrega el hito. Revisa además que el espejo del tablero
+    refleje lo que salió (en review que salió en el release pasa a Hecho/Done).
+  - **Cambia una regla**: los GitHub Releases dejan de ser «del coordinador».
+  - El hito de la ficha pasa al formato oficial `AAAA-MM-DD · vX.Y.Z - Título ·
+    descripción`. ADR `docs/decisions/20261110-release-automatico-observatorio.md`.
+
 ## [3.17.0] — 2026-10-08
 
 ### Agregado

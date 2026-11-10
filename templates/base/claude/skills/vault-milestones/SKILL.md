@@ -138,7 +138,11 @@ CLI global: `npm install -g github:soutecdev/souclaude-harness#v3`.)
 En el Vault también vive `Project-<PREFIJO>/OBSERVATORIO.md`, la ficha pública
 del proyecto. **El hito del release se agrega siempre a su sección "Hitos" al
 abrir el PR de release `dev` → `main`** (formato
-`- YYYY-MM-DD · vX.Y.Z · resumen breve`), con push directo al Vault en el
-momento, y se verifica/corrige al confirmarse el merge y el tag. La regla completa está en la skill `soutec-github` (sección "Ficha del
-Observatorio") — si estás cerrando un milestone que termina en release, verifica
+`- AAAA-MM-DD · vX.Y.Z - <Título> · <descripción corta>`, el mismo texto de la
+sección `## Release en GitHub` del PR), con push directo al Vault en el
+momento, y se verifica/corrige al confirmarse el merge y el tag — cierre que
+hace solo el subagente de "Cierre del release" (tag, GitHub Release, hito y
+espejo del tablero), sin que el desarrollador pida nada más. La regla completa
+está en la skill `soutec-github` (secciones "Ficha del Observatorio" y "Cierre
+del release") — si estás cerrando un milestone que termina en release, verifica
 que el hito haya quedado registrado.

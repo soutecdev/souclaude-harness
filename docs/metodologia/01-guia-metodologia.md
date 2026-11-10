@@ -106,7 +106,9 @@ milestone → plan → tarea → rama → PR → Vault → espejo del tablero
 4. **Commits** `tipo: descripción breve`, en español.
 5. **El PR apunta a `dev`** con la plantilla completada de verdad; el security
    review corre antes. Mergea el coordinador. `dev` → `main` es el release, también
-   por PR, y el tag `vX.Y.Z` se crea después del merge.
+   por PR; el PR de release lleva el título y la descripción corta del release, y tras
+   el merge el agente cierra solo el resto: tag `vX.Y.Z`, GitHub Release, hito en la
+   ficha del Observatorio y espejo del tablero. El desarrollador solo aprueba.
 6. **Cada movimiento del Vault se espeja** en el tablero externo en el mismo
    momento (skill de sincronización instalada). Si el conector no está autorizado,
    se reporta y el trabajo local sigue.

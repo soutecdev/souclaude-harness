@@ -2,10 +2,12 @@ name: Tag de release
 
 # Automatiza lo que la skill soutec-github documenta como paso manual del
 # agente: tras el merge de release dev -> main, crea el tag inmutable vX.Y.Z
-# (leyendo package.json del commit de merge) y mueve el tag móvil vX. No crea
-# el GitHub Release: eso sigue siendo del coordinador. Este workflow y
-# scripts/tag-release.mjs los distribuye y actualiza el harness (npx souclaude
-# upgrade); no los edites a mano en el repo consumidor.
+# (leyendo package.json del commit de merge) y mueve el tag móvil vX. Luego crea
+# (o actualiza) el GitHub Release con scripts/release-publicar.mjs, tomando el
+# título y la descripción corta (menos de 30 palabras) de la sección
+# "## Release en GitHub" del cuerpo del PR de release (SHS-M44). Este workflow y
+# los scripts los distribuye y actualiza el harness (npx souclaude upgrade); no
+# los edites a mano en el repo consumidor.
 
 # PAUSA TEMPORAL (SHS-M36): los triggers automaticos estan desactivados para
 # frenar el consumo de minutos de Actions hasta optimizar los checks. Solo
@@ -41,3 +43,12 @@ jobs:
 
       - name: crea/actualiza el tag de release
         run: node scripts/tag-release.mjs
+
+      # No bloquea: si el PR no trae la sección "## Release en GitHub" (o el texto
+      # no valida), el tag ya quedó creado y el release lo cierra el agente
+      # (skill soutec-github, "Cierre del release").
+      - name: crea/actualiza el GitHub Release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-publicar.mjs --desde-pr ${{ github.event.pull_request.number }}

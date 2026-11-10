@@ -6,7 +6,8 @@ import { mkRepo, has, replan } from './helpers.js'
 
 const YES = ['--yes', '--name', 'acme', '--type', 'backend', '--lang', 'es']
 
-const TAG_RELEASE_DESTS = ['scripts/tag-release.mjs', '.github/workflows/tag-release.yml']
+// El script de release de GitHub (SHS-M44) viaja con el de tag: misma condicion de stack.
+const TAG_RELEASE_DESTS = ['scripts/tag-release.mjs', 'scripts/release-publicar.mjs', '.github/workflows/tag-release.yml']
 
 test('tag-release: se instala en un repo Node (package.json presente)', async () => {
   const dir = mkRepo({ 'package.json': '{"name": "acme", "version": "1.0.0"}' })

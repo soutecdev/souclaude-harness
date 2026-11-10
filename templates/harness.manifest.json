@@ -183,6 +183,14 @@
       "modos": ["equipo"]
     },
     {
+      "id": "release-publicar",
+      "src": "base/scripts/release-publicar.mjs",
+      "dest": "scripts/release-publicar.mjs",
+      "policy": "managed",
+      "when": "stack:node",
+      "modos": ["equipo"]
+    },
+    {
       "id": "workflow-tag-release",
       "src": "base/github/workflows/tag-release.yml",
       "dest": ".github/workflows/tag-release.yml",
