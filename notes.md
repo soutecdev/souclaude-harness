@@ -302,3 +302,23 @@ repo de scratch, con el hook vivo de la sesión):
   conector; las tarjetas del Vault no llevan anotación de work item todavía.
 - La corrección de la infografía 05 ("mientras el tag v3 no esté publicado…")
   NO se hizo aquí a propósito: pertenece a SHS-M16-T005 (Backlog, @pendiente).
+
+## 2026-11-10 · SHS-M44 · release automático (Leonardo)
+
+- Auditoría de hitos de las 22 fichas del Vault: solo OBS, SARA, SVD (y SPOCK casi)
+  usan el formato oficial `versión - Título · descripción`; los otros 16 proyectos
+  (ALF 28 hitos, SFI 11, SPK 12, WEB 7, RML 5, CCA 6, etc.) no llevan ` - Título` y
+  muchos hitos no son releases (títulos tipo «alta», «MVP»). OBS tiene 17 hitos con
+  descripción >300 y SPOCK 1. Solo se corrigió SHS (23 hitos); el resto queda a
+  cargo de sus dueños: el subagente de cierre pregunta, no reescribe hitos ajenos.
+- `azdo.json`: `@leonardo` apuntaba a `libarra@soutec-group.com`, que Azure rechaza
+  («unknown identity»); la identidad real es `libarra@soutec.ai` (corregido). Ojo:
+  `@ignacio` sí resuelve con `ialvarez@soutec-group.com`.
+- Gotcha: un PreToolUse de la sesión deniega los comandos Bash de búsqueda recursiva
+  de contenido (aunque solo aparezcan citados en un heredoc): usar la herramienta
+  Grep en vez de la búsqueda recursiva por Bash.
+- Gotcha: `update_batch`/`link` del MCP de Azure devuelve el work item completo por
+  cada ítem (60-80 KB por llamada grande): verificar después con `get_batch` y
+  `fields` acotado.
+- Pendiente: reactivar Actions daría tag y release inmediatos (hoy el cierre ocurre
+  al mergearse si la sesión está abierta, o en la siguiente sesión).
