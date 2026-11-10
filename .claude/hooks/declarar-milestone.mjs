@@ -251,6 +251,122 @@ function avisoVersionNueva(root) {
   }
 }
 
+// --- Cierre pendiente del release (SHS-M44) ----------------------------------
+//
+// Aprobar el PR de release es lo unico que hace el desarrollador: el agente
+// cierra el resto (tag, GitHub Release, hito en la ficha del Observatorio y
+// espejo del tablero) sin que nadie lo pida. Si la sesion que abrio el PR ya
+// se cerro cuando el coordinador mergeo, este hook lo detecta al inicio de la
+// siguiente sesion y ordena lanzar al subagente de cierre (skill soutec-github,
+// "Cierre del release"). Solo mira el release de los ultimos 14 dias; lo que
+// ya esta cerrado se recuerda en una cache por maquina para no consultar de
+// nuevo. Sin git, sin gh o sin red: silencio — la sesion jamas se corta.
+const CIERRE_VENTANA_MS = 14 * 24 * 60 * 60 * 1000
+
+function gitSalida(root, args) {
+  try {
+    return execFileSync('git', ['-C', root, ...args], {
+      encoding: 'utf8',
+      timeout: REFRESCO_TIMEOUT_MS,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+  } catch {
+    return null
+  }
+}
+
+// true / false / null (no se pudo saber: gh ausente, sin sesion o sin red).
+// SOUCLAUDE_GH_RELEASES (lista de tags separada por comas) reemplaza a gh en tests.
+function releaseDeGithubExiste(root, tag) {
+  const simulado = process.env.SOUCLAUDE_GH_RELEASES
+  if (simulado !== undefined) return simulado.split(',').includes(tag)
+  try {
+    execFileSync('gh', ['release', 'view', tag, '--json', 'tagName'], {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: REFRESCO_TIMEOUT_MS,
+    })
+    return true
+  } catch (e) {
+    if (e?.code === 'ENOENT' || e?.killed) return null
+    return /release not found/i.test(String(e?.stderr ?? '')) ? false : null
+  }
+}
+
+function hitoEnFicha(vaultPath, proyecto, tag) {
+  if (!vaultPath || !proyecto) return null
+  try {
+    const ficha = fs.readFileSync(path.join(vaultPath, proyecto, 'OBSERVATORIO.md'), 'utf8')
+    const re = new RegExp(`^- \\d{4}-\\d{2}-\\d{2} · ${tag.replace(/\./g, '\\.')}(?= - | · |\\s*$)`, 'm')
+    return re.test(ficha)
+  } catch {
+    return null
+  }
+}
+
+function rutaCacheCierre() {
+  const home = process.env.SOUCLAUDE_CLAUDE_HOME ?? path.join(os.homedir(), '.claude')
+  return path.join(home, 'souclaude', 'cierre-release.json')
+}
+
+function avisoCierreRelease(root, vaultPath, proyecto) {
+  try {
+    gitRefresco(['-C', root, 'fetch', 'origin', '--tags', '--quiet'])
+    const ahora = Date.now()
+    // El release de referencia es la version de package.json en origin/main.
+    // Sin package.json (stack no Node) se mira el ultimo tag vX.Y.Z.
+    let version = null
+    try {
+      const v = JSON.parse(gitSalida(root, ['show', 'origin/main:package.json']) ?? '{}').version
+      if (/^\d+\.\d+\.\d+$/.test(v)) version = v
+    } catch {
+      // sin package.json en main
+    }
+    const tags = (gitSalida(root, ['tag', '--list', 'v[0-9]*.[0-9]*.[0-9]*']) ?? '')
+      .split('\n')
+      .filter((t) => /^v\d+\.\d+\.\d+$/.test(t))
+    const tag = version ? `v${version}` : tags.sort((a, b) => compararSemver(b.slice(1), a.slice(1)))[0]
+    if (!tag) return []
+
+    const cache = leerJson(rutaCacheCierre()) ?? {}
+    if ((cache.cerrados ?? []).includes(tag)) return []
+
+    const existeTag = tags.includes(tag)
+    const refFecha = existeTag ? `${tag}^{commit}` : 'origin/main'
+    const fechaCommit = Number(gitSalida(root, ['log', '-1', '--format=%ct', refFecha]))
+    if (!fechaCommit || ahora - fechaCommit * 1000 > CIERRE_VENTANA_MS) return []
+
+    const faltas = []
+    if (!existeTag) faltas.push('tag')
+    const release = existeTag ? releaseDeGithubExiste(root, tag) : false
+    if (release === false) faltas.push('GitHub Release')
+    const hito = hitoEnFicha(vaultPath, proyecto, tag)
+    if (hito === false) faltas.push('hito en la ficha del Observatorio')
+
+    if (faltas.length === 0) {
+      // Todo lo comprobable esta cerrado; solo se recuerda si no hubo dudas.
+      if (release === true && (hito === true || hito === null)) {
+        try {
+          fs.mkdirSync(path.dirname(rutaCacheCierre()), { recursive: true })
+          fs.writeFileSync(rutaCacheCierre(), JSON.stringify({ cerrados: [...(cache.cerrados ?? []), tag].slice(-20) }, null, 2) + '\n')
+        } catch {
+          // la cache es mejor-esfuerzo
+        }
+      }
+      return []
+    }
+    const asunto = gitSalida(root, ['log', '-1', '--format=%s', 'origin/main']) ?? ''
+    const pr = asunto.match(/#(\d+)/)?.[1]
+    return [
+      `Release ${tag} mergeado a main sin cerrar (falta: ${faltas.join(', ')}).`,
+      `Lanza ahora el subagente de cierre de release (skill soutec-github, "Cierre del release")${pr ? ` con el PR de release #${pr}` : ''}: el desarrollador no tiene que pedirlo. Luego sigue con lo que pidio.`,
+    ]
+  } catch {
+    // El aviso jamas rompe una sesion.
+    return []
+  }
+}
+
 function main() {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd()
   const salida = [...REGLA]
@@ -261,6 +377,7 @@ function main() {
 
   if (!vaultPath || !fs.existsSync(vaultPath)) {
     salida.push('Vault no configurado en esta maquina: pide el tablero al usuario antes de asumir.')
+    salida.push(...avisoCierreRelease(root, null, null))
     console.log(salida.join('\n'))
     return
   }
@@ -300,6 +417,8 @@ function main() {
   } catch {
     // La deteccion de PRs mergeados es best-effort: sin git o sin kanban, nada.
   }
+
+  salida.push(...avisoCierreRelease(root, vaultPath, proyecto))
 
   console.log(salida.join('\n'))
 }
