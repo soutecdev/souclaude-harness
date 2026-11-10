@@ -20,7 +20,7 @@
   },
   "responsables": {
     "_comentario": "@quien de la tarjeta -> correo para System.AssignedTo. El conector no resuelve identidades (core_get_identity_ids da HTTP 401 con un PAT solo de Work Items), asi que se asigna por correo. @pendiente = sin asignar.",
-    "@leonardo": "libarra@soutec-group.com",
+    "@leonardo": "libarra@soutec.ai",
     "@ignacio": "ialvarez@soutec-group.com"
   }
 }
