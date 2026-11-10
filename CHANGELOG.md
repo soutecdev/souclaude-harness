@@ -2,6 +2,19 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.18.1] — 2026-11-10
+
+### Cambiado
+
+- **Se reactiva GitHub Actions** (SHS-M45, revierte la pausa SHS-M36). Los 5
+  workflows de este repo y los 4 distribuidos (`reglas-*`, `tag-release`) recuperan
+  sus triggers; `tag-release.yml` vuelve a crear solo el tag y el GitHub Release al
+  mergear `dev` → `main`. La protección de `main` vuelve a exigir los checks
+  `reglas-secretos` y `reglas-pr-metadata` (se reaplica con `npx souclaude upgrade`;
+  en este repo la actualiza el coordinador a mano). La regla de «solo los workflows
+  del harness» sigue vigente. La prosa de las skills que habla de la pausa queda
+  por actualizar.
+
 ## [3.18.0] — 2026-11-10
 
 ### Agregado

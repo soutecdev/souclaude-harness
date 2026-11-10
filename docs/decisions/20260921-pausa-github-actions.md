@@ -1,7 +1,7 @@
 # ADR: Pausa temporal y revertible de GitHub Actions
 
 **Fecha**: 2026-09-21
-**Status**: accepted (temporal — se revierte al cerrar la optimización de los checks)
+**Status**: revertido el 2026-11-10 (SHS-M45): los 9 workflows recuperan sus triggers y `CHECKS_REQUERIDOS` vuelve a `['reglas-secretos', 'reglas-pr-metadata']`. La regla 5 (solo workflows del harness) sigue vigente. La optimización de minutos queda pendiente.
 **Deciders**: Ignacio A. (@ignacio)
 
 ## Context
