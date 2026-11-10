@@ -92,6 +92,24 @@ export function validarRelease({ version, titulo, descripcion, fecha }) {
   ]
 }
 
+// Fuente unica del texto del release: la seccion "## Release en GitHub" del
+// cuerpo del PR de release dev -> main, con las lineas
+//   Título: <hasta 6 palabras>
+//   Descripción: <una frase de menos de 30 palabras>
+//   Milestones: SHS-M44, SHS-M43          (opcional)
+// La escribe quien abre el PR; este script, el workflow, el subagente de cierre
+// y el hook de SessionStart leen de ahi, asi release y hito no se desalinean.
+export function extraerDeBody(body) {
+  const seccion = String(body ?? '').match(/^## Release en GitHub[ \t]*\r?\n([\s\S]*?)(?=\r?\n## |(?![\s\S]))/m)?.[1]
+  if (!seccion) return { titulo: null, descripcion: null, milestones: [] }
+  const campo = (re) => seccion.match(re)?.[1]?.trim() || null
+  return {
+    titulo: campo(/^T[ií]tulo:[ \t]*(.+)$/im),
+    descripcion: campo(/^Descripci[oó]n:[ \t]*(.+)$/im),
+    milestones: (campo(/^Milestones?:[ \t]*(.+)$/im) ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+  }
+}
+
 function sh(args) {
   return execFileSync(args[0], args.slice(1), {
     encoding: 'utf8',
@@ -122,27 +140,42 @@ function main() {
       descripcion: { type: 'string' },
       milestones: { type: 'string' },
       fecha: { type: 'string' },
+      'desde-pr': { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
     },
   })
-  const version = values.version
+  // --desde-pr <n|url>: toma titulo, descripcion y milestones de la seccion
+  // "## Release en GitHub" del PR de release (los flags explicitos mandan).
+  let fuente = { titulo: null, descripcion: null, milestones: [] }
+  if (values['desde-pr']) {
+    const pr = JSON.parse(sh(['gh', 'pr', 'view', values['desde-pr'], '--json', 'body,mergedAt,baseRefName']))
+    if (pr.baseRefName !== 'main') throw new Error(`el PR no apunta a main (apunta a ${pr.baseRefName})`)
+    if (!pr.mergedAt && !values['dry-run']) throw new Error('el PR de release todavía no está mergeado')
+    fuente = extraerDeBody(pr.body)
+  }
+  // Sin --version, la version sale del package.json de origin/main (como tag-release).
+  const version = values.version ?? JSON.parse(sh(['git', 'show', 'origin/main:package.json'])).version
   const tag = `v${version}`
-  const problemas = validarRelease({ ...values, version })
+  const titulo = values.titulo ?? fuente.titulo
+  const descripcion = values.descripcion ?? fuente.descripcion
+  const problemas = validarRelease({ version, titulo, descripcion, fecha: values.fecha })
   if (problemas.length) {
     for (const p of problemas) console.error(`[ERROR] ${p}`)
     process.exit(1)
   }
 
-  const milestones = (values.milestones ?? '').split(',').map((s) => s.trim()).filter(Boolean)
-  const nombre = nombreRelease(version, values.titulo)
+  const milestones = values.milestones
+    ? values.milestones.split(',').map((s) => s.trim()).filter(Boolean)
+    : fuente.milestones
+  const nombre = nombreRelease(version, titulo)
   const cuerpo = cuerpoRelease({
-    descripcion: values.descripcion,
+    descripcion: descripcion,
     milestones,
     changelogUrl: urlChangelog(intentar(['git', 'remote', 'get-url', 'origin'])),
   })
   // La fecha del hito es la del commit del tag (fecha real del release).
   const fecha = values.fecha ?? intentar(['git', 'log', '-1', '--format=%cs', `${tag}^{commit}`]) ?? ''
-  const hito = fecha ? hitoDeRelease({ fecha, version, titulo: values.titulo, descripcion: values.descripcion }) : ''
+  const hito = fecha ? hitoDeRelease({ fecha, version, titulo, descripcion }) : ''
 
   if (values['dry-run']) {
     console.log(`[dry-run] release: ${nombre}\n${cuerpo}\n`)

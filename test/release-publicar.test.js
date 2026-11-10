@@ -14,6 +14,7 @@ import {
   cuerpoRelease,
   hitoDeRelease,
   urlChangelog,
+  extraerDeBody,
 } from '../scripts/release-publicar.mjs'
 
 const SCRIPT = fileURLToPath(new URL('../scripts/release-publicar.mjs', import.meta.url))
@@ -79,6 +80,33 @@ test('urlChangelog: arma la URL desde remotos https y ssh de GitHub; vacía si n
   assert.equal(urlChangelog('git@github.com:soutecdev/souclaude-harness.git'), 'https://github.com/soutecdev/souclaude-harness/blob/main/CHANGELOG.md')
   assert.equal(urlChangelog('https://gitlab.com/a/b.git'), '')
   assert.equal(urlChangelog(null), '')
+})
+
+test('extraerDeBody: lee título, descripción y milestones de la sección "Release en GitHub"', () => {
+  const body = [
+    '## Descripción del cambio',
+    'algo',
+    '',
+    '## Release en GitHub',
+    'Título: Release automático',
+    'Descripción: Una frase corta del release.',
+    'Milestones: SHS-M44, SHS-M43',
+    '',
+    '## Impacto / Riesgos',
+    'Título: esto no cuenta, es de otra sección',
+  ].join('\n')
+  assert.deepEqual(extraerDeBody(body), {
+    titulo: 'Release automático',
+    descripcion: 'Una frase corta del release.',
+    milestones: ['SHS-M44', 'SHS-M43'],
+  })
+})
+
+test('extraerDeBody: tolera CRLF y tildes opcionales; sin la sección devuelve nulos', () => {
+  const crlf = '## Release en GitHub\r\nTitulo: Sin tilde\r\nDescripcion: Tampoco aquí.\r\n'
+  assert.deepEqual(extraerDeBody(crlf), { titulo: 'Sin tilde', descripcion: 'Tampoco aquí.', milestones: [] })
+  assert.deepEqual(extraerDeBody('## Otra cosa\nTítulo: x'), { titulo: null, descripcion: null, milestones: [] })
+  assert.deepEqual(extraerDeBody(undefined), { titulo: null, descripcion: null, milestones: [] })
 })
 
 test('CLI --dry-run: imprime release y hito sin tocar GitHub', () => {
