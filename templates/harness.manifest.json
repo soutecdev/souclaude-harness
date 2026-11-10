@@ -1,5 +1,5 @@
 {
-  "harnessVersion": "3.17.0",
+  "harnessVersion": "3.18.0",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
@@ -178,6 +178,14 @@
       "id": "tag-release",
       "src": "base/scripts/tag-release.mjs",
       "dest": "scripts/tag-release.mjs",
+      "policy": "managed",
+      "when": "stack:node",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "release-publicar",
+      "src": "base/scripts/release-publicar.mjs",
+      "dest": "scripts/release-publicar.mjs",
       "policy": "managed",
       "when": "stack:node",
       "modos": ["equipo"]
