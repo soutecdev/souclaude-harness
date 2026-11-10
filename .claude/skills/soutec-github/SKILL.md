@@ -37,7 +37,9 @@ Estas no se negocian, ni siquiera en un hotfix.
   `tag-release.yml` o, en repos sin ese workflow, el agente.
   **PAUSA TEMPORAL (SHS-M36)**: mientras GitHub Actions esté en pausa,
   `tag-release.yml` no se dispara y los tags los crea siempre el agente (ver
-  "Versionamiento").
+  "Versionamiento"). El **GitHub Release** tampoco es del coordinador: se crea
+  solo al mergearse el PR de release, con su descripción corta (ver "Cierre del
+  release").
 - **Un hotfix NO es un bypass.** Aun en máxima criticidad: rama + Pull Request.
 - **Nunca crear workflows de GitHub Actions ni checks adicionales.** Los únicos
   workflows del repo son los que instala y actualiza el harness (`reglas-*.yml`,
@@ -249,6 +251,11 @@ escribir la plantilla ya completada en un archivo temporal y abrir el PR con
 (secciones con el texto guía intacto, casilla de versión sin marcar) **falla
 `pr-metadata`**: la descripción tiene que quedar bien desde el alta.
 
+**El PR de release `dev` → `main` lleva además la sección `## Release en GitHub`**
+(la plantilla no la trae; la agregas tú al armar el cuerpo): el título y la
+descripción corta del release, de donde salen el GitHub Release y el hito de la
+ficha. Formato y reglas en "Cierre del release".
+
 **Apenas creas el PR, el hook `reglas-pr` te devuelve el resultado de los
 checks.** Con un FAIL en `secretos` o `pr-metadata`, el PR no está listo:
 corrígelo en ese momento.
@@ -326,8 +333,81 @@ git fetch origin && node scripts/tag-release.mjs --ref origin/main
 sin cambiar de rama ni tocar tu árbol de trabajo; es idempotente. En repos sin
 `scripts/tag-release.mjs` (stack no Node), usa el script de tags del stack (skill
 `harness-upgrade`) o créalos a mano: `vX.Y.Z` anotado y el móvil `vX` movido al
-mismo commit. Los releases de GitHub siguen siendo del coordinador; ni el
-workflow ni el agente los crean.
+mismo commit. El GitHub Release lo crea `scripts/release-publicar.mjs` (ver
+"Cierre del release").
+
+## Cierre del release (automático tras el merge)
+
+Aprobar el PR de release es lo único que hace el desarrollador: el agente cierra
+el resto sin que nadie se lo pida. El **GitHub Release ya no es del coordinador**:
+aprobado y mergeado el PR, se crea solo.
+
+**Un solo texto para todo.** Al abrir el PR de release, su cuerpo lleva una
+sección `## Release en GitHub` con tres líneas:
+
+```
+## Release en GitHub
+Título: <hasta 6 palabras>
+Descripción: <una frase de menos de 30 palabras>
+Milestones: SHS-M44, SHS-M43
+```
+
+De ahí salen el nombre del release (`vX.Y.Z · <título>`), su cuerpo (`## Qué trae`
++ la frase + milestones y enlace al CHANGELOG) y el hito de la ficha del
+Observatorio (`- AAAA-MM-DD · vX.Y.Z - <título> · <descripción>`): release y hito
+no pueden desalinearse. Valida el texto antes de abrir el PR con
+`node scripts/release-publicar.mjs --version X.Y.Z --titulo "..." --descripcion "..." --dry-run`
+(rechaza más de 6 palabras en el título, 30 o más en la descripción, o más de 300
+caracteres).
+
+**Qué lo dispara — el desarrollador no pide nada:**
+
+1. **Sesión abierta al abrir el PR**: quédate atento al merge. Sondea
+   `gh pr view <n> --json mergedAt,state` cada pocos minutos (ScheduleWakeup o
+   Monitor) hasta que se mergee; al mergearse, lanza el subagente de cierre. Si el
+   PR se cierra sin merge, deja el hito y la ficha como en "Al confirmarse el
+   merge y el tag" y avisa.
+2. **Sesión cerrada**: el hook de SessionStart de la siguiente sesión detecta el
+   release mergeado sin cerrar y te ordena lanzar el subagente.
+3. **Con GitHub Actions activo**, `tag-release.yml` ya habrá creado el tag y el
+   release (con `release-publicar.mjs --desde-pr`); el subagente igual verifica
+   todo, porque el Vault y el espejo del tablero no los toca el workflow.
+
+**Subagente de cierre de release.** Lánzalo con el Agent tool (tipo
+general-purpose) y dale el número del PR de release y esta consigna:
+
+1. **Confirmar el merge**: `gh pr view <n> --json mergedAt,baseRefName`. Sin merge
+   a `main`, no hace nada.
+2. **Tag**: `git fetch origin && node scripts/tag-release.mjs --ref origin/main`
+   (idempotente).
+3. **GitHub Release**: `node scripts/release-publicar.mjs --desde-pr <n>`
+   (idempotente: si el release existe, lo actualiza). Si el texto del PR no valida,
+   no lo inventa: devuelve el problema para preguntar al desarrollador.
+4. **Vault y ficha** (solo si el repo tiene Vault conectado):
+   `souclaude vault-sync` y **revisa antes los hitos** de la ficha del proyecto
+   contra la plantilla oficial: cada línea de "Hitos" es
+   `- AAAA-MM-DD · vX.Y.Z - Título · descripción` (fecha ISO real, título corto,
+   descripción de hasta 300 caracteres), en orden cronológico y con un máximo de
+   40. **Si hay algo que acomodar, no toca la ficha**: devuelve la lista
+   (línea, problema, propuesta) y el agente principal se la pregunta al
+   desarrollador. **Si todo está en regla**, agrega o verifica el hito del release
+   con el mismo título y descripción del PR, revisa "Próxima versión" (regla de
+   "Ficha del Observatorio") y publica con
+   `souclaude vault-sync --push -m "docs: hito vX.Y.Z en la ficha del Observatorio" --paths Project-<PREFIJO>`.
+5. **Espejo del tablero** (skill de sincronización instalada): revisa que lo
+   publicado en el release esté reflejado con los estados correctos. Para cada
+   milestone y tarea que salió (`Milestones:` del PR y `git log` entre el tag
+   anterior y el nuevo): una tarjeta o tarea que estaba En review o En curso y
+   cuyo PR se mergeó y salió en el release pasa a **Hecho en el Vault (primero) y
+   a Done en el espejo**; un milestone con todas sus tareas cerradas y su PR final
+   mergeado pasa a Hecho. Lo que no cuadre (estado sin evidencia, tarea faltante,
+   sin dueño) **se reporta y se pregunta**, no se corrige en silencio. Al
+   terminar, verifica que no haya duplicados ni tareas sin dueño.
+6. **Reporte corto**: tag, URL del release, hito agregado, cambios de estado hechos
+   y preguntas pendientes para el desarrollador.
+
+Si el conector del espejo no está autorizado o no hay Vault conectado, el
+subagente lo dice una vez y sigue con el resto: nada de esto bloquea el release.
 
 ## Ficha del Observatorio (`OBSERVATORIO.md` en el Vault)
 
@@ -419,9 +499,14 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   en la sección "Hitos" de la ficha en ese mismo momento, con push directo al
   Vault — no esperes al merge: el coordinador mergea en un momento que no
   controlas y la sesión puede cerrarse antes de que llegue el aviso. Formato de
-  la línea: `- YYYY-MM-DD · vX.Y.Z · resumen breve del release` (fecha del día,
-  versión propuesta en `package.json` y resumen del cambio principal —
-  CHANGELOG o descripción del PR de release). **El push al Vault va siempre por
+  la línea: `- AAAA-MM-DD · vX.Y.Z - <Título> · <descripción>` (fecha del día,
+  versión propuesta en `package.json`, y el **mismo título y la misma
+  descripción** de la sección `## Release en GitHub` del PR de release; la
+  descripción, de menos de 30 palabras y nunca más de 300 caracteres). Antes de
+  agregarla, **revisa los hitos que ya hay**: si alguno está fuera de formato
+  (sin ` - Título`, sin fecha ISO, descripción larga, fuera de orden), no lo
+  arregles por tu cuenta ni inventes títulos: pregúntale al desarrollador.
+  **El push al Vault va siempre por
   `souclaude vault-sync --push -m "docs: hito vX.Y.Z en la ficha del Observatorio"
   --paths Project-<PREFIJO>`**, con el archivo editado y **sin commitear**: ese
   comando hace el ciclo completo (add → commit → pull → push). No uses
@@ -444,8 +529,9 @@ plantilla canónica (`00-System/templates/OBSERVATORIO.md`). Reglas sobre ella:
   Si "Próxima versión" queda vacía después, déjala vacía con su comentario guía
   de la plantilla; no borres la sección.
 - **Al confirmarse el merge y el tag** (mientras Actions esté en pausa, el tag
-  lo creas tú: ver "Versionamiento"): verifica el hito y corrige fecha o
-  resumen si difieren de lo publicado. Si el PR de release se rechaza o se
+  lo creas tú: ver "Versionamiento"; todo este cierre lo hace el subagente de
+  "Cierre del release"): verifica el hito y corrige fecha o resumen si difieren
+  de lo publicado. Si el PR de release se rechaza o se
   descarta, elimina el hito en la sesión que lo detecte y restaura en "Próxima
   versión" cualquier línea que hayas quitado o editado creyendo que este
   release la cumplía. El hito **no es opcional**: todo tag publicado tiene su
