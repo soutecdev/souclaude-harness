@@ -48,7 +48,9 @@ test('init en repo vacio: emite el harness completo + scaffolding', async () => 
   // El flujo SDD/CCEM ya no existe: ni agentes, ni constitucion, ni specs.
   assert.ok(!files.some((f) => f.startsWith('.claude/agents/')), 'se emitio un agente')
   assert.ok(!files.some((f) => f.startsWith('specs/')), 'se emitio specs/')
-  assert.ok(!files.includes('AGENTS.md'))
+  // AGENTS.md volvio en SHS-M48, pero como puntero a CLAUDE.md para Codex y
+  // Antigravity, no como el orquestador del flujo SDD.
+  assert.ok(files.includes('AGENTS.md'))
   assert.ok(!files.includes('docs/constitution.md'))
 
   // Scaffolding: solo porque el repo estaba vacio.

@@ -1,5 +1,5 @@
 {
-  "harnessVersion": "3.18.1",
+  "harnessVersion": "3.20.0",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
@@ -70,6 +70,39 @@
       "policy": "user-owned",
       "critical": true,
       "modos": ["solo"]
+    },
+    {
+      "id": "agents-md",
+      "src": "base/AGENTS.md",
+      "dest": "AGENTS.md",
+      "render": true,
+      "policy": "managed"
+    },
+    {
+      "id": "codex-hooks",
+      "src": "base/codex/hooks.json",
+      "dest": ".codex/hooks.json",
+      "policy": "merge-json",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "codex-hooks-solo",
+      "src": "base/codex/hooks-solo.json",
+      "dest": ".codex/hooks.json",
+      "policy": "merge-json",
+      "modos": ["solo"]
+    },
+    {
+      "id": "antigravity-hooks",
+      "src": "base/agents/hooks.json",
+      "dest": ".agents/hooks.json",
+      "policy": "merge-json"
+    },
+    {
+      "id": "antigravity-hooks-adaptador",
+      "src": "base/agents/hooks/souclaude-antigravity.mjs",
+      "dest": ".agents/hooks/souclaude-antigravity.mjs",
+      "policy": "managed"
     },
     {
       "id": "notes",
@@ -408,10 +441,6 @@
     {
       "dest": ".claudeignore",
       "reason": "Claude Code nunca soporto .claudeignore: el archivo se ignora en silencio. La exclusion real se configura en permissions.deny de .claude/settings.json, que este harness ya emite."
-    },
-    {
-      "dest": "AGENTS.md",
-      "reason": "El harness 3.0 elimino el flujo SDD/CCEM con agentes: el modelo trabaja sin orquestacion fija."
     },
     {
       "dest": ".claude/agents/orchestrator.md",
