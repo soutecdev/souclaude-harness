@@ -12,7 +12,8 @@
 // Contrato de Antigravity (antigravity.google/docs/hooks):
 //   - PreToolUse recibe por stdin { toolCall: { name, args }, workspacePaths, ... };
 //     la tool de terminal es `run_command` y el comando va en args.CommandLine.
-//   - Se bloquea con { "decision": "deny", "reason": "..." } por stdout.
+//   - Se bloquea con { "decision": "deny", "reason": "..." } por stdout; con
+//     "ask" se le pregunta al usuario.
 //   - SessionStart inyecta contexto con { "injectSteps": [{ "systemMessage": ... }] }.
 //
 // Igual que los hooks originales, este adaptador jamas rompe una sesion: ante
@@ -43,17 +44,27 @@ export function entradaComoClaude(entrada, { plataforma = process.platform, raiz
     // corre la terminal en PowerShell.
     tool_name: plataforma === 'win32' ? 'PowerShell' : 'Bash',
     tool_input: { command: comando },
-    cwd: llamada.args?.Cwd || entrada.workspacePaths?.[0] || raiz,
+    // Solo cadenas: un Cwd con otra forma no debe tumbar la revision.
+    cwd: [llamada.args?.Cwd, entrada.workspacePaths?.[0]].find((c) => typeof c === 'string' && c) ?? raiz,
   }
 }
 
 // Salida de reglas-pr (contrato de Claude Code) -> salida de Antigravity.
-// Solo el deny se traduce: reglas-pr nunca emite "allow", y un aviso sin
-// bloqueo no tiene equivalente documentado en PreToolUse.
+//   - deny            -> decision "deny": el comando no corre.
+//   - systemMessage   -> decision "ask": reglas-pr avisa que NO pudo verificar
+//     (sin el script de checks, error interno). En Claude Code ese aviso se le
+//     muestra al usuario; aca no hay canal equivalente, asi que se le pregunta
+//     en vez de dejar pasar el comando en silencio.
+// reglas-pr nunca emite "allow": sin salida, el comando sigue su curso normal.
 export function salidaParaAntigravity(salida) {
   const decision = salida?.hookSpecificOutput
-  if (decision?.permissionDecision !== 'deny') return null
-  return { decision: 'deny', reason: String(decision.permissionDecisionReason ?? 'reglas-pr denego el comando.') }
+  if (decision?.permissionDecision === 'deny') {
+    return { decision: 'deny', reason: String(decision.permissionDecisionReason ?? 'reglas-pr denego el comando.') }
+  }
+  if (typeof salida?.systemMessage === 'string' && salida.systemMessage) {
+    return { decision: 'ask', reason: salida.systemMessage }
+  }
+  return null
 }
 
 // Texto del hook de inicio de sesion -> pasos inyectados de Antigravity.
@@ -76,8 +87,14 @@ async function reglasPr(raiz) {
   if (!entrada) return null
   const hook = path.join(raiz, '.claude', 'hooks', 'reglas-pr.mjs')
   if (!fs.existsSync(hook)) return null
-  const { procesar } = await import(pathToFileURL(hook).href)
-  return salidaParaAntigravity(procesar(entrada))
+  try {
+    const { procesar } = await import(pathToFileURL(hook).href)
+    return salidaParaAntigravity(procesar(entrada))
+  } catch (e) {
+    // Igual que el hook original ante un error interno: no bloquea, pero avisa.
+    const motivo = String(e?.message ?? e).split('\n')[0]
+    return { decision: 'ask', reason: `reglas-pr: error interno del hook (${motivo}); no se verifico nada.` }
+  }
 }
 
 // Equipo: declarar-milestone. Solo: worklog-solo. Se usa el que este instalado.

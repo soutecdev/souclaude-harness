@@ -167,6 +167,12 @@ test('adaptador: sin Cwd usa el workspace y, sin eso, la raiz del repo', () => {
   assert.equal(entradaComoClaude({ toolCall: llamada }, { raiz: '/repo' }).cwd, '/repo')
 })
 
+test('adaptador: un Cwd que no es cadena no tumba la revision', () => {
+  const llamada = { name: 'run_command', args: { CommandLine: 'git push origin main', Cwd: { ruta: '/x' } } }
+  assert.equal(entradaComoClaude({ toolCall: llamada, workspacePaths: [42] }, { raiz: '/repo' }).cwd, '/repo')
+  assert.equal(entradaComoClaude({ toolCall: llamada, workspacePaths: ['/ws'] }, { raiz: '/repo' }).cwd, '/ws')
+})
+
 test('adaptador: otras tools y entradas rotas no producen nada', () => {
   assert.equal(entradaComoClaude({ toolCall: { name: 'view_file', args: {} } }), null)
   assert.equal(entradaComoClaude({ toolCall: { name: 'run_command', args: {} } }), null)
@@ -175,13 +181,13 @@ test('adaptador: otras tools y entradas rotas no producen nada', () => {
   assert.equal(entradaComoClaude(null), null)
 })
 
-test('adaptador: solo el deny se traduce a decision de Antigravity', () => {
+test('adaptador: el deny bloquea y un aviso de "no se verifico" pregunta al usuario', () => {
   assert.deepEqual(
     salidaParaAntigravity({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'no' } }),
     { decision: 'deny', reason: 'no' },
   )
   assert.equal(salidaParaAntigravity(null), null)
-  assert.equal(salidaParaAntigravity({ systemMessage: 'aviso' }), null)
+  assert.deepEqual(salidaParaAntigravity({ systemMessage: 'aviso' }), { decision: 'ask', reason: 'aviso' })
   assert.equal(salidaParaAntigravity({ hookSpecificOutput: { permissionDecision: 'allow' } }), null)
 })
 
@@ -249,4 +255,20 @@ test('adaptador real: sin los hooks de .claude instalados no rompe la sesion', (
     assert.equal(r.status, 0)
     assert.equal(r.stdout, '')
   }
+})
+
+test('adaptador real: con el hook roto no deja pasar el push en silencio, pregunta', () => {
+  const dir = repoInstalado()
+  write(dir, '.claude/hooks/reglas-pr.mjs', 'export function procesar( {')
+  const r = adaptador(dir, 'reglas-pr', { toolCall: { name: 'run_command', args: { CommandLine: 'git push origin main', Cwd: dir } } })
+  assert.equal(r.status, 0)
+  const salida = JSON.parse(r.stdout)
+  assert.equal(salida.decision, 'ask')
+  assert.match(salida.reason, /no se verifico nada/)
+})
+
+test('adaptador real: un Cwd con forma inesperada no evita el deny', () => {
+  const dir = repoInstalado()
+  const r = adaptador(dir, 'reglas-pr', { toolCall: { name: 'run_command', args: { CommandLine: 'git push origin main', Cwd: { x: 1 } } } })
+  assert.equal(JSON.parse(r.stdout).decision, 'deny')
 })
