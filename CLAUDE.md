@@ -9,7 +9,7 @@ organización.
 
 ## Harness
 
-Harness `3.18.1`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
+Harness `3.20.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
 viven en `.claude/skills/` y se aplican solas cuando el contexto lo amerita (en un
 proyecto consumidor se eligen al instalar con `npx souclaude`; `soutec-github` es
 obligatoria y siempre está):
@@ -135,6 +135,12 @@ infraestructura y todo lo que toca frameworks, en inglés.
   verify` y el test de dogfood lo vigilan.
 - Los archivos de skills con assets binarios llevan `"binary": true` en el manifest:
   sin eso, la lectura utf8 y la normalización LF corrompen los bytes.
+- El harness se instala siempre para Claude Code, Codex y Antigravity (SHS-M48, las
+  dos últimas en prueba). Una skill se declara **una vez** en el manifest, bajo
+  `.claude/skills/`: `loadManifest()` deriva su gemelo en `.agents/skills/`, y este
+  repo lleva copia local de las dos carpetas. La lógica de los hooks vive solo en
+  `.claude/hooks/`; `.codex/hooks.json` la invoca directo y Antigravity pasa por el
+  adaptador `.agents/hooks/souclaude-antigravity.mjs`, que traduce y no decide.
 - Escritura de archivos: siempre plana (nada de write-temp-then-rename): OneDrive y
   antivirus rompen el patrón "atómico" con EPERM.
 - `docs/metodologia/` es la carpeta publicable de la metodología: sus secciones
