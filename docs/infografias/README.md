@@ -19,6 +19,7 @@ impresión A4).
 | [04-maquina-nueva.html](04-maquina-nueva.html) | Dejar lista una máquina nueva (integrante nuevo o existente) |
 | [05-actualizar-harness.html](05-actualizar-harness.html) | Actualizar el harness en un proyecto ya adoptado |
 | [06-sin-jira.html](06-sin-jira.html) | Proyecto sin Jira o conector sin autorizar: degradación y catch-up |
+| [07-harness-multiherramienta.html](07-harness-multiherramienta.html) | El harness en Claude Code, Codex y Antigravity (SHS-M48): qué se instala, qué tener en cuenta y cómo probarlo |
 
 Fuente de la letra chica: el playbook de bootstrap, `docs/onboarding-desarrollador.md`
 y `progress/README.md`. Si esos documentos cambian, estas infografías se actualizan

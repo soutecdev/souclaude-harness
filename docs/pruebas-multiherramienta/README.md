@@ -9,7 +9,7 @@ Esta carpeta es para quienes van a hacer esa prueba.
 - [Guía para Codex](codex.md)
 - [Guía para Antigravity](antigravity.md)
 
-Cada guía toma entre 30 y 45 minutos.
+Cada guía tiene nueve pruebas y toma entre 30 y 45 minutos.
 
 ## Qué instala el harness para cada herramienta
 

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El harness en Claude Code, Codex y Antigravity</title>
+<style>
+  :root{
+    --cyan:#00A5BC; --blue:#00688F; --deep:#004F64; --carbon:#3D4543;
+    --body:#2C3331; --grey:#6B7472; --rule:#D8DDE0; --zebra:#F3F7F8;
+    --codebg:#F1F4F5; --green:#47B45A; --yellow:#F2D13F; --magenta:#C81E54;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--body);
+       background:#fff;max-width:1000px;margin:0 auto;padding:0 0 0}
+  .marca{display:flex;align-items:center;justify-content:space-between;padding:18px 40px 10px}
+  .marca svg{height:30px}
+  .sello{font-size:11.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#8a6d00;
+         background:#FBF4D9;border:1px solid var(--yellow);border-radius:20px;padding:5px 14px}
+  .banner{background:var(--blue);color:#fff;padding:24px 40px 26px}
+  .banner .kicker{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8FD8E4;font-weight:600}
+  .banner h1{font-size:28px;font-weight:600;margin-top:3px;line-height:1.2}
+  .banner p{margin-top:8px;font-size:14.5px;color:#CFE6EE;max-width:760px;line-height:1.5}
+  main{padding:0 40px}
+  h2{color:var(--blue);font-size:17px;margin:34px 0 14px;padding-bottom:6px;
+     border-bottom:2px solid var(--rule);text-transform:uppercase;letter-spacing:.6px}
+  h2 small{font-size:12px;color:var(--grey);text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
+  code{font-family:Consolas,monospace;font-size:11.5px;background:var(--codebg);
+       color:var(--deep);padding:1px 5px;border-radius:3px}
+  b{color:var(--deep)}
+  .premisa{background:var(--zebra);border-left:4px solid var(--cyan);border-radius:0 6px 6px 0;
+           padding:13px 16px;font-size:13.5px;line-height:1.55}
+
+  /* tres herramientas */
+  .tres{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .herr{border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+  .herr .cab{color:#fff;padding:11px 14px;display:flex;justify-content:space-between;align-items:center}
+  .herr .cab .n{font-weight:600;font-size:15px}
+  .herr .cab .e{font-size:10.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+                border-radius:20px;padding:3px 10px;background:rgba(255,255,255,.2)}
+  .herr:nth-child(1) .cab{background:var(--deep)}
+  .herr:nth-child(2) .cab{background:var(--blue)}
+  .herr:nth-child(3) .cab{background:var(--cyan)}
+  .fila{padding:10px 14px;border-top:1px solid var(--rule);font-size:12.5px;line-height:1.5}
+  .fila:first-of-type{border-top:none}
+  .fila .q{display:block;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--grey);font-weight:600;margin-bottom:2px}
+  .fila code{font-size:12px}
+
+  /* una sola fuente */
+  .fuente{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .f{border:1px solid var(--rule);border-top:4px solid var(--cyan);border-radius:6px;padding:13px 15px;font-size:12.5px;line-height:1.55}
+  .f h4{font-size:13.5px;color:var(--blue);margin-bottom:8px}
+  .caja{display:block;background:var(--codebg);border-radius:4px;padding:6px 9px;font-family:Consolas,monospace;
+        font-size:11.5px;color:var(--deep);text-align:center}
+  .caja.origen{background:var(--deep);color:#fff;font-weight:600}
+  .baja{display:block;text-align:center;color:var(--cyan);font-size:15px;font-weight:700;line-height:1.3}
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .f p{margin-top:9px}
+
+  /* dos columnas de cuidados */
+  .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .col{border:1px solid var(--rule);border-radius:6px;padding:13px 15px}
+  .col h4{font-size:13.5px;margin-bottom:6px;color:var(--blue)}
+  .col.codex{border-top:4px solid var(--blue)}
+  .col.anti{border-top:4px solid var(--cyan)}
+  .lista{list-style:none}
+  .lista li{font-size:12.5px;padding:4px 0 4px 20px;position:relative;line-height:1.5}
+  .lista li::before{content:"›";position:absolute;left:5px;color:var(--cyan);font-weight:700}
+
+  /* pruebas */
+  .pruebas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .p{border:1px solid var(--rule);border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.45;display:flex;gap:10px;align-items:flex-start}
+  .p .num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-weight:600;
+          font-size:12.5px;display:flex;align-items:center;justify-content:center}
+  .p.clave{border-color:var(--magenta);background:#FDF3F6}
+  .p.clave .num{background:var(--magenta)}
+  .nota{font-size:12px;color:var(--grey);margin-top:9px}
+
+  /* estado */
+  .estado{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .nr{border:1px solid var(--rule);border-radius:6px;padding:13px 15px}
+  .nr.bien{border-top:4px solid var(--green)}
+  .nr.mal{border-top:4px solid var(--magenta)}
+  .nr h4{font-size:13.5px;margin-bottom:6px}
+  .nr.bien h4{color:#2f8a41}
+  .nr.mal h4{color:var(--magenta)}
+  .nr.bien .lista li::before{content:"✓";color:var(--green)}
+  .nr.mal .lista li::before{content:"✗";color:var(--magenta)}
+
+  .ojo{margin-top:14px;font-size:12.5px;background:#FBF4D9;border-left:4px solid var(--yellow);
+       padding:10px 14px;border-radius:0 6px 6px 0;line-height:1.5}
+  .ojo b{color:#8a6d00}
+  .cmd{display:block;margin-top:4px;background:var(--deep);border-radius:6px;padding:12px 14px;
+       font-family:Consolas,monospace;font-size:12px;color:#fff;line-height:1.6;word-break:break-all}
+  .cmd .c{color:#8FD8E4}
+  .reporte{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .r{background:var(--zebra);border-radius:6px;padding:10px 13px;font-size:12.5px;line-height:1.5}
+  .r b{display:block;color:var(--blue)}
+  footer{margin-top:38px;padding:14px 40px;background:var(--blue);color:#CFE6EE;
+         font-size:11.5px;display:flex;justify-content:space-between;gap:20px}
+  @media (max-width:760px){.tres,.fuente,.dos,.estado,.reporte{grid-template-columns:1fr}.pruebas{grid-template-columns:1fr 1fr}}
+  @media print{
+    @page{size:A4;margin:8mm}
+    body{max-width:none}
+    .banner,.herr .cab,.premisa,.ojo,footer,.cmd,.caja,.p .num,.p.clave,.r,.sello{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<div class="marca">
+  <svg viewBox="0 0 300 64" role="img" aria-label="Soutec">
+    <path d="M30 6 C14 8 6 20 8 32 C10 22 20 16 30 18 C40 20 44 30 38 38 C48 34 52 22 46 14 C42 8 36 5 30 6 Z" fill="#00A5BC"/>
+    <path d="M18 58 C34 56 42 44 40 32 C38 42 28 48 18 46 C8 44 4 34 10 26 C0 30 -4 42 2 50 C6 56 12 59 18 58 Z" fill="#00A5BC"/>
+    <circle cx="33" cy="15" r="5" fill="#00688F"/>
+    <circle cx="15" cy="49" r="5" fill="#00688F"/>
+    <text x="58" y="48" font-family="Segoe UI,system-ui,sans-serif" font-size="44" font-weight="700" fill="#3D4543" letter-spacing="1">soutec</text>
+  </svg>
+  <span class="sello">Codex y Antigravity: en prueba</span>
+</div>
+
+<div class="banner">
+  <div class="kicker">Harness souclaude · v3.20.0 · SHS-M48</div>
+  <h1>Un harness, tres herramientas de IA</h1>
+  <p>El harness de SOUTEC se instala a la vez para Claude Code, Codex y Antigravity. Esto es lo que cambia, lo que hay que tener en cuenta al instalarlo y cómo probarlo en cada herramienta.</p>
+</div>
+
+<main>
+
+<h2>La idea</h2>
+<div class="premisa"><b>Una instalación sirve para las tres herramientas, sin preguntar cuál se usa.</b> <code>init</code> y <code>upgrade</code> dejan siempre lo mismo, así que un repo puede trabajarse con una herramienta hoy y con otra mañana, o con varias a la vez. Las reglas del proyecto son las mismas para todas.</div>
+
+<h2>Qué lee cada herramienta</h2>
+<div class="tres">
+  <div class="herr">
+    <div class="cab"><span class="n">Claude Code</span><span class="e">Estable</span></div>
+    <div class="fila"><span class="q">Instrucciones</span><code>CLAUDE.md</code></div>
+    <div class="fila"><span class="q">Skills</span><code>.claude/skills/</code></div>
+    <div class="fila"><span class="q">Hooks</span><code>.claude/settings.json</code></div>
+  </div>
+  <div class="herr">
+    <div class="cab"><span class="n">Codex</span><span class="e">En prueba</span></div>
+    <div class="fila"><span class="q">Instrucciones</span><code>AGENTS.md</code></div>
+    <div class="fila"><span class="q">Skills</span><code>.agents/skills/</code></div>
+    <div class="fila"><span class="q">Hooks</span><code>.codex/hooks.json</code></div>
+  </div>
+  <div class="herr">
+    <div class="cab"><span class="n">Antigravity</span><span class="e">En prueba</span></div>
+    <div class="fila"><span class="q">Instrucciones</span><code>AGENTS.md</code></div>
+    <div class="fila"><span class="q">Skills</span><code>.agents/skills/</code></div>
+    <div class="fila"><span class="q">Hooks</span><code>.agents/hooks.json</code> + adaptador</div>
+  </div>
+</div>
+
+<h2>Una sola fuente para cada cosa</h2>
+<div class="fuente">
+  <div class="f">
+    <h4>Instrucciones</h4>
+    <span class="caja origen">CLAUDE.md</span>
+    <span class="baja">&#8593; remite</span>
+    <span class="caja">AGENTS.md</span>
+    <p><code>CLAUDE.md</code> sigue siendo el único archivo de reglas, el que cada equipo adapta. <code>AGENTS.md</code> es un puntero: manda a leerlo y explica cómo traducir lo que es propio de Claude Code.</p>
+  </div>
+  <div class="f">
+    <h4>Skills</h4>
+    <span class="caja origen">una skill en el harness</span>
+    <span class="baja">&#8595;</span>
+    <span class="par"><span class="caja">.claude/skills</span><span class="caja">.agents/skills</span></span>
+    <p>Las dos carpetas llevan <b>los mismos archivos</b>. Son copias que genera el harness: nadie las mantiene a mano y no pueden quedar desparejas.</p>
+  </div>
+  <div class="f">
+    <h4>Hooks</h4>
+    <span class="caja origen">.claude/hooks/ (la lógica)</span>
+    <span class="baja">&#8595;</span>
+    <span class="par"><span class="caja">Codex: directo</span><span class="caja">Antigravity: adaptador</span></span>
+    <p>Las reglas se escriben una vez. Codex usa el mismo formato que Claude Code; Antigravity usa otro, y un adaptador solo traduce.</p>
+  </div>
+</div>
+
+<h2>Al instalar o actualizar</h2>
+<ul class="lista">
+  <li><b>Todo repo recibe archivos nuevos en su próximo <code>upgrade</code>:</b> <code>AGENTS.md</code>, <code>.codex/</code>, <code>.agents/</code> y una segunda copia de las skills, se use o no esa herramienta.</li>
+  <li><b>Lo que el equipo ya tenía no se pisa.</b> Un <code>AGENTS.md</code> propio queda intacto, con la propuesta del harness al lado en <code>AGENTS.md.new</code>. Los <code>hooks.json</code> propios se conservan y se les suma lo del harness.</li>
+  <li><b>La carpeta <code>.claude/</code> tiene que existir aunque nadie use Claude Code:</b> ahí viven los scripts de los hooks y la configuración del harness (<code>vault.local.json</code>, <code>harness.json</code>).</li>
+  <li><b>Todo se versiona.</b> <code>AGENTS.md</code>, <code>.codex/</code> y <code>.agents/</code> van al repo como el resto del harness; el upgrade se integra por rama y Pull Request.</li>
+  <li><b>Requisitos:</b> Node 22.4 o superior y <code>git</code>. Los hooks se ejecutan con <code>node</code> en las tres herramientas.</li>
+</ul>
+
+<h2>Qué hacen los hooks <small>iguales en las tres herramientas</small></h2>
+<div class="dos">
+  <div class="col codex">
+    <h4>reglas-pr · antes de cada comando de terminal</h4>
+    <ul class="lista">
+      <li>Deniega cualquier <code>git push</code> que toque <code>main</code>.</li>
+      <li>Deniega el push que subiría un archivo de credenciales (<code>.env</code>, llaves, tokens).</li>
+      <li>Un comando normal pasa sin mensajes ni demora.</li>
+    </ul>
+  </div>
+  <div class="col anti">
+    <h4>Inicio de sesión</h4>
+    <ul class="lista">
+      <li>Le recuerda al agente la regla de trazabilidad: todo trabajo pertenece a un milestone del Vault.</li>
+      <li>Le muestra el tablero de milestones en curso, si el Vault está conectado.</li>
+    </ul>
+  </div>
+</div>
+<div class="ojo"><b>Si los hooks no corren, las reglas valen igual.</b> <code>AGENTS.md</code> las repite en texto: nunca push a <code>main</code>, nunca subir secretos. Sin hook, nada lo bloquea: depende de que el agente obedezca.</div>
+
+<h2>Lo que cambia al probar cada herramienta</h2>
+<div class="dos">
+  <div class="col codex">
+    <h4>Codex</h4>
+    <ul class="lista">
+      <li><b>Los hooks no corren hasta aprobarlos.</b> Codex los marca como no confiables: hay que revisarlos y aceptarlos en <code>/hooks</code>, y repetirlo cada vez que el harness los cambie.</li>
+      <li>El hook está registrado para la herramienta <code>Bash</code>. Si en Windows Codex usa otra, el push no se bloquea: hay que anotar el nombre exacto.</li>
+      <li>Al crear un Pull Request, corre el mismo check que en Claude Code.</li>
+    </ul>
+  </div>
+  <div class="col anti">
+    <h4>Antigravity</h4>
+    <ul class="lista">
+      <li>Vale para la App, el IDE y la CLI: los tres leen <code>.agents/hooks.json</code>.</li>
+      <li>El adaptador supone que la terminal en Windows es PowerShell.</li>
+      <li>Si el hook corre pero no puede revisar, Antigravity <b>pregunta</b> en vez de dejar pasar el comando: no lo apruebes y reporta el motivo.</li>
+      <li><b>No corre el check automático tras crear un Pull Request.</b> Se corre a mano: <code>node .claude/hooks/reglas-pr.mjs --pr &lt;url&gt;</code>.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="ojo"><b>Dos casos que todavía no sabemos cómo se comportan.</b> Si la sesión se abre desde una <b>subcarpeta</b>, el hook puede no encontrarse y el push pasaría sin aviso. Y si Codex en <b>Windows</b> ejecuta PowerShell pero lo informa como <code>Bash</code>, un push sin destino explícito puede escaparse. Las pruebas 8 y 9 son para confirmarlo.</div>
+
+<h2>Las nueve pruebas <small>30 a 45 minutos por herramienta, en un repo desechable</small></h2>
+<div class="pruebas">
+  <div class="p"><span class="num">1</span><span>Las instrucciones se cargan: ¿leyó <code>CLAUDE.md</code>, y cuándo?</span></div>
+  <div class="p"><span class="num">2</span><span>Las skills aparecen y <code>adr-new</code> se activa.</span></div>
+  <div class="p"><span class="num">3</span><span><code>it-security-review</code> no corre sola.</span></div>
+  <div class="p"><span class="num">4</span><span>Los hooks figuran registrados y habilitados.</span></div>
+  <div class="p"><span class="num">5</span><span>La sesión nueva conoce la regla de milestone.</span></div>
+  <div class="p clave"><span class="num">6</span><span><b>El push a <code>main</code> se bloquea.</b></span></div>
+  <div class="p clave"><span class="num">7</span><span><b>Un secreto no se sube.</b></span></div>
+  <div class="p"><span class="num">8</span><span>En Windows: qué shell usa la herramienta.</span></div>
+  <div class="p clave"><span class="num">9</span><span><b>El push a <code>main</code> se bloquea también desde una subcarpeta.</b></span></div>
+</div>
+<p class="nota">Las pruebas 6, 7 y 9 son las que importan: son las reglas que protegen <code>main</code> y las credenciales. Paso a paso en <code>docs/pruebas-multiherramienta/</code>.</p>
+
+<h2>En qué estado está</h2>
+<div class="estado">
+  <div class="nr bien">
+    <h4>Verificado</h4>
+    <ul class="lista">
+      <li>La suite del harness pasa completa (715 tests, 19 nuevos).</li>
+      <li>La instalación deja los archivos de las tres herramientas.</li>
+      <li>El push a <code>main</code> y el push con un secreto se deniegan con entradas simuladas en el formato de Codex y en el de Antigravity.</li>
+      <li>Un <code>upgrade</code> no toca lo que el equipo editó.</li>
+    </ul>
+  </div>
+  <div class="nr mal">
+    <h4>Pendiente o fuera de alcance</h4>
+    <ul class="lista">
+      <li><b>Nada se probó en Codex ni en Antigravity reales:</b> se construyó contra su documentación.</li>
+      <li>Las skills que solo corren a pedido usan un campo de Claude Code; las otras herramientas podrían activarlas solas.</li>
+      <li>Los permisos de Claude Code (por ejemplo, no leer <code>.env</code>) no se trasladan.</li>
+      <li>Los conectores MCP (Jira, Azure Boards) no se registran para Codex ni Antigravity.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Cómo probarlo</h2>
+<span class="cmd"><span class="c">mkdir</span> prueba-harness &amp;&amp; <span class="c">cd</span> prueba-harness &amp;&amp; <span class="c">git init</span> -b main<br><span class="c">npx</span> github:soutecdev/souclaude-harness#feature/M48-harness-multiherramienta init --yes --name prueba --type backend --lang es</span>
+<div class="reporte">
+  <div class="r"><b>1 · Sigue tu guía</b><code>codex.md</code> o <code>antigravity.md</code>, en <code>docs/pruebas-multiherramienta/</code>.</div>
+  <div class="r"><b>2 · Completa la tabla</b>OK, Falla o Parcial por prueba, con la versión de la herramienta y el sistema operativo.</div>
+  <div class="r"><b>3 · Reporta lo literal</b>El mensaje exacto o una captura. Si la guía no coincide con tu herramienta, eso también es un resultado.</div>
+</div>
+
+</main>
+
+<footer>
+  <span>SOUTEC · harness souclaude · SHS-M48 · 18 de noviembre de 2026</span>
+  <span>Decisión y alternativas: docs/decisions/20261118-harness-para-varias-herramientas-de-ia.md</span>
+</footer>
+
+</body>
+</html>

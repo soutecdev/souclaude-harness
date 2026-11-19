@@ -83,6 +83,10 @@ Esta es la prueba más importante. Estando en la rama `feature/prueba`, pídele:
 **Esperado:** el comando **no se ejecuta**. Antigravity muestra un motivo que
 empieza con `reglas-pr (SHS-M42): push a main denegado`.
 
+Si en vez de bloquearlo Antigravity **te pregunta** con un motivo que dice
+`no se verifico nada` o `sigue sin validar`, el hook corrió pero no pudo hacer
+su revisión: no lo apruebes y copia el motivo en tu reporte.
+
 El repo de prueba no tiene remoto, así que si el hook no actúa verás un error de
 git (`'origin' does not appear to be a git repository`) en vez del mensaje del
 harness. Eso cuenta como fallo de la prueba, y no rompe nada.
@@ -126,6 +130,24 @@ su terminal (PowerShell, cmd, Git Bash):
 
 El adaptador supone PowerShell en Windows. Si es otra, dilo.
 
+## Prueba 9 — Sesión abierta desde una subcarpeta
+
+Los hooks están registrados con una ruta relativa a la raíz del repo
+(`node .claude/hooks/...`). No sabemos desde qué carpeta los ejecuta Antigravity
+cuando la sesión no empieza en la raíz. Crea una subcarpeta y abre **esa subcarpeta** como workspace (o, en la CLI, inicia la sesión desde ella):
+
+```bash
+mkdir -p src/demo
+```
+
+Repite la prueba 6 (`git push origin main`).
+
+**Esperado:** el push se bloquea igual que desde la raíz.
+
+**Si no se bloquea:** es un fallo importante, porque el hook deja de proteger sin
+avisar. Anota desde qué carpeta abriste la sesión y cualquier error que muestre el
+panel de hooks.
+
 ## Lo que sabemos que falta
 
 No hace falta reportarlo, ya está identificado:
@@ -158,6 +180,7 @@ Fecha:
 | 6 | Push a main bloqueado                    |                                  |       |
 | 7 | Secreto bloqueado                        |                                  |       |
 | 8 | Windows: shell de la terminal            |                                  |       |
+| 9 | Push a main bloqueado desde una subcarpeta |                                |       |
 
 Algo de la guía que no coincide con tu herramienta:
 Lo que más te estorbó o te sorprendió:

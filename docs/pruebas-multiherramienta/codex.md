@@ -116,6 +116,36 @@ PowerShell, cmd) y con qué nombre aparece la herramienta en `/hooks`. El hook e
 registrado solo para la tool `Bash`: si Codex usa otra en Windows, el push no se
 bloqueará y necesitamos saber el nombre exacto.
 
+Después prueba un push **sin destino explícito**. Vuelve a `main`
+(`git checkout main`) y pídele, con la ruta real de tu repo de prueba:
+
+> Ejecuta exactamente: git -C C:\ruta\a\prueba-harness push
+
+**Esperado:** se bloquea, porque la rama actual es `main`.
+
+**Por qué importa:** el hook interpreta el comando según el shell que le informa
+Codex. Si Codex ejecuta en PowerShell pero lo informa como `Bash`, la ruta con
+barras invertidas se lee mal y este push puede pasar sin revisión. Al terminar,
+vuelve a tu rama: `git checkout feature/prueba`.
+
+## Prueba 9 — Sesión abierta desde una subcarpeta
+
+Los hooks están registrados con una ruta relativa a la raíz del repo
+(`node .claude/hooks/...`). No sabemos desde qué carpeta los ejecuta Codex
+cuando la sesión no empieza en la raíz. Crea una subcarpeta y abre Codex **desde ahí** (`cd src/demo` y luego `codex`):
+
+```bash
+mkdir -p src/demo
+```
+
+Repite la prueba 6 (`git push origin main`).
+
+**Esperado:** el push se bloquea igual que desde la raíz.
+
+**Si no se bloquea:** es un fallo importante, porque el hook deja de proteger sin
+avisar. Anota desde qué carpeta abriste la sesión y cualquier error que muestre el
+panel de hooks.
+
 ## Lo que sabemos que falta
 
 No hace falta reportarlo, ya está identificado:
@@ -143,7 +173,8 @@ Fecha:
 | 5 | Inicio de sesión: regla de milestone     |                                  |       |
 | 6 | Push a main bloqueado                    |                                  |       |
 | 7 | Secreto bloqueado                        |                                  |       |
-| 8 | Windows: shell y nombre de la tool       |                                  |       |
+| 8 | Windows: shell, nombre de la tool y push sin destino |                      |       |
+| 9 | Push a main bloqueado desde una subcarpeta |                                |       |
 
 Algo de la guía que no coincide con tu herramienta:
 Lo que más te estorbó o te sorprendió:
