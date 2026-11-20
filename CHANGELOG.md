@@ -17,7 +17,8 @@ El harness se instala con un único prompt que cubre todos los puntos de partida
   conviene resolver (`gh` ausente o sin autenticar, carpeta en OneDrive, cambios
   sin commitear, Vault mal conectado) y qué pasos no hace el instalador (`git
   init`, crear el repo, commit inicial, rama `dev`, conectar el Vault, dar de alta
-  el prefijo). Con `--json` lo lee un agente. Exit 1 si hay bloqueos.
+  el prefijo). Con `--json` lo lee un agente. Exit 1 si hay bloqueos. La URL del
+  remoto se informa sin credenciales embebidas.
 - **Prompt único de instalación** en `docs/metodologia/03-prompt-instalacion.md`:
   se pega tal cual, sin sustituir variables. El agente diagnostica, pregunta solo
   lo que no se puede deducir, prepara git, instala por flags y verifica.

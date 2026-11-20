@@ -177,6 +177,9 @@ FASE 5 · VERIFICAR Y CERRAR
    Exit 0 o 2 es correcto (2 = hay archivos .new o ediciones mías por revisar);
    exit 1 significa que quedó algo sin aplicar: muéstramelo.
 3. Commitea la instalación: chore: instala el harness souclaude v<versión>
+   Agrega solo los archivos que escribió el instalador (los que lista su salida):
+   nunca git add -A ni git add . — en la carpeta puede haber archivos míos o
+   secretos. Muéstrame git status --short antes de commitear.
    .claude/vault.local.json no se commitea (es de esta máquina). Haz push de la
    rama. En modo equipo pregúntame, una sola vez, si abres el PR contra dev.
 4. Lee el CLAUDE.md instalado y progress/README.md. Si la sección "Contexto" de

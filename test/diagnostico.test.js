@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { main } from '../src/cli.js'
 import { mkRepo, read, has, tree } from './helpers.js'
-import { clasificar, recolectar, nodeCumple, slugDeGitHub, NODE_MINIMO, CASOS } from '../src/core/diagnostico.js'
+import { clasificar, recolectar, nodeCumple, slugDeGitHub, sinCredenciales, NODE_MINIMO, CASOS } from '../src/core/diagnostico.js'
 import { loadManifest } from '../src/core/manifest.js'
 import { leerRegistroDePrefijos, machineConfigPath, VAULT_CONFIG } from '../src/core/vault.js'
 
@@ -250,6 +250,20 @@ test('slugDeGitHub: https, ssh y remotos de otro host', () => {
   assert.equal(slugDeGitHub('https://github.com/soutecdev/acme'), 'soutecdev/acme')
   assert.equal(slugDeGitHub('https://dev.azure.com/org/p/_git/acme'), null)
   assert.equal(slugDeGitHub(null), null)
+})
+
+test('el remoto nunca sale con credenciales embebidas', () => {
+  assert.equal(sinCredenciales('https://x-access-token:ghp_secreto@github.com/org/repo.git'), 'https://github.com/org/repo.git')
+  assert.equal(sinCredenciales('https://usuario:PAT@dev.azure.com/org/p/_git/repo'), 'https://dev.azure.com/org/p/_git/repo')
+  assert.equal(sinCredenciales('https://github.com/org/repo.git'), 'https://github.com/org/repo.git')
+  assert.equal(sinCredenciales('git@github.com:org/repo.git'), 'git@github.com:org/repo.git')
+  assert.equal(sinCredenciales(null), null)
+
+  const dir = repoReal()
+  git(dir, 'remote', 'add', 'origin', 'https://usuario:ghp_secreto@example.invalid/org/repo.git')
+  const salida = JSON.stringify(recolectar(dir, { manifest: loadManifest() }))
+  assert.doesNotMatch(salida, /ghp_secreto/)
+  assert.match(salida, /https:\/\/example\.invalid\/org\/repo\.git/)
 })
 
 // --- recolectar contra el disco y git reales

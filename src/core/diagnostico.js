@@ -77,6 +77,13 @@ export function slugDeGitHub(url) {
   return m ? `${m[1]}/${m[2]}` : null
 }
 
+// Una URL de remoto puede llevar credenciales embebidas
+// (https://usuario:token@host/...). El diagnostico se imprime, lo lee un agente
+// y termina en transcripciones, PRs y tickets: la URL sale siempre sin ellas.
+export function sinCredenciales(url) {
+  return url ? String(url).replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/@]+@/i, '$1') : url
+}
+
 function leerMaquina(correr) {
   const git = intenta(() => correr('git', ['--version']))
   const gh = intenta(() => correr('gh', ['--version']))
@@ -95,7 +102,7 @@ function leerRepo(cwd, correr) {
   const raiz = g('rev-parse', '--show-toplevel')
   if (!raiz) return { esRepo: false }
 
-  const remoto = g('remote', 'get-url', 'origin') || null
+  const remoto = sinCredenciales(g('remote', 'get-url', 'origin') || null)
   // Las ramas del remoto se preguntan al remoto (ls-remote), no a las refs
   // locales: un clon sin fetch reciente diria que `dev` no existe. Sin red o sin
   // credenciales queda en null -- "no se pudo saber", que no es lo mismo que no.
