@@ -587,3 +587,42 @@ test('evaluaVersionDelPaquete: avisa si el release propone una version y package
   assert.equal(evaluaVersionDelPaquete({ body: cuerpo(true, 'sin proponer nada') }, 'main', () => '3.18.1'), null, 'de eso ya se queja version-semver')
   assert.equal(evaluaVersionDelPaquete(null, 'main', () => '3.18.1'), null)
 })
+
+// --- El grupo rama-commits tal como lo corre el workflow de CI: sin --pr, con
+// la base y la rama del evento en el entorno y HEAD en el merge sintetico.
+
+function repoComoEnCI({ rama }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude check ci '))
+  git(dir, 'init', '-q', '-b', 'main')
+  git(dir, 'commit', '-q', '--allow-empty', '-m', 'chore: raiz')
+  git(dir, 'update-ref', 'refs/remotes/origin/main', 'HEAD')
+  git(dir, 'switch', '-q', '-c', rama)
+  git(dir, 'commit', '-q', '--allow-empty', '-m', 'feat: algo nuevo')
+  // Actions deja HEAD detached en refs/pull/<n>/merge: padre 1 la base, padre 2 la rama.
+  git(dir, 'switch', '-q', '--detach', 'main')
+  git(dir, 'merge', '-q', '--no-ff', '-m', 'Merge de prueba', rama)
+  return dir
+}
+
+const entornoDelEvento = (base, rama) => ({ ...ENTORNO_SIN_EVENTO, GITHUB_BASE_REF: base, GITHUB_HEAD_REF: rama })
+
+test('rama-commits en CI: el PR de release dev -> main pasa sin --pr', () => {
+  const dir = repoComoEnCI({ rama: 'dev' })
+  const r = correrCheck(dir, ['--grupo', 'rama-commits'], entornoDelEvento('main', 'dev'))
+  assert.match(r.stdout, /\[OK\s*\] rama-formato: PR de release dev -> main/)
+  assert.doesNotMatch(r.stdout, /\[FAIL\]/)
+  assert.equal(r.status, 0)
+})
+
+test('rama-commits en CI: a main solo llega dev, tampoco sin --pr', () => {
+  const dir = repoComoEnCI({ rama: 'fix/M1-algo' })
+  const r = correrCheck(dir, ['--grupo', 'rama-commits'], entornoDelEvento('main', 'fix/M1-algo'))
+  assert.match(r.stdout, /\[FAIL\] rama-formato: PR a main solo puede venir de "dev"/)
+  assert.equal(r.status, 1)
+})
+
+test('rama-commits en CI: contra dev, "dev" sigue sin ser una rama de trabajo', () => {
+  const dir = repoConBase()
+  const r = correrCheck(dir, ['--grupo', 'rama-commits'], entornoDelEvento('dev', 'dev'))
+  assert.match(r.stdout, /\[FAIL\] rama-formato: "dev" no cumple/)
+})
