@@ -282,9 +282,14 @@ export function createSessionsPublisher({
 // Una sesion reanudada (crecio despues de publicada) actualiza SU linea en el
 // lugar si sigue intacta; si alguien la edito o la movio, se agrega una nueva
 // al final — nunca se toca una linea que no sea byte a byte la nuestra.
-function aplicarLineas(contenido, pendientes) {
-  let lineas = contenido === '' ? [] : contenido.split('\n')
+export function aplicarLineas(contenido, pendientes) {
+  // /\r?\n/: con un checkout en CRLF, partir por "\n" dejaba un "\r" al final de
+  // cada linea y la linea previa no se encontraba nunca.
+  let lineas = contenido === '' ? [] : contenido.split(/\r?\n/)
   for (const p of pendientes) {
+    // Idempotente: si la linea nueva ya esta (un intento anterior la escribio y
+    // fallo el push, o el monitor se cerro a mitad), no se agrega otra vez.
+    if (lineas.includes(p.linea)) continue
     const idx = p.lineaPrevia ? lineas.indexOf(p.lineaPrevia) : -1
     if (idx >= 0) lineas[idx] = p.linea
     else {
@@ -293,6 +298,10 @@ function aplicarLineas(contenido, pendientes) {
       lineas.push(p.linea)
     }
   }
+  // Un solo salto de linea al final: al reemplazar una linea, el vacio que deja
+  // el split tras el ultimo "\n" se volvia a unir y el archivo ganaba una linea
+  // en blanco en cada actualizacion de la sesion.
+  while (lineas.length > 0 && lineas[lineas.length - 1].trim() === '') lineas.pop()
   return lineas.join('\n') + '\n'
 }
 

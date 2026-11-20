@@ -50,6 +50,9 @@ const OPTIONS = {
   // instalan o actualizan solos, tambien con --yes; en CI hace falta el flag.
   // --no-cli-global lo omite.
   'cli-global': { type: 'boolean' },
+  // Proteccion de `main` en GitHub (modo equipo). --no-github-protect la omite:
+  // para repos cuya proteccion ya administra la organizacion.
+  'github-protect': { type: 'boolean', default: true },
   'assume-version': { type: 'string' },
   // monitor. --interval y --top solo pueden ser 'string' en parseArgs (no hay tipo
   // numerico): el comando los convierte y valida.
@@ -126,7 +129,13 @@ export async function main(argv, cwd) {
     return 0
   }
 
-  const command = positionals[0] ?? autoDetect(cwd)
+  let command
+  try {
+    command = positionals[0] ?? autoDetect(cwd)
+  } catch (err) {
+    ui.log.error(err.message)
+    return 1
+  }
 
   if (!(command in COMMANDS)) {
     console.error(pc.red(`Comando desconocido: ${command}`))
@@ -146,7 +155,7 @@ export async function main(argv, cwd) {
 }
 
 // Sin comando explicito, el CLI decide segun lo que encuentra. Un dev que corre
-// `npx souclaude` en un repo cualquiera obtiene lo correcto sin leer el help.
+// el CLI en un repo cualquiera obtiene lo correcto sin leer el help.
 function autoDetect(cwd) {
   if (readLockfile(cwd)) return 'upgrade'
 
@@ -167,7 +176,7 @@ ${pc.bold('USO')}
 ${pc.bold('COMANDOS')}
   ${pc.cyan('init')}      Instala el harness. Sirve igual en un repo vacio y en uno legacy.
   ${pc.cyan('upgrade')}   Actualiza el harness a la ultima version. Aplica migraciones.
-  ${pc.cyan('status')}    Solo lectura: que version tenes, que cambio, que editaste tú.
+  ${pc.cyan('status')}    Solo lectura: que version tienes, que cambio, que editaste tú.
   ${pc.cyan('adopt')}     Para un repo con estructura hecha a mano. NO toca ningun archivo:
             solo anota en .claude/harness.json que ya coincide con el harness.
   ${pc.cyan('verify')}    Audita el propio harness (manifest vs templates/base/): huerfanos,
@@ -176,14 +185,16 @@ ${pc.bold('COMANDOS')}
             sesiones y proyectos. Sale 0/1/2 segun el peor limite (util en un hook).
   ${pc.cyan('vault-sync')} Sincroniza con el Vault de forma segura. Sin flags: pull --rebase
             (con abort defensivo). Con --push -m "<msg>": add + commit + pull +
-            push, jamas --force. Exit: 0 ok/sin cambios, 1 fallo, 3 sin Vault.
+            push, jamas --force. Exit: 0 ok/sin cambios, 1 fallo, 2 uso
+            incorrecto, 3 sin Vault.
 
   Sin comando, se autodetecta: hay lockfile -> upgrade · hay estructura previa -> adopt · repo limpio -> init
 
 ${pc.bold('FLAGS')}
   --dry-run            Imprime el plan y no escribe ni un byte.
   -y, --yes            Acepta los defaults. No pregunta nada. (CI=true lo implica)
-  --force              Sobrescribe archivos que editaste tú. Pide confirmacion escrita.
+  --force              Sobrescribe archivos que editaste tú. Pide tipear FORCE
+                       (--yes no lo implica; en CI se deniega). Deja backup.
   --prune              Borra archivos obsoletos sin editar sin preguntar; los que
                        editaste piden confirmacion escrita.
   --no-backup          No copia a .claude/backup-<ts>/ antes de sobrescribir.
@@ -218,6 +229,10 @@ ${pc.bold('FLAGS')}
                        terminal. Solo en CI hace falta este flag (sin el, se
                        avisa). --no-cli-global lo omite. Idempotente.
   --no-vault           Omite el paso del Vault por completo.
+  --no-github-protect  No configura la proteccion de main en GitHub. En modo
+                       equipo, init/upgrade la REESCRIBEN entera (0 aprobaciones,
+                       solo los checks del harness): usalo si la administra la
+                       organizacion o ya tiene reglas mas estrictas.
   --assume-version     (adopt) Version del harness que se asume instalada.
   --strict             (verify) Los warnings (huerfanos) tambien hacen fallar el comando.
 
@@ -276,7 +291,7 @@ ${pc.bold('FLAGS DE MONITOR')}
 
 ${pc.bold('MONITOR --EMIT-ROUTER')}
   Escribe UNA linea "medida" en progress/model-router.jsonl a partir de la
-  telemetria real de un agente o sesion ya corridos (ver SKILL ccem-model-router).
+  telemetria real de un agente o sesion ya corridos.
   Es la unica escritura del comando: sin este flag, monitor es de solo lectura.
 
   --emit-router           Activa el modo. No dibuja panel.
@@ -292,6 +307,6 @@ ${pc.bold('MONITOR --EMIT-ROUTER')}
 
 ${pc.bold('GARANTIA')}
   Un archivo tuyo NUNCA se sobrescribe en silencio. Si difiere del harness, la
-  propuesta queda al lado como <archivo>.new y tú decidis. (P8 — Surgical Changes)
+  propuesta queda al lado como <archivo>.new y tú decides.
 `)
 }

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/soutecdev/souclaude-harness/blob/dev/schemas/harness.lock.schema.json",
+  "title": "Lockfile del harness (.claude/harness.json)",
+  "description": "Lo escribe el CLI en cada repo y se versiona. Registra que se instalo y con que contenido, para distinguir en el siguiente upgrade lo intacto de lo editado. Las claves de nivel superior quedan abiertas: un lockfile puede venir de un CLI mas viejo o mas nuevo.",
+  "type": "object",
+  "required": ["harnessVersion", "files"],
+  "properties": {
+    "harnessVersion": { "$ref": "#/$defs/semver", "description": "Version del harness instalada en este repo." },
+    "cliVersion": { "$ref": "#/$defs/semver" },
+    "installedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$" },
+    "greenfield": { "type": "boolean", "description": "El repo estaba vacio en la primera instalacion. No se recalcula." },
+    "skills": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" } },
+    "modo": { "enum": ["equipo", "solo"], "description": "Modo de trabajo del repo. Ausente en instalaciones anteriores al modo solo: equivale a equipo." },
+    "vars": { "type": "object", "additionalProperties": { "type": ["string", "null"] }, "description": "Variables con las que se renderizaron los templates." },
+    "detected": {
+      "type": "object",
+      "properties": {
+        "stacks": { "type": "array", "items": { "type": "string" } },
+        "packageManager": { "type": ["string", "null"] }
+      }
+    },
+    "files": {
+      "description": "Por cada archivo que el harness escribio: su politica y el hash de lo que escribio. La clave es la ruta relativa al repo.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/archivo" }
+    },
+    "blocks": {
+      "description": "Por cada archivo con un bloque gestionado (append-block): el hash del bloque.",
+      "type": "object",
+      "additionalProperties": { "type": "object", "required": ["hash"], "additionalProperties": false, "properties": { "hash": { "$ref": "#/$defs/hash" } } }
+    }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "Primeros 16 hex del SHA-256 del contenido, con finales de linea normalizados a LF." },
+    "archivo": {
+      "type": "object",
+      "required": ["policy", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "policy": { "enum": ["managed", "user-owned", "merge-json"] },
+        "hash": { "$ref": "#/$defs/hash" },
+        "binary": { "const": true }
+      }
+    }
+  }
+}

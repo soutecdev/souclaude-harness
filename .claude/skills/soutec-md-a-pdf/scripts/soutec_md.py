@@ -14,7 +14,9 @@ No agregues aquí nada específico de un formato.
 """
 import datetime
 import html as html_mod
+import os
 import re
+import sys
 from html.parser import HTMLParser
 
 import markdown
@@ -58,6 +60,12 @@ def parse_front_matter(text):
         if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
             continue
         key, _, val = line.partition(":")
+        val = val.strip()
+        # Como en YAML: en un valor sin comillas, " #" abre un comentario. Sin
+        # esto, el propio ejemplo del SKILL (`client_logo: logo.png   # logo del
+        # cliente`) dejaba el comentario dentro del valor.
+        if val[:1] not in ('"', "'"):
+            val = re.sub(r"\s+#.*$", "", val)
         meta[key.strip().lower()] = val.strip().strip('"').strip("'")
     return meta, text[m.end():]
 
@@ -72,8 +80,18 @@ def extract_title(body, meta):
     secciones)."""
     if meta.get("title"):
         return meta["title"], body
+    # Un archivo guardado desde Windows puede empezar con BOM: con él delante,
+    # el primer "# Título" no se reconocía.
+    body = body.lstrip(chr(0xFEFF))
     lines = body.splitlines()
+    en_codigo = False
     for i, line in enumerate(lines):
+        # Un "# comentario" dentro de un bloque de código no es el título.
+        if re.match(r"^\s*(```|~~~)", line):
+            en_codigo = not en_codigo
+            continue
+        if en_codigo:
+            continue
         m = re.match(r"^#\s+(.*\S)\s*$", line)
         if m:
             title = m.group(1).strip()
@@ -87,6 +105,34 @@ def extract_title(body, meta):
 # ============================================================
 BLOCK = {"h1", "h2", "h3", "h4", "p", "ul", "ol", "li",
          "table", "thead", "tbody", "tr", "th", "td", "pre", "blockquote", "hr"}
+
+# Único marcado inline que llega a los renderizadores (además de <a> y <br/>).
+# El Markdown puede traer HTML crudo: lo que no esté acá (img, font, script...)
+# se descarta como etiqueta -- su texto sigue saliendo -- en vez de pasar tal
+# cual a ReportLab, cuyo Paragraph interpreta esas etiquetas.
+INLINE = {"b", "strong", "i", "em", "code", "sub", "sup"}
+
+
+def salida_utf8():
+    """Fuerza UTF-8 en stdout y stderr.
+
+    La salida de la skill la lee Claude Code (como UTF-8) y terminales con otra
+    página de códigos -- cp1252 en Windows --: sin esto las tildes de los
+    mensajes llegaban rotas («módulo» se leía «m?dulo»)."""
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def texto_de_imagen(atributos):
+    """Lo que queda en el documento en lugar de una imagen del cuerpo. Los motores
+    no incrustan imágenes: antes desaparecían sin dejar rastro; ahora queda dicho
+    que ahí había una, con su texto alternativo o el nombre del archivo."""
+    alt = (atributos.get("alt") or "").strip()
+    nombre = os.path.basename((atributos.get("src") or "").split("?")[0].rstrip("/"))
+    return html_mod.escape(f"[Imagen: {alt or nombre or 'sin descripción'}]")
 
 
 class BlockBuilder(HTMLParser):
@@ -104,7 +150,9 @@ class BlockBuilder(HTMLParser):
         self.in_pre = False
         self.pre_buf = []
         self.list = None         # dict {'t':'ul'/'ol','items':[]}
+        self.list_depth = 0      # 1 = lista de primer nivel; >1 = anidada
         self.in_li = False
+        self.a_abiertos = []     # por cada <a> abierto: ¿se emitió como enlace?
         self.table = None        # dict {'head':[], 'rows':[]}
         self.row = None
         self.in_head = False
@@ -115,15 +163,34 @@ class BlockBuilder(HTMLParser):
     def _txt(self):
         return "".join(self.buf) if self.buf else ""
 
+    def _cerrar_item(self):
+        """Agrega el ítem en curso a la lista, si tiene texto. Los sub-ítems de
+        una lista anidada llevan un guion por nivel: la lista se aplana, pero la
+        jerarquía se sigue leyendo."""
+        texto = self._txt().strip()
+        if self.list is not None and texto:
+            self.list["items"].append("– " * max(self.list_depth - 1, 0) + texto)
+        self.buf = None
+
     def handle_starttag(self, tag, attrs):
         d = dict(attrs)
         if tag not in BLOCK:
             if self.buf is not None:
                 if tag == "a":
-                    self.buf.append(f'<a href="{d.get("href","")}">')
+                    # Solo son enlaces los destinos web y de correo, con el href
+                    # escapado. Un destino relativo o un ancla (`docs/guia.md`,
+                    # `#detalle`) no existe dentro del PDF y abortaba el render:
+                    # su texto se conserva, sin enlace.
+                    href = (d.get("href") or "").strip()
+                    enlazable = bool(re.match(r"(?i)^(https?://|mailto:)", href))
+                    self.a_abiertos.append(enlazable)
+                    if enlazable:
+                        self.buf.append(f'<a href="{html_mod.escape(href, quote=True)}">')
                 elif tag == "br":
                     self.buf.append("<br/>")
-                else:
+                elif tag == "img":
+                    self.buf.append(texto_de_imagen(d))
+                elif tag in INLINE:
                     self.buf.append(f"<{tag}>")
             return
         if tag in ("h1", "h2", "h3", "h4"):
@@ -139,7 +206,14 @@ class BlockBuilder(HTMLParser):
                 self.cap = "p"
                 self.buf = []
         elif tag in ("ul", "ol"):
-            self.list = {"t": tag, "items": []}
+            if self.list is None:
+                self.list = {"t": tag, "items": []}
+            elif self.in_li:
+                # Lista anidada: el ítem padre se cierra acá y sus sub-ítems
+                # siguen en la MISMA lista. Antes la interna pisaba a la externa
+                # y, al cerrar el ítem padre, el render moría con un TypeError.
+                self._cerrar_item()
+            self.list_depth += 1
         elif tag == "li":
             self.in_li = True
             self.buf = []
@@ -166,13 +240,19 @@ class BlockBuilder(HTMLParser):
     def handle_startendtag(self, tag, attrs):
         if tag == "br" and self.buf is not None:
             self.buf.append("<br/>")
+        elif tag == "img" and self.buf is not None:
+            self.buf.append(texto_de_imagen(dict(attrs)))
         elif tag == "hr":
             self.blocks.append({"t": "hr"})
 
     def handle_endtag(self, tag):
         if tag not in BLOCK:
-            if self.buf is not None and tag not in ("br",):
-                self.buf.append(f"</{tag}>")
+            if self.buf is not None:
+                if tag == "a":
+                    if self.a_abiertos and self.a_abiertos.pop():
+                        self.buf.append("</a>")
+                elif tag in INLINE:
+                    self.buf.append(f"</{tag}>")
             return
         if tag in ("h1", "h2", "h3", "h4"):
             text = self._txt().strip()
@@ -193,14 +273,17 @@ class BlockBuilder(HTMLParser):
                 self.buf = None
                 self.cap = None
         elif tag == "li":
-            self.list["items"].append(self._txt().strip())
+            self._cerrar_item()
             self.in_li = False
-            self.buf = None
         elif tag in ("ul", "ol"):
-            if self.list:
-                self.blocks.append({"t": "list", "ordered": self.list["t"] == "ol",
-                                    "items": self.list["items"]})
-            self.list = None
+            self.list_depth = max(self.list_depth - 1, 0)
+            if self.list_depth == 0:
+                if self.list:
+                    self.blocks.append({"t": "list", "ordered": self.list["t"] == "ol",
+                                        "items": self.list["items"]})
+                self.list = None
+            else:
+                self.in_li = True  # se vuelve al ítem padre, que sigue abierto
         elif tag in ("th", "td"):
             self.row.append(self._txt().strip())
             self.in_cell = False
@@ -271,11 +354,23 @@ def md_to_blocks(body):
 # ============================================================
 #  Numeración jerárquica automática
 # ============================================================
-def strip_manual_number(text):
+def strip_manual_number(text, esperado=None):
     """Quita una numeración manual al inicio del encabezado ("1.2 Foo", "3)
-    Bar") para no duplicarla con la numeración automática. Respeta las
-    etiquetas inline (<b>, <i>) que pudieran ir delante."""
-    return re.sub(r"^((?:<[^>]+>\s*)*)\d+(?:\.\d+)*[.)]?\s+", r"\1", text)
+    Bar", "4. Baz") para no duplicarla con la numeración automática. Respeta
+    las etiquetas inline (<b>, <i>) que pudieran ir delante.
+
+    Un número suelto seguido de espacio ("2026 Roadmap", "3 razones para
+    migrar") NO es una numeración y antes se borraba del título. Solo se quita
+    si coincide con el número que el encabezado va a recibir (`esperado`), que
+    es el caso "1 Introducción".
+    """
+    limpio = re.sub(r"^((?:<[^>]+>\s*)*)(?:\d+(?:\.\d+)+[.)]?|\d+[.)])\s+", r"\1", text)
+    if limpio != text or esperado is None:
+        return limpio
+    m = re.match(r"^((?:<[^>]+>\s*)*)(\d+)\s+(?=\S)", text)
+    if m and int(m.group(2)) == esperado:
+        return m.group(1) + text[m.end():]
+    return text
 
 
 def number_blocks(blocks):
@@ -291,10 +386,9 @@ def number_blocks(blocks):
         if b["t"] == "section":
             sec += 1
             h2 = h3 = h4 = 0
-            b["title"] = strip_manual_number(b["title"])
+            b["title"] = strip_manual_number(b["title"], sec)
             b["num"] = str(sec)
         elif b["t"] == "h":
-            b["text"] = strip_manual_number(b["text"])
             lvl = b["level"]
             if lvl == 2 and sec:
                 h2 += 1
@@ -309,12 +403,27 @@ def number_blocks(blocks):
                 b["num"] = f"{sec}.{h2}.{h3}.{h4}"
             else:
                 b["num"] = ""
+            propio = {2: h2, 3: h3, 4: h4}.get(lvl) if b["num"] else None
+            b["text"] = strip_manual_number(b["text"], propio)
     return blocks
 
 
 def plain(text):
-    """Texto sin etiquetas inline (para banners, marcadores y títulos PDF)."""
-    return re.sub(r"<[^>]+>", "", text)
+    """Texto sin etiquetas inline (para banners, marcadores y títulos PDF).
+
+    También deshace las entidades: el texto de los bloques viene escapado para
+    el marcado de párrafo, y estos destinos lo dibujan literal -- un título
+    «Q&A "piloto"» salía como «Q&amp;A &quot;piloto&quot;»."""
+    return html_mod.unescape(re.sub(r"<[^>]+>", "", text))
+
+
+def toc_markup(text):
+    """Texto literal -> marcado de una entrada del índice del PDF.
+
+    ReportLab interpreta el texto de cada entrada como marcado de párrafo. Sin
+    escapar, un título «Precio < 10 & cantidad > 5» perdía lo que quedaba entre
+    los signos, y lo que pareciera una etiqueta se reinyectaba como tal."""
+    return html_mod.escape(text)
 
 
 # ============================================================

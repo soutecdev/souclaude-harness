@@ -73,14 +73,23 @@ import { charsFor } from './caps.js'
  *           UMBRAL_ALARMA ni el titulo `LIMITE N%`.
  */
 
+// El formateador se crea SIEMPRE con color: quien decide si una celda se tiñe es
+// el parametro `color` de renderPanel (ver tenir()), no la deteccion que
+// picocolors hace una sola vez al importarse (TTY, CI, win32, FORCE_COLOR). Con
+// el `pc` global, `color: true` no emitia ni un escape cuando el proceso no
+// tenia TTY -- macOS/Linux con la salida por tuberia, o un agente corriendo la
+// suite -- y el panel dependia del entorno en vez de sus parametros. En
+// produccion nada cambia: `caps.color` sigue saliendo de pc.isColorSupported.
+const tinta = pc.createColors(true)
+
 const PALETA = {
-  red: pc.red,
-  yellow: pc.yellow,
-  green: pc.green,
-  cyan: pc.cyan,
-  dim: pc.dim,
-  bold: pc.bold,
-  gray: pc.gray,
+  red: tinta.red,
+  yellow: tinta.yellow,
+  green: tinta.green,
+  cyan: tinta.cyan,
+  dim: tinta.dim,
+  bold: tinta.bold,
+  gray: tinta.gray,
 }
 
 const UMBRAL_ALARMA = 85

@@ -101,13 +101,23 @@ Lo mismo aplica al "Página X de Y" del pie, que usa los campos PAGE y NUMPAGES.
 Paquetes de Python puro, instalables con pip en cualquier SO:
 
 ```bash
-pip install reportlab pillow markdown python-docx
+python -m venv .venv-soutec-pdf
+.venv-soutec-pdf/bin/python -m pip install -r .claude/skills/soutec-md-a-pdf/requirements.txt
 ```
 
+`requirements.txt` fija las versiones con las que la skill se probó de punta a
+punta; si alguna no existe para tu Python, instala la más reciente que haya.
 (`reportlab` dibuja el PDF, `python-docx` escribe el Word, `pillow` maneja los
-PNG de marca y genera las franjas, `markdown` parsea el `.md`.) En entornos
-gestionados agrega `--break-system-packages -q`. Si el render falla, es por
-falta de uno de estos paquetes — instálalo y reintenta; no cambies de motor.
+PNG de marca y genera las franjas, `markdown` parsea el `.md`.) En Windows el
+intérprete del entorno es `.venv-soutec-pdf\Scripts\python.exe`. Úsalo también
+para correr los scripts. **No instales en el Python del sistema ni uses
+`--break-system-packages`**: un entorno virtual no toca nada fuera de su
+carpeta, y pide confirmación al usuario antes de crearlo si todavía no existe.
+
+Si falta un paquete, el script lo dice con el nombre exacto a instalar. Si el
+render falla por otra cosa, **no es por paquetes**: lee el error. Lo que el
+render no soporta está en la guía de autoría (imágenes en el cuerpo, enlaces
+relativos, que salen como texto, y listas anidadas, que se aplanan).
 
 ## De dónde salen el título y el encabezado
 

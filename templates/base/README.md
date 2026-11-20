@@ -29,6 +29,6 @@ notes.md      scratchpad persistente
 
 Este repo tiene el harness de SOUTEC instalado. Las skills viven en
 `.claude/skills/`, versionadas junto al código, y se eligen al instalar con
-`npx souclaude` (`soutec-github` es obligatoria y siempre está). No hay agentes
+`npx github:soutecdev/souclaude-harness#v3` (`soutec-github` es obligatoria y siempre está). No hay agentes
 ni flujos fijos: el modelo trabaja directo, con el flujo Git de SOUTEC como
 única regla dura.

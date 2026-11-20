@@ -5,6 +5,8 @@
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
       "Read(./secrets/**)",
       "Read(./**/*.pem)",
       "Read(./**/*.key)",
@@ -41,7 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/declarar-milestone.mjs"
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/declarar-milestone.mjs\"",
+            "timeout": 60
           }
         ]
       }

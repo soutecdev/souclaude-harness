@@ -74,4 +74,4 @@ Sin aviso, las láminas entran. Lo que el generador **no** puede verificar es qu
 La lámina 12 muestra ventanas de consumo, sesiones activas y proyectos. **Esas cifras son
 de ejemplo**, para mostrar la forma del panel: no son telemetría real de ningún proyecto.
 Los datos reales los publica el monitor en el Vault (`00-System/monitor/`) y se consultan
-con `npx souclaude monitor --usage`.
+con `souclaude monitor --usage`.

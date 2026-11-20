@@ -118,7 +118,7 @@
     <h3>Conectar el Vault y dar de alta el proyecto</h3>
     <p>Clonar el Vault fuera de OneDrive, conectarlo (<code>souclaude upgrade --vault-path</code>), registrar el prefijo en <code>id-registry.md</code> y crear <code>Project-&lt;PREFIJO&gt;/</code> con tableros vacíos: no se inventan milestones.</p>
     <div class="queda"><b>Debe quedar:</b> el hook de SessionStart imprimiendo el tablero al arrancar.</div>
-    <div class="ojo"><b>Ojo:</b> el CLI no escribe el campo <code>"project"</code> en <code>vault.local.json</code> — agrégalo a mano o el hook queda ciego (sin error) cuando el Vault tiene más de un proyecto.</div>
+    <div class="ojo"><b>Ojo:</b> el instalador declara solo el campo <code>"project"</code> en <code>vault.local.json</code>. Si el Vault tiene más de un proyecto, pregunta cuál es (sin terminal interactiva: <code>--vault-project Project-&lt;PREFIJO&gt;</code>); si falta, el hook de sesión lo avisa.</div>
   </div>
 
   <div class="fase">

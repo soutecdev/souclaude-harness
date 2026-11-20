@@ -4,8 +4,8 @@ name: Reglas PR - rama y commits
 # commits. CI opcional a proposito -- un nombre de rama o un commit con una
 # letra distinta no debe trabar un merge, solo avisar. github-protect.js NO
 # suma este check a required_status_checks. Este workflow y
-# scripts/check-pr-rules.mjs los distribuye y actualiza el harness (npx
-# souclaude upgrade); no los edites a mano en el repo consumidor.
+# scripts/check-pr-rules.mjs los distribuye y actualiza el harness
+# (souclaude upgrade); no los edites a mano en el repo consumidor.
 
 on:
   pull_request:

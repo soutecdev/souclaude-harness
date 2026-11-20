@@ -5,6 +5,8 @@
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
       "Read(./secrets/**)",
       "Read(./**/*.pem)",
       "Read(./**/*.key)",
@@ -30,7 +32,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/worklog-solo.mjs"
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/worklog-solo.mjs\"",
+            "timeout": 60
           }
         ]
       }

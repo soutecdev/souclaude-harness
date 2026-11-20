@@ -8,9 +8,9 @@ import { verifyManifest } from '../core/verify.js'
 // A diferencia de status/upgrade/adopt, verify no mira ningun proyecto
 // consumidor: audita que el propio harness (manifest + templates/base/) sea
 // internamente consistente, asi que `cwd` no se usa. Se mantiene en la firma
-// solo por uniformidad con el resto de COMMANDS en cli.js.
-export async function verify(flags, _cwd) {
-  const manifest = loadManifest()
+// solo por uniformidad con el resto de COMMANDS en cli.js. El tercer parametro
+// existe para los tests: un manifest y una raiz del generador a medida.
+export async function verify(flags, _cwd, { manifest = loadManifest(), raizGenerador = fileURLToPath(new URL('../../', import.meta.url)) } = {}) {
   ui.intro('souclaude verify')
 
   const { errors, warnings } = verifyManifest(manifest)
@@ -19,7 +19,6 @@ export async function verify(flags, _cwd) {
   // coincidir con package.json y el manifest. Solo existe en el repo del
   // generador (el paquete publicado no lleva scripts/ ni docs/), asi que en
   // cualquier otra instalacion el check se salta solo.
-  const raizGenerador = fileURLToPath(new URL('../../', import.meta.url))
   const genDocs = path.join(raizGenerador, 'scripts', 'gen-docs-metodologia.mjs')
   if (existsSync(genDocs) && existsSync(path.join(raizGenerador, 'docs', 'metodologia'))) {
     try {

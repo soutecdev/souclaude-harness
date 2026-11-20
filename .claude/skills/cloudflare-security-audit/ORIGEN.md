@@ -49,4 +49,4 @@ Los archivos son los del origen, sin cambios, con estas excepciones:
 Se actualiza en el generador (`souclaude-harness`), no en cada repo: se vuelven a
 copiar los archivos de `skills/security-audit/` del origen, se reaplica el
 encabezado de `SKILL.md` y se anota aquí el commit nuevo. Los repos la reciben con
-`npx souclaude upgrade`.
+`npx github:soutecdev/souclaude-harness#v3 upgrade`.

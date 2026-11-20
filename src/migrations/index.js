@@ -86,6 +86,77 @@ export const migrations = [
       return changed ? stringifyJson(json) : content
     },
   },
+  {
+    // El hook de SessionStart se registraba con una ruta RELATIVA
+    // (`node .claude/hooks/declarar-milestone.mjs`). Claude Code corre los hooks
+    // en el directorio actual de la sesion: tras un `cd` del agente, el
+    // SessionStart de un resume / clear / compact no encontraba el script y la
+    // regla del milestone no volvia a inyectarse justo cuando el contexto se
+    // habia perdido. Pasa a ${CLAUDE_PROJECT_DIR}, igual que reglas-pr, y con
+    // plazo (sin `timeout` el default es de 10 minutos). merge-json solo agrega:
+    // sin esta migracion el comando viejo quedaria registrado al lado del nuevo.
+    // `to` es el primer release que la incluye: ajustarlo al publicar.
+    id: 'v3-settings-session-start-ruta-absoluta',
+    to: '3.19.0',
+    dest: '.claude/settings.json',
+    describe:
+      'settings.json: el hook de SessionStart pasa a `${CLAUDE_PROJECT_DIR}` (la ruta relativa fallaba si la sesión había cambiado de carpeta) y gana un plazo de 60 s',
+    transform(content) {
+      const json = parseJson(content, '.claude/settings.json')
+      if (json == null) return content
+      const VIEJOS = {
+        'node .claude/hooks/declarar-milestone.mjs': 'node "${CLAUDE_PROJECT_DIR}/.claude/hooks/declarar-milestone.mjs"',
+        'node .claude/hooks/worklog-solo.mjs': 'node "${CLAUDE_PROJECT_DIR}/.claude/hooks/worklog-solo.mjs"',
+      }
+      let changed = false
+      for (const grupo of Array.isArray(json.hooks?.SessionStart) ? json.hooks.SessionStart : []) {
+        for (const hook of Array.isArray(grupo?.hooks) ? grupo.hooks : []) {
+          if (typeof hook?.command === 'string' && Object.hasOwn(VIEJOS, hook.command)) {
+            hook.command = VIEJOS[hook.command]
+            hook.timeout ??= 60
+            changed = true
+          }
+        }
+      }
+      return changed ? stringifyJson(json) : content
+    },
+  },
+  {
+    // GitHub Actions se reactivo en 3.18.1 (SHS-M45), pero el CLAUDE.md del modo
+    // equipo emitido por 3.14-3.18 sigue diciendole al agente que esta en pausa:
+    // que los tags los crea siempre el y que los checks de PR solo corren en la
+    // sesion. Es user-owned y casi siempre esta editado, asi que el upgrade solo
+    // le dejaria un .new que nadie mira. Reemplazo literal de los dos pasajes que
+    // escribio el harness; si el usuario los reescribio, no coinciden y no se
+    // tocan. La busqueda tolera CRLF (el archivo en disco puede tenerlo); el
+    // motor escribe siempre LF. `to` es el primer release que la incluye.
+    id: 'v3-claude-md-actions-reactivado',
+    to: '3.19.0',
+    dest: 'CLAUDE.md',
+    describe: 'CLAUDE.md: GitHub Actions ya no está en pausa — se corrigen los dos pasajes que escribió el harness (tags de versión y checks de PR)',
+    transform(content) {
+      const literal = (texto) => new RegExp(texto.split('\n').map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\r?\\n'))
+      const PASAJES = [
+        [
+          '  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al\n' +
+            '  publicar y después del merge de release `dev` → `main`: mientras GitHub Actions\n' +
+            '  esté en pausa (SHS-M36), con `git fetch origin && node scripts/tag-release.mjs\n' +
+            '  --ref origin/main`.',
+          '  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) los crea el workflow\n' +
+            '  `tag-release.yml` al mergearse el release `dev` → `main`; si no corrió o el repo\n' +
+            '  no lo tiene, los creo yo con `git fetch origin && node scripts/tag-release.mjs\n' +
+            '  --ref origin/main`.',
+        ],
+        [
+          '- **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de',
+          '- **Checks de PR en la sesión** (además de los workflows `reglas-*` de CI): el hook `reglas-pr` de',
+        ],
+      ]
+      let out = content
+      for (const [viejo, nuevo] of PASAJES) out = out.replace(literal(viejo), () => nuevo)
+      return out
+    },
+  },
 ]
 
 // Devuelve las migraciones aplicables a `dest` para pasar de `fromVersion` al
