@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util'
 import path from 'node:path'
 import pc from 'picocolors'
 import { exists } from './core/fsx.js'
+import { ESTRUCTURA_PREVIA } from './core/diagnostico.js'
 import { readLockfile } from './core/lockfile.js'
 import { loadManifest } from './core/manifest.js'
 import { init } from './commands/init.js'
@@ -11,6 +12,7 @@ import { adopt } from './commands/adopt.js'
 import { verify } from './commands/verify.js'
 import { monitor } from './commands/monitor.js'
 import { vaultSync } from './commands/vault-sync.js'
+import { diagnostico } from './commands/diagnostico.js'
 import * as ui from './ui.js'
 
 const OPTIONS = {
@@ -25,6 +27,9 @@ const OPTIONS = {
   type: { type: 'string' },
   stack: { type: 'string' },
   lang: { type: 'string' },
+  // Herramienta que hace cumplir la regla de dependencias (P2). Sin el flag sale
+  // del stack detectado.
+  enforcer: { type: 'string' },
   // Seleccion de skills sin modo interactivo: --skills adr-new,soutec-md-a-pdf
   // (soutec-github se instala siempre, este o no en la lista).
   skills: { type: 'string' },
@@ -46,6 +51,14 @@ const OPTIONS = {
   // falta en modo desatendido: con TTY se confirma. Sin este flag, un --yes
   // nunca escribe en el repo compartido de la organizacion.
   'vault-seed': { type: 'boolean' },
+  // Alta de un proyecto NUEVO en el Vault sin modo interactivo (SHS-M53): agrega
+  // la fila al id-registry y siembra Project-<PREFIJO>. Es una escritura en el
+  // repo compartido, por eso exige los dos datos explicitos (prefijo y nombre).
+  'vault-prefix': { type: 'string' },
+  'vault-project-name': { type: 'string' },
+  'vault-owner': { type: 'string' },
+  // Alias del contribuyente (campo "quien" de vault.local.json) sin preguntar.
+  'vault-quien': { type: 'string' },
   // CLI global (npm install -g desde GitHub). Sin flag, init/upgrade lo
   // instalan o actualizan solos, tambien con --yes; en CI hace falta el flag.
   // --no-cli-global lo omite.
@@ -103,7 +116,7 @@ const OPTIONS = {
   version: { type: 'boolean' },
 }
 
-const COMMANDS = { init, upgrade, status, adopt, verify, monitor, 'vault-sync': vaultSync }
+const COMMANDS = { init, upgrade, status, adopt, verify, monitor, 'vault-sync': vaultSync, diagnostico }
 
 export async function main(argv, cwd) {
   let parsed
@@ -160,8 +173,7 @@ function autoDetect(cwd) {
   if (readLockfile(cwd)) return 'upgrade'
 
   // Estructura hecha a mano (una copia del Kit, o un CLAUDE.md escrito a pulso).
-  const priorArt = ['CLAUDE.md', '.claude', 'docs/constitution.md', 'specs/_templates']
-  if (priorArt.some((p) => exists(path.join(cwd, ...p.split('/'))))) return 'adopt'
+  if (ESTRUCTURA_PREVIA.some((p) => exists(path.join(cwd, ...p.split('/'))))) return 'adopt'
 
   return 'init'
 }
@@ -177,6 +189,10 @@ ${pc.bold('COMANDOS')}
   ${pc.cyan('init')}      Instala el harness. Sirve igual en un repo vacio y en uno legacy.
   ${pc.cyan('upgrade')}   Actualiza el harness a la ultima version. Aplica migraciones.
   ${pc.cyan('status')}    Solo lectura: que version tienes, que cambio, que editaste tú.
+  ${pc.cyan('diagnostico')} Solo lectura: en que caso de instalacion esta esta carpeta (requisitos
+            de maquina, git, remoto, ramas, harness y Vault), que comando corresponde
+            y que falta antes y despues. --json para que lo lea un agente. Exit 1
+            si hay bloqueos.
   ${pc.cyan('adopt')}     Para un repo con estructura hecha a mano. NO toca ningun archivo:
             solo anota en .claude/harness.json que ya coincide con el harness.
   ${pc.cyan('verify')}    Audita el propio harness (manifest vs templates/base/): huerfanos,
@@ -193,6 +209,8 @@ ${pc.bold('COMANDOS')}
 ${pc.bold('FLAGS')}
   --dry-run            Imprime el plan y no escribe ni un byte.
   -y, --yes            Acepta los defaults. No pregunta nada. (CI=true lo implica)
+                       Sin terminal interactiva (un agente) es obligatorio: sin el,
+                       el comando termina con error antes de escribir nada.
   --force              Sobrescribe archivos que editaste tú. Pide tipear FORCE
                        (--yes no lo implica; en CI se deniega). Deja backup.
   --prune              Borra archivos obsoletos sin editar sin preguntar; los que
@@ -222,6 +240,11 @@ ${pc.bold('FLAGS')}
                        si el id-registry ya asocia este repo a un prefijo y la
                        carpeta todavia no existe (por defecto, --yes no escribe en
                        el Vault compartido). Con TTY se pregunta y el flag sobra.
+  --vault-prefix <XXX> Da de alta un proyecto NUEVO en el Vault sin preguntar: agrega
+                       la fila al id-registry y siembra Project-<XXX> (2 a 6 letras
+                       mayusculas). Exige --vault-project-name "<nombre>"; el dueño
+                       va en --vault-owner <@usuario> (por defecto, tu usuario de git).
+  --vault-quien <alias> Alias del contribuyente para el registro de consumo.
   --cli-global         init/upgrade instalan o actualizan solos el CLI global
                        (npm install -g github:soutecdev/souclaude-harness#v3)
                        si falta o esta en otra version, tambien con --yes: deja

@@ -20,6 +20,57 @@ El harness y el CLI se versionan juntos.
   avisa; sin la skill instalada queda el aviso manual (ADR
   `20261120-upgrade-automatico-con-subagente.md`).
 
+## [3.21.0] — 2026-11-20
+
+El harness se instala con un único prompt que cubre todos los puntos de partida
+(SHS-M53).
+
+### Nuevo
+
+- **`souclaude diagnostico`**: comando de solo lectura que dice en qué caso de
+  instalación está la carpeta — proyecto desde cero, carpeta sin git, repo sin
+  remoto, repo vacío, repo con código, estructura Claude hecha a mano, máquina
+  nueva, harness desactualizado o al día —, qué comando corresponde, qué bloquea
+  (Node anterior a 22.4, sin git, subdirectorio del repo, lockfile dañado), qué
+  conviene resolver (`gh` ausente o sin autenticar, carpeta en OneDrive, cambios
+  sin commitear, Vault mal conectado) y qué pasos no hace el instalador (`git
+  init`, crear el repo, commit inicial, rama `dev`, conectar el Vault, dar de alta
+  el prefijo). Con `--json` lo lee un agente. Exit 1 si hay bloqueos. La URL del
+  remoto se informa sin credenciales embebidas.
+- **Prompt único de instalación** en `docs/metodologia/03-prompt-instalacion.md`:
+  se pega tal cual, sin sustituir variables. El agente diagnostica, pregunta solo
+  lo que no se puede deducir, prepara git, instala por flags y verifica.
+- **Alta de un proyecto nuevo del Vault sin terminal interactiva**:
+  `--vault-prefix <XXX> --vault-project-name "<nombre>" [--vault-owner <@dueño>]`
+  agrega la fila al registro de prefijos y siembra `Project-<XXX>`. Antes solo se
+  podía desde el flujo interactivo, que un agente no tiene. `--vault-quien <alias>`
+  registra el contribuyente por la misma vía.
+
+### Cambios
+
+- **El agente puede crear el repo de un proyecto que nace desde cero**, con
+  `gh repo create` y únicamente después de que el usuario confirme de forma
+  explícita nombre, organización y visibilidad. Fuera de ese caso sigue sin crear
+  repositorios. Cambia la regla en `CLAUDE.md`, la skill `soutec-github` y el
+  onboarding.
+- **`init` y `adopt` se niegan a instalar en un subdirectorio de un repo**: el
+  harness va en la raíz. En una carpeta sin git instalan igual, y lo avisan.
+- **La skill `harness-upgrade` corre `upgrade --prune --yes`**: sin terminal
+  interactiva el `--yes` es obligatorio.
+
+### Correcciones
+
+- **Sin terminal interactiva y sin `--yes`, el CLI moría con código 13** y un aviso
+  de Node («unsettled top-level await») que no decía qué hacer. Ahora termina con
+  un error que nombra los flags a pasar, antes de escribir nada.
+- **Con un Node anterior a 22.4 el CLI fallaba con un `SyntaxError`** que no
+  mencionaba la versión. `bin/cli.mjs` la comprueba primero y dice cuál hace falta.
+- **`--enforcer` era rechazado como opción desconocida** aunque el instalador lo
+  leía.
+- Documentación que contradecía al código: el campo `project` de
+  `vault.local.json` (lo escribe el instalador, no se añade a mano), el largo del
+  prefijo (2 a 6 letras) y las preguntas que hace el instalador.
+
 ## [3.20.0] — 2026-11-18
 
 Dos cambios en este release: el endurecimiento del harness tras una auditoría

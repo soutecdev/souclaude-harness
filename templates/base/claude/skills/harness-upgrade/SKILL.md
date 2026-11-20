@@ -54,8 +54,11 @@ No hace falta que el usuario pida cada paso por separado.
 3. Aplica directo, sin esperar confirmación intermedia:
 
    ```
-   npx -y github:soutecdev/souclaude-harness#v3 upgrade --prune
+   npx -y github:soutecdev/souclaude-harness#v3 upgrade --prune --yes
    ```
+
+   El `--yes` es obligatorio: el agente no tiene terminal interactiva y, sin
+   él, el comando termina con error antes de escribir nada.
 
    Esto actualiza los archivos que no editaste, deja `.new` al lado de los que sí
    editaste y **borra sin preguntar** los obsoletos que nunca tocaste. Los

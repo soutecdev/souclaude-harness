@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/harness.manifest.schema.json",
-  "harnessVersion": "3.20.0",
+  "harnessVersion": "3.21.0",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },

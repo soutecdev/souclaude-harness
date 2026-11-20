@@ -31,7 +31,11 @@ Estas no se negocian, ni siquiera en un hotfix.
 - **Una rama por milestone, no por tarea.** Las tareas del kanban del Vault son
   commits en la rama de su milestone; el ID `-T<nnn>` nunca va en el nombre de la
   rama. Ver "Ciclo de vida de la rama del milestone".
-- **Nunca crear repositorios.** Eso es del coordinador. Los **tags de versión**
+- **Repositorios: solo el de un proyecto que nace desde cero.** Al instalar el
+  harness en un proyecto sin repo, el agente lo crea con `gh repo create`
+  únicamente después de que el usuario confirme de forma explícita nombre,
+  organización y visibilidad (privado salvo indicación contraria). Fuera de ese
+  caso no se crean repositorios. Los **tags de versión**
   (`vX.Y.Z` y el tag móvil por major) se crean únicamente al publicar, después
   del merge del PR de release `dev` → `main`: los crea el workflow
   `tag-release.yml` o, en repos sin ese workflow, el agente (ver
