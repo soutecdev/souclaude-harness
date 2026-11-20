@@ -2,7 +2,7 @@ import * as ui from '../ui.js'
 import { loadManifest } from '../core/manifest.js'
 import { resolveDetected } from '../core/detect.js'
 import { readLockfile } from '../core/lockfile.js'
-import { resolveVars, planAndApply, vaultStep, githubProtectionStep, cliGlobalStep } from './_shared.js'
+import { revisarCarpeta, resolveVars, planAndApply, vaultStep, githubProtectionStep, cliGlobalStep } from './_shared.js'
 
 export async function init(flags, cwd) {
   const manifest = loadManifest()
@@ -10,6 +10,7 @@ export async function init(flags, cwd) {
   const detected = resolveDetected(cwd, lock)
 
   ui.intro(`souclaude init — harness v${manifest.harnessVersion}`)
+  revisarCarpeta(cwd)
 
   ui.log.info(
     detected.isEmpty

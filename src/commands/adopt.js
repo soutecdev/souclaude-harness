@@ -4,7 +4,7 @@ import { detect } from '../core/detect.js'
 import { readLockfile, writeLockfile } from '../core/lockfile.js'
 import { computePlan, NOOP, FOREIGN, CONFLICT } from '../core/plan.js'
 import { hashContent } from '../core/hash.js'
-import { resolveVars } from './_shared.js'
+import { resolveVars, revisarCarpeta } from './_shared.js'
 
 // Primer paso seguro para un repo que ya tiene una estructura hecha a mano
 // (una copia del Kit, o un CLAUDE.md escrito a pulso). NO toca ni un archivo:
@@ -24,6 +24,7 @@ export async function adopt(flags, cwd) {
     return 0
   }
 
+  revisarCarpeta(cwd)
   const vars = await resolveVars({ flags, lock: null, detected, cwd, manifest })
   const plan = computePlan({ manifest, cwd, lock: null, vars, detected })
 
