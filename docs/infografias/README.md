@@ -19,8 +19,13 @@ impresión A4).
 | [04-maquina-nueva.html](04-maquina-nueva.html) | Dejar lista una máquina nueva (integrante nuevo o existente) |
 | [05-actualizar-harness.html](05-actualizar-harness.html) | Actualizar el harness en un proyecto ya adoptado |
 | [06-sin-jira.html](06-sin-jira.html) | Proyecto sin Jira o conector sin autorizar: degradación y catch-up |
-| [07-harness-multiherramienta.html](07-harness-multiherramienta.html) | El harness en Claude Code, Codex y Antigravity (SHS-M48): qué se instala, qué tener en cuenta y cómo probarlo |
+| [07-harness-multiherramienta.html](07-harness-multiherramienta.html) | El harness en Claude Code, Codex y Antigravity (SHS-M48), lámina 1 de 2: qué lee cada herramienta, qué pasa al actualizar y qué protegen los hooks |
+| [08-harness-multiherramienta-prueba.html](08-harness-multiherramienta-prueba.html) | Lámina 2 de 2: cómo probar el harness en Codex y Antigravity y cómo reportar el resultado |
 
 Fuente de la letra chica: el playbook de bootstrap, `docs/onboarding-desarrollador.md`
 y `progress/README.md`. Si esos documentos cambian, estas infografías se actualizan
 con ellos.
+
+Las láminas 07 y 08 siguen el formato de la skill `soutec-infografias` (lámina vertical de
+700 px, fichas con pestaña y arco, tipografías y logotipo de marca incrustados): se
+comparten como PNG en el chat del equipo.
