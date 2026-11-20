@@ -76,7 +76,7 @@ en orden, sin saltarte ninguna.
 
 REGLAS DE TODA LA INSTALACIÓN
 - El instalador se invoca SIEMPRE así: npx -y github:soutecdev/souclaude-harness#v3 <comando>
-  Nunca "npx souclaude": ese nombre corto no es el del harness.
+  Nunca con el nombre corto del paquete en npx: ese nombre no es el del harness.
 - No tienes terminal interactiva: todo comando que escribe lleva --yes y las
   respuestas van por flags. Nunca uses --force ni --prune en esta instalación.
 - No adivines ninguna decisión mía: si un dato no sale del diagnóstico, pregúntamelo.
