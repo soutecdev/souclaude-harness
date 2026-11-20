@@ -15,6 +15,8 @@ es obligatoria y siempre está):
 - `soutec-github` — flujo Git/GitHub obligatorio de SOUTEC.
 - `it-security-review` — security review para IT (si está instalada).
 - `security-report-standard` — estándar de informes de seguridad (si está instalada).
+- `cloudflare-security-audit` — auditoría de seguridad de Cloudflare; solo a pedido,
+  con `/cloudflare-security-audit` (si está instalada).
 - `soutec-md-a-pdf` — Markdown a PDF con identidad Soutec (si está instalada).
 - `adr-new` — documentar decisiones con ADRs (si está instalada).
 - `harness-upgrade` — actualizar el harness (si está instalada).

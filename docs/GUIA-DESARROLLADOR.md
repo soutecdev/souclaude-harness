@@ -69,6 +69,9 @@ tienes depende de lo que se eligió al instalar el harness:
 - `soutec-github` — el flujo Git/GitHub obligatorio (siempre está).
 - `it-security-review` — security review con evidencia en PDF para IT.
 - `security-report-standard` — el estándar de esos informes.
+- `cloudflare-security-audit` — la auditoría de seguridad de Cloudflare (copia de
+  `cloudflare/security-audit-skill`, MIT). Solo corre cuando la invocas con
+  `/cloudflare-security-audit`.
 - `soutec-md-a-pdf` — cualquier Markdown a PDF con la identidad Soutec.
 - `adr-new` — registra una decisión arquitectónica en `docs/decisions/` (`/adr-new`).
 - `harness-upgrade` — actualiza el harness del repo (`/harness-upgrade`).

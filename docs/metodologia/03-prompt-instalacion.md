@@ -47,6 +47,7 @@ Skills disponibles al instalar:
 | `soutec-github-solo` | solo · obligatoria | flujo Git fluido del modo solo |
 | `it-security-review` | equipo y solo | workflow de security review para IT |
 | `security-report-standard` | equipo y solo | estándar de informes de seguridad |
+| `cloudflare-security-audit` | equipo y solo | auditoría de seguridad de Cloudflare (solo a pedido, con /cloudflare-security-audit) |
 | `soutec-md-a-pdf` | equipo y solo | Markdown a PDF con identidad Soutec |
 | `adr-new` | equipo y solo | documentar decisiones con ADRs |
 | `harness-upgrade` | equipo y solo | actualizar el harness desde Claude |

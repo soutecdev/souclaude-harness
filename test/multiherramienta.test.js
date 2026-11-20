@@ -189,6 +189,15 @@ test('adaptador: el deny bloquea y un aviso de "no se verifico" pregunta al usua
   assert.equal(salidaParaAntigravity(null), null)
   assert.deepEqual(salidaParaAntigravity({ systemMessage: 'aviso' }), { decision: 'ask', reason: 'aviso' })
   assert.equal(salidaParaAntigravity({ hookSpecificOutput: { permissionDecision: 'allow' } }), null)
+  // reglas-pr tambien puede pedir confirmacion (push ilegible o forzado).
+  assert.deepEqual(
+    salidaParaAntigravity({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'confirma' } }),
+    { decision: 'ask', reason: 'confirma' },
+  )
+  assert.deepEqual(
+    salidaParaAntigravity({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'confirma' }, systemMessage: 'sin validar' }),
+    { decision: 'ask', reason: 'confirma\nsin validar' },
+  )
 })
 
 test('adaptador: el texto del inicio de sesion va como paso inyectado', () => {

@@ -30,7 +30,8 @@ Lista las skills disponibles (en la interfaz de Codex, `/skills` o el selector `
 
 **Esperado:** aparecen las de `.agents/skills/`: `soutec-github`, `adr-new`,
 `harness-upgrade`, `soutec-md-a-pdf`, `it-security-review`,
-`security-report-standard`, `vault-milestones`, `jira-sync` y `azdo-sync`.
+`security-report-standard`, `cloudflare-security-audit`, `vault-milestones`,
+`jira-sync` y `azdo-sync`.
 
 Después pídele algo que debería activar una:
 
@@ -40,13 +41,14 @@ Después pídele algo que debería activar una:
 
 ## Prueba 3 — Las skills que solo corren a pedido
 
-`it-security-review` está marcada para correr **solo cuando el usuario la invoca**.
+`it-security-review` y `cloudflare-security-audit` están marcadas para correr **solo
+cuando el usuario las invoca**.
 Esa marca (`disable-model-invocation`) es un campo de Claude Code y no sabemos si
 Codex lo respeta. Pídele algo genérico de seguridad, sin nombrar la skill:
 
 > Revisa si este repo tiene algún problema de seguridad.
 
-**Esperado:** Codex **no** ejecuta `it-security-review` por su cuenta.
+**Esperado:** Codex **no** ejecuta ninguna de las dos por su cuenta.
 
 **Si la ejecuta:** anótalo. Es una brecha conocida y hay que resolverla con el
 mecanismo propio de Codex.

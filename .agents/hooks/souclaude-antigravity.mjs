@@ -51,6 +51,8 @@ export function entradaComoClaude(entrada, { plataforma = process.platform, raiz
 
 // Salida de reglas-pr (contrato de Claude Code) -> salida de Antigravity.
 //   - deny            -> decision "deny": el comando no corre.
+//   - ask             -> decision "ask": reglas-pr no puede leer el destino del
+//     push (o es un push forzado) y le deja la decision al usuario.
 //   - systemMessage   -> decision "ask": reglas-pr avisa que NO pudo verificar
 //     (sin el script de checks, error interno). En Claude Code ese aviso se le
 //     muestra al usuario; aca no hay canal equivalente, asi que se le pregunta
@@ -61,9 +63,12 @@ export function salidaParaAntigravity(salida) {
   if (decision?.permissionDecision === 'deny') {
     return { decision: 'deny', reason: String(decision.permissionDecisionReason ?? 'reglas-pr denego el comando.') }
   }
-  if (typeof salida?.systemMessage === 'string' && salida.systemMessage) {
-    return { decision: 'ask', reason: salida.systemMessage }
+  const aviso = typeof salida?.systemMessage === 'string' ? salida.systemMessage : ''
+  if (decision?.permissionDecision === 'ask') {
+    const motivo = String(decision.permissionDecisionReason ?? 'reglas-pr pide confirmar el comando.')
+    return { decision: 'ask', reason: aviso ? `${motivo}\n${aviso}` : motivo }
   }
+  if (aviso) return { decision: 'ask', reason: aviso }
   return null
 }
 

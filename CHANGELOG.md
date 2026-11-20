@@ -30,6 +30,25 @@ El harness y el CLI se versionan juntos.
     Codex y Antigravity; en Antigravity tampoco corre el check automático tras
     crear el PR. Decisión y alternativas en
     `docs/decisions/20261118-harness-para-varias-herramientas-de-ia.md`.
+## [3.19.0] — 2026-11-18
+
+### Agregado
+
+- **Skill opcional `cloudflare-security-audit`** (SHS-M47): la skill `security-audit`
+  de Cloudflare ([cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill),
+  licencia MIT) queda disponible en el selector de `npx souclaude`. Es una auditoría
+  de seguridad en seis fases con hallazgos verificados de forma independiente.
+  - Lleva el nombre de Cloudflare para que el origen quede a la vista, e incluye el
+    `LICENSE` del origen y un `ORIGEN.md` con el commit copiado y las diferencias.
+  - **Solo corre a pedido**, con `/cloudflare-security-audit`
+    (`disable-model-invocation: true`): no se activa sola ni interfiere con
+    `it-security-review` ni con el `/security-review` nativo.
+  - Los archivos son los del origen sin cambios, salvo el encabezado de `SKILL.md`;
+    no se distribuyen los tests de los validadores.
+  - La auditoría completa necesita Linux, macOS o WSL: los validadores del origen
+    no corren en Windows nativo (ver `ORIGEN.md`). El modo guía sí funciona.
+  - Un repo ya instalado la suma con `npx souclaude upgrade --skills <lista completa>` (la
+    selección de skills existente no cambia sola).
 
 ## [3.18.1] — 2026-11-10
 
