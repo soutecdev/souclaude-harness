@@ -71,6 +71,53 @@ for (const hook of Object.keys(HOOKS)) {
   })
 }
 
+// Upgrade automatico en sesion (SHS-M43-T005): con el subagente instalado y en
+// una rama de trabajo, el aviso ordena lanzarlo sin preguntar; en main/master
+// o con HEAD suelto solo avisa; sin el agente queda el aviso manual.
+function conAgenteYHead(dir, head) {
+  write(dir, '.claude/agents/harness-upgrader.md', '---\nname: harness-upgrader\n---\n')
+  write(dir, '.git/HEAD', `${head}\n`)
+  return dir
+}
+
+for (const hook of Object.keys(HOOKS)) {
+  test(`${hook}: en rama de trabajo con el agente instalado ordena lanzar harness-upgrader`, () => {
+    const remoto = remotoConTags(['v3.16.2', 'v3.18.0'])
+    const dir = conAgenteYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo')
+    const salida = correrHook(hook, dir, { remoto, home: homeTmp() })
+    assert.match(salida, /Sin preguntarle al usuario, lanza ya en segundo plano el subagente harness-upgrader/)
+    assert.match(salida, /Actualiza el harness de v3\.16\.2 a v3\.18\.0\./)
+    assert.doesNotMatch(salida, /ofrecele actualizar/)
+  })
+}
+
+test('en main con el agente instalado no lanza el subagente: solo avisa', () => {
+  const remoto = remotoConTags(['v3.18.0'])
+  for (const rama of ['main', 'master']) {
+    const dir = conAgenteYHead(consumidorCon('3.16.2'), `ref: refs/heads/${rama}`)
+    const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
+    assert.match(salida, new RegExp(`Estas en ${rama}: el harness no se actualiza solo aqui`))
+    assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+  }
+})
+
+test('con HEAD suelto no lanza el subagente: solo avisa', () => {
+  const remoto = remotoConTags(['v3.18.0'])
+  const dir = conAgenteYHead(consumidorCon('3.16.2'), 'a'.repeat(40))
+  const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
+  assert.match(salida, /Estas en HEAD suelto/)
+  assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+})
+
+test('en rama de trabajo sin el agente instalado queda el aviso manual', () => {
+  const remoto = remotoConTags(['v3.18.0'])
+  const dir = consumidorCon('3.16.2')
+  write(dir, '.git/HEAD', 'ref: refs/heads/feature/M7-algo\n')
+  const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
+  assert.match(salida, /ofrecele actualizar con la skill harness-upgrade/)
+  assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+})
+
 // Los demas casos cubren la logica compartida: con un solo hook alcanza.
 
 test('major nueva: aviso aparte, ademas del de la propia major si corresponde', () => {

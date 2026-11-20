@@ -162,6 +162,41 @@ function ultimaConocidaPorMajor(ahoraMs) {
   }
 }
 
+// Rama actual leida de .git/HEAD (sin lanzar git): 'main', 'feature/x',
+// 'HEAD' si esta suelto, o null si no se pudo saber (worktree, .git raro).
+function ramaActual(root) {
+  try {
+    const head = fs.readFileSync(path.join(root, '.git', 'HEAD'), 'utf8').trim()
+    const m = head.match(/^ref: refs\/heads\/(.+)$/)
+    if (m) return m[1]
+    return /^[0-9a-f]{40,64}$/.test(head) ? 'HEAD' : null
+  } catch {
+    return null
+  }
+}
+
+// Ante una version nueva de la misma major el harness se actualiza solo
+// (SHS-M43-T005): el modelo lanza en segundo plano el subagente
+// harness-upgrader, que commitea en la rama actual. En main/master o con HEAD
+// suelto no se commitea nunca, y sin el agente instalado (lockfile previo a
+// el) queda el aviso manual con la skill harness-upgrade.
+function instruccionUpgrade(root, instalada, ultima) {
+  const rama = ramaActual(root)
+  const agente = fs.existsSync(path.join(root, '.claude', 'agents', 'harness-upgrader.md'))
+  if (rama === 'main' || rama === 'master' || rama === 'HEAD') {
+    return [
+      `Estas en ${rama === 'HEAD' ? 'HEAD suelto' : rama}: el harness no se actualiza solo aqui. Avisale al usuario una sola vez que hay version nueva y que se actualiza desde una rama de trabajo (skill harness-upgrade); luego sigue con lo que pidio.`,
+    ]
+  }
+  if (!agente) {
+    return ['Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.']
+  }
+  return [
+    `Sin preguntarle al usuario, lanza ya en segundo plano el subagente harness-upgrader con el prompt "Actualiza el harness de v${instalada} a v${ultima}." y sigue con lo que pidio el usuario.`,
+    'Cuando el subagente termine, dile al usuario su ultima linea ("Harness actualizado: vX a vY" o el motivo por el que no se actualizo) y, si su reporte lo pide, que reinicie Claude Code.',
+  ]
+}
+
 function avisoVersionNueva(root) {
   try {
     // El repo del propio generador no se avisa a si mismo.
@@ -182,7 +217,7 @@ function avisoVersionNueva(root) {
     const ultima = porMajor[major]
     if (esVersion(ultima) && compararSemver(ultima, instalada) > 0) {
       lineas.push(`Version nueva del harness: v${ultima} (instalada: v${instalada}).`)
-      lineas.push('Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.')
+      lineas.push(...instruccionUpgrade(root, instalada, ultima))
     }
     const majorsNuevas = Object.keys(porMajor)
       .map(Number)

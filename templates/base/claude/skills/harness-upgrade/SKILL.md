@@ -19,7 +19,14 @@ No hace falta que el usuario pida cada paso por separado.
 
    **El harness avisa solo**: al inicio de cada sesión, el hook de SessionStart
    compara la versión instalada con el último tag publicado y, si hay una
-   nueva, la anuncia (SHS-M43). Si ese aviso ya te dijo cuál es la última
+   nueva, la anuncia (SHS-M43). **En una rama de trabajo con el subagente
+   `harness-upgrader` instalado, el upgrade corre solo**: el aviso ordena
+   lanzarlo en segundo plano sin preguntar, y el subagente sigue este mismo
+   flujo sin consultas (no toca secciones del usuario ni hunks ambiguos de los
+   `.new`), commitea en la rama actual sin push y cierra con «Harness
+   actualizado: vX a vY». Esta skill queda para el camino manual: cuando el
+   usuario lo pide, en `main`/`master` o HEAD suelto (ahí el aviso solo
+   avisa), o en repos que todavía no tienen el subagente. Si ese aviso ya te dijo cuál es la última
    versión (ej. `v3.18.0`), usa el **tag exacto** en todos los comandos de este
    flujo — `npx -y github:soutecdev/souclaude-harness#v3.18.0 …` — en lugar del
    tag móvil `#v3`: la caché de npx puede servir un CLI viejo del tag móvil y
