@@ -322,3 +322,19 @@ repo de scratch, con el hook vivo de la sesión):
   `fields` acotado.
 - Pendiente: reactivar Actions daría tag y release inmediatos (hoy el cierre ocurre
   al mergearse si la sesión está abierta, o en la siguiente sesión).
+
+## 2026-11-20 — SHS-M53: instalación por prompt único
+
+- Sin terminal interactiva y sin `--yes`, los prompts de clack dejan una promesa
+  sin resolver y Node sale con código 13 («unsettled top-level await»), sin
+  escribir nada y sin decir qué hacer. `ui.js` ahora corta antes con un error que
+  nombra los flags. Todo comando que corre un agente lleva `--yes`.
+- `bin/cli.mjs` no puede usar top-level await ni importar `src/` de forma estática:
+  un Node anterior a 22.4 falla al parsear antes de llegar al chequeo de versión.
+- `diagnostico` separa `recolectar()` (disco, git, gh) de `clasificar()` (pura): una
+  casuística nueva se agrega como un objeto de hechos en `test/diagnostico.test.js`.
+- Gotcha de pruebas: el hook `reglas-pr` deniega también un `git push … main` a un
+  repo desechable del temporal. Para un remoto de prueba con `main`, crear el
+  origen con `git clone --bare` del repo local en vez de pushear.
+- Las ramas del remoto se consultan con `ls-remote`, no con las refs locales: un
+  clon sin fetch reciente diría que `dev` no existe.
