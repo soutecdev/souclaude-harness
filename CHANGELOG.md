@@ -4,6 +4,316 @@ El harness y el CLI se versionan juntos.
 
 ## [3.20.0] — 2026-11-18
 
+Dos cambios en este release: el endurecimiento del harness tras una auditoría
+completa (SHS-M49) y la instalación para varias herramientas de IA (SHS-M48).
+
+### Seguridad
+
+- **El hook `reglas-pr` y los scripts de `scripts/` dejaban de correr, en silencio y
+  con exit 0, si se invocaban por una ruta con un enlace simbólico** (un proyecto
+  abierto por un symlink o junction, `/tmp` y `/var` en macOS): la guarda de «soy el
+  script de entrada» comparaba `import.meta.url` contra `process.argv[1]` tal cual,
+  y Node resuelve los enlaces del script de entrada. Con eso, la protección de
+  `main` y el check de secretos quedaban apagados sin aviso, y un check de CI podía
+  salir verde sin haber corrido. Ahora se comparan rutas reales.
+- **El hook ve el `git push` aunque venga envuelto, agrupado o anidado**
+  (`command git push`, `env … git push`, `(git push)`, `if …; then git push; fi`,
+  `bash -c "…"`, `eval`, `xargs`, `iex`): antes solo lo reconocía como primera
+  palabra del segmento, y `command`/`time`/`nohup` además casan con la regla allow
+  `Bash(git push:*)`, así que ese push a `main` pasaba sin pregunta. Cuando el
+  destino no se puede leer del comando (`$RAMA`, `$(…)`, un comodín, un alias de git
+  en línea) el hook **pregunta** (`ask`) en vez de dejarlo pasar; `$(git branch
+  --show-current)` se resuelve como la rama actual.
+- **El push forzado se pregunta en modo equipo esté donde esté el flag**
+  (`git push origin x --force`, `-uf`, `+refspec`, `--force-with-lease`): las reglas
+  `ask` de `settings.json` son de prefijo y solo veían el flag justo después de
+  `git push`.
+- **El check de secretos ya no se evade renombrando**: `git mv notas.txt .env`
+  figuraba como renombrado (R) y el filtro solo miraba agregados (A). Se suman las
+  llaves privadas SSH (`id_rsa`, `id_ed25519`…) y los `.p12`.
+- **Nada se lee, escribe ni borra fuera del repo**: una clave `../algo` en
+  `.claude/harness.json` (que se commitea y llega por PR) hacía que `--prune` borrara
+  ese archivo sin confirmar. Las rutas del lockfile y del manifest se validan, y
+  `apply()` se niega a aplicar un plan que se salga del repo.
+- **`--force` pide tipear `FORCE`**, como prometían el README y el `--help`: no
+  existía, y `upgrade --force --yes` sobrescribía archivos editados sin confirmación
+  escrita. `--yes` no la implica y en CI se deniega.
+- **Ninguna plantilla ni mensaje del CLI manda ya a correr `npx souclaude`**: fuera
+  de este repo, npx busca ese nombre en el registro público, donde no es del harness
+  y está libre para registrar. Quedaban 16 líneas que lo nombraban; un test lo
+  impide de ahora en adelante. Se usa `npx github:soutecdev/souclaude-harness#v3` o el CLI global.
+- `git clone` del Vault lleva `--` antes de la URL (venía de un flag o del lockfile);
+  el `fetch` de límites del monitor no sigue redirecciones con el token puesto.
+- `settings.json` deniega también la lectura de `.env` en subcarpetas
+  (`Read(./**/.env)`), y el `.gitignore` emitido ignora cualquier `.env.*` salvo las
+  plantillas (`.env.example`…), igual que el check de secretos.
+- **El hook de inicio de sesión muestra el contenido del Vault como dato**:
+  rotulado, sin caracteres de control ni invisibles, en una línea y acotado a 240
+  caracteres. Antes inyectaba las tarjetas tal cual en el contexto de la sesión de
+  todo el equipo. Un `project` de `vault.local.json` que no sea una carpeta
+  `Project-<PREFIJO>` ya no se usa como ruta (ni en los hooks ni en el CLI).
+- **El hook pregunta antes de borrar `dev` en el remoto** (`git push origin
+  --delete dev`, `:dev`) en modo equipo: casaba con la regla allow de `git push`.
+- **El hook ve también el push que lanza otro programa y dos formas poco comunes de
+  escribirlo**: `start git push …` (cmd y Git Bash), `Start-Process`/`saps`,
+  `Invoke-Command`/`icm` y `Start-Job` en PowerShell, `git send-pack` y el refspec
+  `:` a secas (el «matching»: sube todas las ramas que coinciden, `main` incluida).
+  Si lo que se alcanza a leer toca `main`, se deniega; el resto de lo que lanzan
+  esos programas se pregunta. Sigue sin verse el push que hace un script u otro
+  programa por dentro: la barrera de `main` es la protección de rama en GitHub.
+- **El hook sigue la carpeta del push solo con el `cd` que de verdad llega a él.**
+  Tomaba por bueno cualquier `cd` anterior, también el que corre en otro proceso:
+  `cd <vault> | cat; git push origin main` (o con `&`, o seguido de `cd -` o
+  `popd`) se evaluaba en el Vault —que está exento— y pasaba, y con una carpeta
+  sin reglas se salteaba el check de secretos. Ahora no mueven la carpeta el `cd`
+  de una tubería, el que va al fondo, el de un subshell o una sustitución
+  (`(cd x)`, `$(cd x)`) ni el que va detrás de un envoltorio que no es del shell
+  (`nohup cd x`); `cd -`, `pushd`/`popd` y `Push-Location`/`Pop-Location` se
+  siguen. Si la carpeta no se puede leer del comando (`cd "$DESTINO"`,
+  `git -C "$DIR"`), si el `cd` puede no haber corrido (el de un `if`, un bucle,
+  el cuerpo de una función o lo que sigue a un `&&`) o si depende del shell
+  (`command cd x` no cambia de carpeta en zsh), el hook lo evalúa donde está y
+  **pregunta**, o deniega si ahí toca `main`. Lo mismo si la carpeta no existe:
+  ese `cd` falla, y con la ruta del Vault mal escrita `cd ../vualt; git add -A;
+  git commit -m …; git push` hacía todo eso en el proyecto, sin revisar. No
+  pregunta si las dos carpetas posibles son del mismo repo (`cd src && npm test
+  && cd ..; git push`); `~`, `$HOME`, `$PWD` y `$(git rev-parse
+  --show-toplevel)` sí se resuelven. Un comando cortado por una expresión se lee entero: en `git push
+  $(echo origin) main`, `main` se ve y se deniega.
+- **El check de secretos del hook corre en cada repo al que el comando pushea**,
+  no solo en el primero: en `git -C <vault> push origin main; git push`, el push
+  del proyecto quedaba sin revisar.
+- **El cuerpo de un heredoc ya no se lee como comandos.** Un documento escrito
+  con `cat > guia.md <<'EOF'` que tuviera una línea `git push origin main` se
+  denegaba, y un `cd` suelto en ese texto movía la carpeta del push que viniera
+  después. Del heredoc sin comillas se leen las sustituciones, que bash sí
+  ejecuta: `cat > guia.md <<EOF` con un `git push origin main` entre backticks
+  hace ese push, y ahora se ve. Lo mismo un here-string de PowerShell. El `)` de
+  un patrón de `case` ya no se toma por el cierre de un subshell.
+- **Una redirección pegada al refspec ya no esconde el push**: `git push origin
+  main>/dev/null` pasaba. Tampoco `cmd //c`, que es como hay que escribirlo
+  desde Git Bash.
+- **Un comentario ya no esconde un push.** El apóstrofo de `# don't …` abría
+  una comilla que se tragaba las líneas siguientes: el push que hubiera en ellas
+  no se veía, y con él se apagaban la protección de `main` y el check de
+  secretos. Ahora un `#` al comienzo de una palabra descarta el resto de la línea
+  (en bash y en PowerShell), y nombrar un push en un comentario deja de contar
+  como hacerlo.
+- **El hook acota lo que lee de un comando.** Con un comando de cientos de KB
+  (decenas de miles de `cd`, o de expresiones anidadas) leerlo costaba el
+  cuadrado de su largo y podía pasar del plazo del hook, que entonces no frena
+  nada. La ruta, la pila de `pushd`, la relectura de comandos cortados y la de
+  comandos anidados quedan acotadas; lo que no se alcanza a leer, y una expresión
+  sin cerrar, se preguntan.
+- **Un push escrito tras una continuación de línea ya no pasa sin verse.** En
+  `git add -A && \` + salto + `git push origin main` —la forma habitual de
+  escribir un comando largo— la barra y el salto quedaban como una palabra
+  delante de `git`, y el hook no veía ese push: ni la protección de `main` ni
+  el check de secretos corrían. Estaba así desde el hook original. Ahora la
+  continuación de línea no deja nada, tampoco en medio de una palabra
+  (`git pu\`+salto+`sh`) ni con el backtick de PowerShell.
+- **El hook lee también lo que se ejecuta dentro de comillas dobles**
+  (`echo "$(git push origin main)"`, un mensaje de commit con
+  `` `git push origin main` `` entre backticks, que bash ejecuta), las comillas
+  `$'…'` (su `\'` no cierra: `git commit -m $'fix: don\'t' && git push origin
+  main` escondía el push), la definición `function f { … }`, las asignaciones
+  que siguen a `then`, `do` o `{` (`then GIT_TRACE=1 git push origin main`) y
+  las funciones definidas en el mismo comando: llamarlas es correr su cuerpo, y
+  la que pasa sus argumentos (`retry() { "$@"; }; retry git push origin main`)
+  es un envoltorio más. Un `<<` dentro de una expresión aritmética
+  (`$((1<<n))`) ya no se toma por un heredoc que escondía las líneas
+  siguientes, ni el heredoc que queda sin cuerpo dentro de una sustitución; el
+  literal de un arreglo (`x=(git push origin main)`) no es un comando.
+- **La carpeta del push se contrastó con bash y zsh de verdad**, con miles de
+  comandos armados al azar y un `git` de mentira que anota dónde corre. De ahí
+  salen las reglas nuevas: el `cd` que sigue a un `||` puede no correr, también
+  para lo que lo acompaña en la misma lista (`ls || cd <vault> && git push
+  origin main`); con `!` delante se invierte; una lista mandada al fondo
+  (`cd x && … &`) deja o no su `cd` según el shell; definir una función no
+  mueve nada y llamarla sí; al salir de un bloque también quedan en duda la
+  pila de `pushd` y la carpeta de `cd -`; el `)` de un patrón de `case`, una
+  palabra `case` suelta o un arreglo ya no cierran antes de tiempo el subshell
+  que los contiene; y de una carpeta que todavía no existe y que no crea un
+  `mkdir` del mismo comando (un clon, un worktree) no se conoce el repo: ese
+  push se pregunta, y si nombra `main` se deniega.
+- **El guion que un shell recibe por su entrada se lee como comandos.** Al
+  pasar a leer el cuerpo de un heredoc como texto, `bash <<'EOF'` con un
+  `git push origin main` adentro había dejado de verse, y el hook original sí
+  lo frenaba. Ahora se lee el guion de `bash`, `sh` o `zsh` sin `-c` ni
+  archivo, venga de un heredoc, de un here-string (`bash <<< '…'`) o de la
+  tubería (`cat <<EOF | sh`, `echo '…' | bash`), y también `source
+  /dev/stdin`, `eval "$(cat <<'EOF' … EOF)"`, la acción de un `trap` y lo que
+  envuelven `coproc`, `repeat` y `nocorrect`. Una función definida en un
+  subshell o en otro proceso (`bash -c`, un guion por la entrada) ya no se da
+  por definida afuera, y una lista como `cd x && make && cd -` puede terminar en
+  cualquiera de sus pasos: si falla `make`, el push siguiente corre en x.
+- **Un push que puede correr en una de dos carpetas conocidas se evalúa en las
+  dos** —reglas de rama y check de secretos— y vale lo más estricto, en vez de
+  preguntar: `npm ci && cd scripts && npm test; cd ..; git push` deja de
+  preguntar, y con la sesión en el Vault `true && cd <proyecto>; git push` se
+  deniega si el proyecto está parado en `main`.
+- **Lo que el hook no alcanza a revisar se pregunta; nunca pasa en silencio**:
+  más pushes distintos que el tope (primero se evalúan los que nombran `main`),
+  más de 12 ramas o tags para el check de secretos (antes eran 4, y el resto
+  pasaba con un aviso), un comando que no se pudo leer con certeza (un heredoc
+  sin cierre) o un `git` que no responde dentro del plazo de la revisión (45 s;
+  el hook está registrado con 60).
+- **Lo que encontró la cuarta lectura del hook.** Una cuarta verificación
+  independiente y el contraste con bash y zsh hallaron más formas de que el push
+  corra en otra carpeta que la prevista; todas se corrigen: un `return`, `exit`,
+  `break` o `continue` que sale antes de una función, de un guion leído con
+  `source` o de un bucle; una función definida dentro de un `if`, tras un `&&`,
+  en un grupo o dentro de otra función, que se lee al llamarla y donde se la
+  llama (y que no queda definida si se la definió en una tubería); `unset -f`,
+  `unfunction` y un alias del mismo comando; `pushd -n`, `popd +N`, `dirs -c`,
+  `cd -N`, `cd` a secas (va a la carpeta personal) y las opciones de un solo
+  shell (`cd -q`, `noglob cd`); `HOME=`, `OLDPWD=` o `CDPATH=` delante del `cd`,
+  y una redirección que falla; varios heredocs para un mismo shell (zsh los
+  concatena); la sintaxis de zsh (`if x { … }`, `always`, `for i (…)`);
+  `&\`+salto+`&`, que es `&&`; y lo que sigue a `echo $(date)` ya no se lee
+  como otro comando. Se ve el push escondido en un escape (`$'\x70ush'`), en
+  `env -S`, en un arreglo de PowerShell o en un subcomando que sale de una
+  variable (si el comando habla de un push), y `GIT_DIR` o `--git-dir` dejan
+  la carpeta en duda.
+- **Las funciones se leen con los argumentos de cada llamada**, como los
+  entienden bash y zsh (`"$@"`, `"$*"`, `$1` con y sin comillas, un argumento
+  vacío): `git() { command git -C <proyecto> "$@"; }; git push origin main` se
+  deniega, y una función que pasa sus argumentos a otro programa (`op run --
+  "$@"`, `ssh host "$@"`) sigue mostrando el push. Una asignación entre
+  comillas (`"X"=1 cd x`) no es una asignación; `X+=1 cd x` sí.
+- **Un error del hook al leer un push ya no lo deja pasar**: si la lectura
+  falla, se pregunta (unos mil `eval` encadenados agotaban la pila del lector,
+  y el push pasaba sin revisar). Los `eval` encadenados tienen su propio tope.
+- **Cambiar de rama en el mismo comando ya no esquiva la protección de
+  `main`.** El hook leía la rama actual antes de que el comando corriera, así
+  que `git checkout main && git push` o `git switch main && git merge … && git
+  push` subían `main` sin que nada los frenara (pasaba desde la primera versión
+  del hook). Ahora sigue `git checkout`, `git switch` y `git branch -m` del
+  mismo comando; si no se sabe a qué rama cambia (`git checkout -`, `gh pr
+  checkout`), pregunta.
+- **El check de secretos revisa también la rama o el tag que el mismo comando
+  crea** (`git switch -c x && git push -u origin x`, `git tag v1 && git push
+  origin v1`): antes no existían al revisar, y el push pasaba con un aviso de
+  que no se pudo validar.
+- **El hook lee las opciones de `git push` como git**: `heads/main` y
+  `HEAD:heads/main` son `main`; `--al`, `--mi` y `--del` son `--all`,
+  `--mirror` y `--delete`; en `-uo x`, `x` es el valor de `-o`. Si el mismo
+  comando cambia la configuración que decide adónde va el push (`-c
+  remote.origin.push=…`, `-c push.default=matching`, `git config remote…`, `git
+  remote add`, `GIT_CONFIG_*`), un push sin refspec se pregunta y uno a `main`
+  ya no pasa por ser del Vault. Un remoto con `/` en el nombre ya no se toma por
+  la URL del Vault, y cuenta la URL de push (`pushurl`) del remoto.
+- **Un push escondido detrás de otro programa se ve o se pregunta**:
+  `caffeinate`, `exec -a`, `env -u`, `find -exec`, `script`, `eval --` y el
+  `=git` de zsh se leen desde el `git`; un programa que sale de una variable
+  (`$G push`, `"${arr[@]}"`), un argumento con un `git push` escrito que el
+  programa puede correr (`perl -e`, `git rebase -x`) y un alias de git definido
+  en el mismo comando se preguntan. En PowerShell, `-EncodedCommand` se
+  decodifica y se preguntan los alias, `& $x`, `& (…)` y los bloques armados
+  como texto.
+- **Más formas de mover la carpeta que bash y zsh leen distinto**: un `&&`,
+  `||` o `|` al final de la línea sigue en la siguiente (también tras una línea
+  en blanco o un comentario); `#` tras cerrar un subshell es un comentario;
+  `cd --foo x` y `cd x/no-existe/..` fallan; `~-`, `~1` y `cd -P` con `..` no
+  se resuelven del texto; `mkdir` sin `-p` no crea las carpetas de arriba. Lo
+  que el hook no sigue —un `trap` que cambia de carpeta, las funciones que el
+  shell corre solo (`chpwd`, `TRAPEXIT`…), opciones como `autopushd`, `disable
+  cd`, `OLDPWD`, `DIRSTACK`, `cdpath`, los archivos de inicio de otro shell, o
+  permisos y enlaces simbólicos creados en el mismo comando— deja la carpeta en
+  duda: el push a `main` se deniega y el resto se pregunta.
+- **Un comando de más de 64 KB que habla de un push o de un PR se pregunta sin
+  leerlo** (leer uno de 500 KB podía pasarse del plazo del hook), y la respuesta
+  del hook ya no se corta: una de más de 64 KB llegaba truncada y dejaba de ser
+  JSON.
+- **Skill `soutec-md-a-pdf`**: del HTML crudo del Markdown solo pasa el marcado
+  conocido, y el `href` de un enlace va escapado (antes, un `href` con comillas
+  cerraba la etiqueta e inyectaba otra, p. ej. un `<img src="file://…">`). El
+  texto de los títulos —secciones y subtítulos— se escapa antes de volver a entrar
+  al índice.
+- **Monitor**: lo que se lee del registro compartido del Vault entra saneado
+  (`--usage` lo imprimía tal cual en la terminal) y con los números validados;
+  una sesión sin carpeta de trabajo conocida ya no publica como «proyecto» la ruta
+  local codificada (lo pedía el ADR 20260820).
+
+### Corregido
+
+- **«Un archivo tuyo nunca se sobrescribe en silencio» ahora vale también si el
+  archivo no se puede leer.** Un error de lectura (archivo abierto por otro programa,
+  retenido por el antivirus, placeholder de OneDrive sin conexión) se trataba como
+  «no existe» y el motor escribía encima, sin `.new` y sin backup. El plan se
+  detiene antes de escribir nada.
+- **El CI de todo PR de release (`dev` → `main`) salía rojo**: dos tests heredaban
+  `GITHUB_BASE_REF=main` del evento y fallaban en sus repos temporales. El de
+  v3.18.1 se fusionó así.
+- **La suite ya no depende de la máquina**: no llama a `gh` con la sesión real del
+  desarrollador (103 invocaciones; pasa de ~54 s a ~7 s), no depende de que haya una
+  terminal (dos tests de color fallaban con la salida por tubería en macOS/Linux) ni
+  de `NO_COLOR`.
+- Un `settings.json` guardado con BOM (PowerShell 5.1) abortaba el upgrade; un
+  `.claude/harness.json` con marcadores de conflicto de git se trataba como «repo sin
+  harness» sin avisar. El primero se tolera; el segundo es un error claro.
+- Ajustar el `timeout` de un hook del harness hacía que el siguiente upgrade lo
+  registrara por duplicado (corría dos veces). Los grupos de hooks se reconocen por
+  tool + comando.
+- El hook de SessionStart se registraba con una ruta relativa y sin plazo: si la
+  sesión había cambiado de carpeta, el de un resume/clear/compact no encontraba el
+  script. Pasa a `${CLAUDE_PROJECT_DIR}` con plazo de 60 s (migración incluida).
+- El git del Vault (`vault-sync`, publicación del monitor) tiene plazo y no espera
+  credenciales cuando nadie puede contestar: un pull colgado bloqueaba para siempre.
+- Con `--prune`, lo borrado se respalda siempre y el respaldo se informa (con
+  `--no-backup` se copiaba igual pero no se decía).
+- La prosa de skills, `CLAUDE.md`, README y MAINTAINERS que seguía dando GitHub
+  Actions por pausado (pendiente desde 3.18.1), el comentario que el hook publica en
+  cada PR, y «Node ≥ 20» donde el requisito real es 22.4. Los `CLAUDE.md` ya
+  instalados se corrigen en el lugar con una migración.
+- **Monitor**: reintentar una publicación tras un `push` fallido duplicaba la
+  línea en `sessions.md` y en `usage/*.jsonl`, y cada actualización de una sesión
+  añadía una línea en blanco al final del archivo. Una respuesta 200 del endpoint
+  de límites con otra forma se tomaba como «límites vacíos» y le ganaba 5 minutos
+  al caché válido: ahora cuenta como fallo, y al caché propio solo llegan los
+  cuatro campos conocidos. Pulsar Ctrl+C dos veces seguidas no salía del panel.
+- **Skill `soutec-md-a-pdf`**: una lista anidada tumbaba el render (`TypeError`);
+  ahora se aplana, con un guion por nivel. Un título como «2026 Roadmap» perdía el
+  número; los títulos con `&` o comillas salían con entidades (`&amp;`); un enlace
+  relativo o de ancla abortaba el PDF (sale como texto); un archivo con BOM no
+  encontraba su título; un comentario en el front-matter quedaba dentro del valor.
+  Si falta una dependencia, lo dice con el paquete a instalar en vez de un
+  traceback, y `--to pdf` ya no exige `python-docx`. La skill indica un entorno
+  virtual y deja de sugerir `--break-system-packages`.
+- **Skill `soutec-md-a-pdf`, probada de punta a punta con sus bibliotecas reales.**
+  Un bloque de código más alto que una página abortaba el PDF (`LayoutError`):
+  ahora continúa en la página siguiente. En Windows los mensajes de la skill salían
+  en la página de códigos de la consola y las tildes llegaban rotas a quien los lee
+  como UTF-8 (lo encontró el CI de Windows): la salida es siempre UTF-8. Una imagen
+  en el cuerpo desaparecía sin dejar rastro: queda como «[Imagen: …]». Un
+  `--client-logo` que no es PNG o JPG se rechaza con un mensaje claro.
+  `requirements.txt` fija las versiones con las que se probó.
+- **`souclaude status` ya no dice «hay un upgrade disponible» para siempre.** Una
+  propuesta `.new` ya escrita y al día contaba como cambio pendiente: en cualquier
+  repo con un archivo propio que el harness no pisa (su README, un `CLAUDE.md`
+  editado) `status` salía con 1 y mandaba a correr un `upgrade` que no tenía nada
+  nuevo que escribir. Ahora cuenta como drift (exit 2, igual que una edición local)
+  y `status` dice qué propuestas esperan revisión. Si el `.new` falta o quedó
+  viejo, sigue siendo un cambio pendiente (exit 1).
+- **Un release que no sube la versión deja de pasar en silencio**: si el tag
+  `vX.Y.Z` ya existe en otro commit que el que se publica, `tag-release.mjs` lo
+  avisa en su salida y, dentro de Actions, como anotación del workflow. Sigue
+  saliendo 0: un release puede no requerir versión.
+- La guía `docs/vault-setup.md` todavía decía que lo estratégico del Vault iba por
+  PR y nombraba el comando `/rock-plan`, eliminado en la 3.0.0.
+- **Cambiar de modo deja `settings.json` como el modo nuevo lo necesita.** El merge
+  solo agrega, así que tras `upgrade --solo` quedaban el `deny` de `gh pr merge` (que
+  le gana al `allow` del modo solo: no se podía mergear), los `ask` del push forzado,
+  los checks de PR y el hook `declarar-milestone`, apuntando a un archivo que
+  `--prune` acababa de borrar. Ahora el cambio de modo retira lo que sembró el modo
+  anterior —solo lo que sigue idéntico; lo que agregaste o reescribiste queda— y el
+  resultado es el de una instalación de cero en ese modo, como describe el ADR
+  20260915. Vale también para un lockfile anterior al modo solo que elige `solo`.
+- Las guías, infografías y láminas de `docs/` seguían nombrando `npx souclaude` (el
+  nombre corto, libre en el registro público) y el paso manual de agregar
+  `"project"` a `vault.local.json`. El test que prohíbe el nombre corto ahora las
+  cubre.
+
 ### Agregado
 
 - **El harness se instala para Claude Code, Codex y Antigravity** (SHS-M48). Toda
@@ -23,13 +333,48 @@ El harness y el CLI se versionan juntos.
     Claude Code). Para Antigravity, `.agents/hooks.json` y el adaptador
     `.agents/hooks/souclaude-antigravity.mjs`, que solo traduce su formato.
   - **Los repos ya instalados reciben estos archivos en su próximo
-    `npx souclaude upgrade`.** Un `AGENTS.md` o un `hooks.json` que ya existían no
+    `upgrade`.** Un `AGENTS.md` o un `hooks.json` que ya existían no
     se pisan: el primero queda con la propuesta en `AGENTS.md.new` y los segundos
     se funden.
   - Fuera de este cambio: permisos (`permissions.deny`) y conectores MCP para
     Codex y Antigravity; en Antigravity tampoco corre el check automático tras
     crear el PR. Decisión y alternativas en
     `docs/decisions/20261118-harness-para-varias-herramientas-de-ia.md`.
+- `souclaude verify` valida el contrato del manifest entry por entry (policy,
+  modos, `when`, skill, rutas, binarios sin `binary: true`, seeds JSON inválidos).
+- Test que exige que las copias de este repo (`.claude/`, `scripts/`, workflows)
+  sean idénticas a su template, y macOS en la matriz de CI.
+- `npm run check`, `npm run verify`, `npm run docs:check`, `npm run test:cobertura`;
+  `.gitattributes` y `.editorconfig`.
+- `--no-github-protect`: `init`/`upgrade` no tocan la protección de `main` en
+  GitHub. Sin él, en modo equipo la reescriben entera en cada corrida.
+- Pruebas de la skill `soutec-md-a-pdf` (`test/python/`, solo biblioteca estándar)
+  enganchadas a la suite, y tabla de variables de entorno en el README.
+- **Esquemas JSON del manifest y del lockfile** (`schemas/`): el contrato de forma
+  que el editor usa para validar y autocompletar; el manifest lo declara en
+  `$schema`. Un test comprueba que el manifest real y el lockfile que escribe `init`
+  los cumplen y que sus listas de políticas y modos son las del código. Las reglas
+  que dependen del disco siguen en `souclaude verify`.
+- **El check de secretos avisa de credenciales pegadas en el contenido**: cabeceras
+  de clave privada y tokens con prefijo propio (AWS, GitHub, Anthropic, Slack,
+  Google, npm) en las líneas que se agregan. Es informativo: no cambia el resultado
+  del check ni imprime el valor, y sin hallazgos la salida es la de siempre. El hook
+  lo muestra en la tabla del PR («OK, con avisos») y se lo pasa al agente. Corre
+  al validar el PR (en la sesión y en CI), no antes de cada push: ahí se sigue
+  mirando solo el nombre de los archivos, que es lo que bloquea. Tiene su propio
+  plazo (8 s) y leer el diff no ejecuta los filtros `textconv` del repo. No
+  reemplaza a un escáner de secretos ni a la protección de push de GitHub.
+- **Aviso previo al merge del release**: si el PR `dev` → `main` propone una versión
+  y `package.json` dice otra, `pr-metadata` lo avisa antes del merge (no bloquea).
+- **Piso de cobertura**: `npm run test:cobertura` mide solo el código del repo
+  (sin `test/`) y falla por debajo de 89 % de líneas, 79 % de ramas o 90 % de
+  funciones (requiere Node >= 22.8). CI lo corre en una celda de la matriz, por
+  ahora como paso informativo.
+- Tests de los comandos `status` y `verify` y de la protección de `main`
+  (`github-protect.js`), que casi no tenían: fijan los códigos de salida, el cuerpo
+  exacto que se le envía a GitHub y que los checks requeridos sigan siendo los
+  jobs de los workflows instalados. El typedef `Snapshot` del monitor vuelve a
+  coincidir con lo que la fuente devuelve, y un test lo mantiene así.
 ## [3.19.0] — 2026-11-18
 
 ### Agregado

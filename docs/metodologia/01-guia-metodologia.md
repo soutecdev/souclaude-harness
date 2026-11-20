@@ -40,7 +40,7 @@ se lo recuerda al arrancar), y cada movimiento de tarjeta se pushea en el moment
 npx github:soutecdev/souclaude-harness#v3
 ```
 
-Opcional, una vez por máquina, el CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo):
+El CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo) lo instalan y actualizan solos `init` y `upgrade`. Para instalarlo a mano, una vez por máquina:
 
 ```bash
 npm install -g github:soutecdev/souclaude-harness#v3

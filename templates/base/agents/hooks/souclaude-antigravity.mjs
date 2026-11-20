@@ -129,11 +129,30 @@ async function main() {
     // Un fallo del adaptador no bloquea ni rompe la sesion.
     salida = null
   }
-  if (salida) process.stdout.write(JSON.stringify(salida))
-  process.exit(0)
+  // Se sale recien cuando la salida termino de escribirse: un motivo largo no
+  // puede quedar cortado a medio JSON.
+  if (salida) process.stdout.write(JSON.stringify(salida), () => process.exit(0))
+  else process.exit(0)
 }
 
-// Solo como ejecutable: al importarse desde los tests no corre nada.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Este archivo es el script que se esta ejecutando (y no un import desde los
+// tests)? Igual que en reglas-pr.mjs, se comparan rutas REALES: si el proyecto
+// se abre por una ruta con un enlace simbolico, import.meta.url y
+// process.argv[1] difieren, y comparados tal cual el adaptador terminaba sin
+// hacer nada y con exit 0.
+export function esPuntoDeEntrada(urlDelModulo, argv1 = process.argv[1], plataforma = process.platform) {
+  if (!argv1) return false
+  const real = (ruta) => {
+    try {
+      return fs.realpathSync.native(ruta)
+    } catch {
+      return path.resolve(ruta)
+    }
+  }
+  const [modulo, entrada] = [real(fileURLToPath(urlDelModulo)), real(argv1)]
+  return plataforma === 'win32' ? modulo.toLowerCase() === entrada.toLowerCase() : modulo === entrada
+}
+
+if (esPuntoDeEntrada(import.meta.url)) {
   main()
 }

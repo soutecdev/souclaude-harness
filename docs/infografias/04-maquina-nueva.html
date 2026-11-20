@@ -91,8 +91,8 @@ gh auth status  # ✓ Logged in</span></div></div>
   <div class="paso"><div><b>Clona el repo del proyecto</b> en una ruta <b>fuera de OneDrive</b> — las carpetas sincronizadas corrompen <code>.git/</code> y generan copias en conflicto.</div></div>
   <div class="paso"><div><b>Clona el Vault y conéctalo</b>, también fuera de OneDrive:
     <span class="cmd">git clone &lt;VAULT_REPO&gt; &lt;RUTA_VAULT&gt;
-npx souclaude upgrade --vault-path &lt;RUTA_VAULT&gt;</span></div></div>
-  <div class="paso"><div><b>Añade a mano <code>"project"</code></b> a <code>.claude/vault.local.json</code> (el CLI aún no lo escribe; sin él, el hook queda ciego en silencio si el Vault tiene más de un proyecto):
+npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path &lt;RUTA_VAULT&gt;</span></div></div>
+  <div class="paso"><div><b>Comprueba <code>"project"</code></b> en <code>.claude/vault.local.json</code>: lo declara el instalador (si el Vault tiene más de un proyecto pregunta cuál, o pásalo con <code>--vault-project</code>). Si falta, el hook de sesión lo avisa:
     <span class="cmd">{ "path": "...", "repo": "...",
   "project": "Project-&lt;PREFIJO&gt;" }</span></div></div>
   <div class="paso"><div><b>Autoriza el conector Jira</b>: en una sesión interactiva de Claude Code escribe <code>/mcp</code> y autentica Atlassian (OAuth en el navegador, una vez por máquina — solo la persona puede).</div></div>

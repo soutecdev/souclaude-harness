@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
-import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT } from '../core/plan.js'
+import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT, CONFLICT } from '../core/plan.js'
 import { readLockfile, writeLockfile } from '../core/lockfile.js'
 import { apply } from '../core/apply.js'
 import { ensureVault } from '../core/vault.js'
@@ -131,7 +131,9 @@ export async function resolveModo({ flags, lock, yes }) {
 // El nucleo compartido por init y upgrade: son el mismo code path. Lo unico que
 // cambia entre "repo vacio", "repo legacy" y "migrar del harness viejo" es que
 // encuentra computePlan en disco y en el lockfile.
-export async function planAndApply({ manifest, cwd, lock, vars, detected, flags, title }) {
+// `prompts` (default: el modulo real de UI) se puede inyectar en tests para
+// ejercer las confirmaciones escritas sin una TTY, igual que en ensureVault.
+export async function planAndApply({ manifest, cwd, lock, vars, detected, flags, title, prompts = ui }) {
   const force = Boolean(flags.force)
   const yes = Boolean(flags.yes) || ui.isCI()
   // El modo se resuelve ANTES que las skills: el catalogo que se ofrece y se
@@ -139,9 +141,29 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   const modo = await resolveModo({ flags, lock, yes })
   ui.log.info(`Modo de trabajo: ${modo}`)
   const skills = await resolveSkills({ flags, lock, manifest, yes, modo })
-  const plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills, modo })
+  let plan = computePlan({ manifest, cwd, lock, vars, detected, force, skills, modo })
+
+  // --force pisa EN EL LUGAR archivos que el usuario edito. El README ("La
+  // garantia") y el --help prometen para eso una confirmacion escrita que no
+  // existia: bastaba `upgrade --force --yes` -- al alcance de un agente -- para
+  // sobrescribir trabajo del usuario. Mismo criterio que BORRAR: hay que tipear
+  // la palabra, --yes NUNCA la implica y en CI se deniega. Sin confirmacion, el
+  // plan vuelve a ser el de siempre: nada se pisa, la propuesta queda en .new.
+  const pisados = plan.actions.filter((a) => a.verdict === CONFLICT && a.writePath === a.dest)
+  if (force && pisados.length && !flags['dry-run']) {
+    const respaldo = flags.backup !== false ? 'queda backup en .claude/backup-<fecha>/' : 'SIN backup: pasaste --no-backup'
+    const confirmado = await prompts.confirmDestructive({
+      message: `--force va a SOBRESCRIBIR ${pisados.length} archivo(s) que editaste (${respaldo}):\n${pisados.map((a) => `    ${a.dest}`).join('\n')}`,
+      word: 'FORCE',
+    })
+    if (!confirmado) {
+      ui.log.warn('--force sin confirmar: esos archivos no se pisan. La propuesta del harness queda al lado, en .new.')
+      plan = computePlan({ manifest, cwd, lock, vars, detected, force: false, skills, modo })
+    }
+  }
 
   ui.renderPlan(plan, { verbose: Boolean(flags.verbose) })
+  avisarIgnorados(plan)
 
   const pending = writeActions(plan.actions)
   const obsolete = plan.actions.filter((a) => a.verdict === OBSOLETE)
@@ -177,7 +199,7 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   const editedObsolete = obsolete.filter((a) => !a.autoPrune)
   let pruneEdited = false
   if (prune && editedObsolete.length) {
-    pruneEdited = await ui.confirmDestructive({
+    pruneEdited = await prompts.confirmDestructive({
       message: `Se van a BORRAR ${editedObsolete.length} archivo(s) obsoleto(s) que editaste:\n${editedObsolete.map((a) => `    ${a.dest}`).join('\n')}`,
       word: 'BORRAR',
     })
@@ -199,6 +221,20 @@ export async function planAndApply({ manifest, cwd, lock, vars, detected, flags,
   report(result, plan, manifest)
   reportSkippedByStack(plan)
   return 0
+}
+
+// Claves del lockfile que no son una ruta relativa dentro del repo (ver
+// esDestSeguro): el motor no las toca y desaparecen del lockfile en la proxima
+// escritura. Se avisa porque un lockfile asi no lo escribio el harness.
+export function avisarIgnorados(plan) {
+  if (!plan.ignorados?.length) return
+  ui.log.warn(
+    [
+      '.claude/harness.json trae rutas que no pertenecen a este repo. Se ignoran (no se leen ni se borran):',
+      ...plan.ignorados.map((i) => `    ${i.dest} (${i.motivo})`),
+      'Revisa quien modifico el lockfile: el harness nunca escribe rutas absolutas ni con "..".',
+    ].join('\n')
+  )
 }
 
 // SHS-M28: entries con "when": "stack:<id>" (ej. tag-release, atado a Node) no
@@ -247,6 +283,14 @@ export async function vaultStep({ code, cwd, flags, manifest, lock }) {
 export function githubProtectionStep({ code, cwd, flags, protege = protegeBranchMain }) {
   if (code !== 0) return code
   if (flags['dry-run']) return code
+  // Opt-out explicito: protegeBranchMain hace un PUT que REEMPLAZA la proteccion
+  // existente (aprobaciones requeridas, revision de CODEOWNERS, otros checks
+  // obligatorios). Un repo cuya proteccion administra la organizacion, o que ya
+  // tiene reglas mas estrictas, tiene que poder decir que no.
+  if (flags['github-protect'] === false) {
+    ui.log.info('--no-github-protect: no se toca la proteccion de main en GitHub.')
+    return code
+  }
   if ((readLockfile(cwd)?.modo ?? 'equipo') === 'solo') {
     ui.log.info('Modo solo: no se configura branch protection de main.')
     return code

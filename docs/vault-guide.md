@@ -122,7 +122,7 @@ y En review se reserva para tareas que se quieran dejar gateadas por un PR concr
 (anotando `PR #N` en la tarjeta).
 
 **Cómo llegan los agentes**: cada repo guarda la ruta local del Vault en
-`.claude/vault.local.json`, que escribe el instalador (`npx souclaude`) y está
+`.claude/vault.local.json`, que escribe el instalador (`npx github:soutecdev/souclaude-harness#v3`) y está
 gitignorado — la ruta es de esa máquina. Si no hay ruta configurada o no existe, el
 espejo se omite **sin bloquear el trabajo** y queda anotado en el `history.md` del
 repo (`vault_skip`).
@@ -177,13 +177,13 @@ en cada repo y en cada máquina.
 3. Por cada proyecto activo, crear `Project-<PREFIJO>/` con `milestones.md` y
    `kanban.md` (frontmatter `kanban-plugin: board` + columnas vacías), `plans/`,
    `sessions.md`, `progress/history.md` y `OBSERVATORIO.md`. **No hace falta a
-   mano**: si el prefijo ya está en `00-System/id-registry.md`, `npx souclaude`
+   mano**: si el prefijo ya está en `00-System/id-registry.md`, `npx github:soutecdev/souclaude-harness#v3`
    siembra la carpeta y la pushea al conectar el repo — confirma en interactivo,
    o `--vault-seed` sin TTY. Un prefijo que no está registrado no se siembra:
    primero va la fila (§3).
 4. Si el Vault es un vault de Obsidian: instalar el plugin **Kanban** para ver los
    tableros.
-5. En cada repo de proyecto: correr `npx souclaude` y aceptar el paso del Vault (clona
+5. En cada repo de proyecto: correr `npx github:soutecdev/souclaude-harness#v3` y aceptar el paso del Vault (clona
    y escribe `.claude/vault.local.json`). Sin interacción: `--vault-path <ruta>`.
 6. Dar escritura al equipo y a los agentes, **sin revisión obligatoria en `main`**: el
    push directo es lo que mantiene vivo el tablero (§7).

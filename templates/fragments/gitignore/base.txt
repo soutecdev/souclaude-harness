@@ -1,12 +1,17 @@
 # === Variables de entorno y secretos ===
 # Guia Operativa Git & GitHub Soutec v2.0, seccion 8.2.
+# Cualquier .env.<algo> (local, staging, production...) menos las plantillas sin
+# valores, que si se commitean. Misma regla que el check de secretos del PR.
 .env
-.env.local
-.env.development
-.env.production
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+!.env.dist
 *.pem
 *.key
 *.pfx
+*.p12
 credentials.json
 secrets.json
 
@@ -21,6 +26,11 @@ secrets.json
 # Propuestas del harness pendientes de merge. Son transitorias: revisalas con
 # `git diff --no-index <archivo> <archivo>.new` y borralas.
 *.new
+
+# === Python de las skills ===
+# soutec-md-a-pdf corre con Python aunque el repo no sea de Python.
+__pycache__/
+*.pyc
 
 # === Docker ===
 docker-compose.override.yml

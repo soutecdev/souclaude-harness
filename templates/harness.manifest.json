@@ -1,4 +1,5 @@
 {
+  "$schema": "../schemas/harness.manifest.schema.json",
   "harnessVersion": "3.20.0",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
@@ -449,6 +450,13 @@
       "id": "skill-soutec-md-a-pdf-launcher",
       "src": "base/claude/skills/soutec-md-a-pdf/scripts/md_to_soutec.py",
       "dest": ".claude/skills/soutec-md-a-pdf/scripts/md_to_soutec.py",
+      "policy": "managed",
+      "skill": "soutec-md-a-pdf"
+    },
+    {
+      "id": "skill-soutec-md-a-pdf-requirements",
+      "src": "base/claude/skills/soutec-md-a-pdf/requirements.txt",
+      "dest": ".claude/skills/soutec-md-a-pdf/requirements.txt",
       "policy": "managed",
       "skill": "soutec-md-a-pdf"
     },

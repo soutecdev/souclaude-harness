@@ -1,0 +1,10 @@
+# Finales de linea: en el repositorio siempre LF, sea cual sea el core.autocrlf de
+# quien commitea. El motor ya normaliza a LF al hashear y al escribir; esto evita
+# que un CRLF llegue al indice y aparezca como "todo el archivo cambio".
+* text=auto
+
+# Binarios: sin conversion de finales de linea ni diff de texto. Son los assets
+# que el manifest declara con "binary": true.
+*.png binary
+*.jpg binary
+*.pdf binary

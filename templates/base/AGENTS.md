@@ -2,7 +2,7 @@
 
 Este archivo lo leen las herramientas de IA que siguen el estándar `AGENTS.md`
 (Codex, Antigravity y otras). Lo genera el harness de SOUTEC (`{{HARNESS_VERSION}}`):
-no lo edites a mano, se actualiza con `npx souclaude upgrade`.
+no lo edites a mano, se actualiza con `npx github:soutecdev/souclaude-harness#v3 upgrade`.
 
 ## Las instrucciones del proyecto están en `CLAUDE.md`
 

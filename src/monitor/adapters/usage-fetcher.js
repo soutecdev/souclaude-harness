@@ -140,19 +140,42 @@ async function pedirUtilizacion(doFetch, token, timeoutMs) {
         Accept: 'application/json',
       },
       signal: controller.signal,
+      // El token solo viaja al host de ENDPOINT: una redireccion (endpoint
+      // interno y no documentado, puede cambiar) se trata como un fallo mas en
+      // vez de seguirla con la cabecera Authorization puesta.
+      redirect: 'error',
     })
 
     // 401 incluido: se trata como un fallo mas. No renovamos el token.
     if (!res || res.status !== 200) return null
 
-    const body = await res.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return null
-    return body
+    return soloUtilizacion(await res.json())
   } catch {
     return null
   } finally {
     clearTimeout(timer)
   }
+}
+
+// La respuesta se reduce a los cuatro campos que el monitor entiende, y solo se
+// acepta si al menos uno trae datos con la forma esperada. El endpoint es
+// interno y puede cambiar: un 200 con otra forma producia limites vacios que,
+// por ser la lectura mas reciente, le ganaban 5 minutos al cache valido de
+// ~/.claude.json, y el comando salia con 0 ("todo bien"). Ahora cuenta como un
+// fallo mas y se cae al cache, que es lo que promete el README. De paso, al
+// cache propio ya no llega ningun campo que la API agregue manana.
+export function soloUtilizacion(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const ventana = (v) => (v && typeof v === 'object' && typeof v.utilization === 'number' ? v : null)
+  const objeto = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : null)
+  const utilizacion = {
+    five_hour: ventana(body.five_hour),
+    seven_day: ventana(body.seven_day),
+    limits: Array.isArray(body.limits) ? body.limits : [],
+    extra_usage: objeto(body.extra_usage),
+  }
+  const hayDatos = utilizacion.five_hour || utilizacion.seven_day || utilizacion.limits.length > 0 || utilizacion.extra_usage
+  return hayDatos ? utilizacion : null
 }
 
 // Lee EXCLUSIVAMENTE claudeAiOauth.accessToken. El objeto parseado (que

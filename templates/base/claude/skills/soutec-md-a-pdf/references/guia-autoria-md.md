@@ -121,13 +121,28 @@ backtick simple (`código`):
 
 ## 7. Listas
 
-Viñetas con `-` (marcador azul) o numeradas con `1.`. Evita anidar más de un
-nivel; el render aplana listas muy profundas.
+Viñetas con `-` (marcador azul) o numeradas con `1.`. Evita anidar: el render
+**aplana** las listas anidadas — los sub-ítems salen en la misma lista, con un
+guion delante por cada nivel.
 
 ## 8. Inline
 
 `**negrita**` (queda en color carbón), `*cursiva*`, `` `código` ``,
 `[enlace](https://…)`. Evita HTML crudo dentro del Markdown.
+
+Solo son enlaces los destinos `http(s)://` y `mailto:`. Un enlace relativo o un
+ancla (`[guía](docs/guia.md)`, `[más abajo](#detalle)`) sale como texto, sin
+enlace: ese destino no existe dentro del PDF. Del HTML crudo solo se conserva
+el texto, salvo negrita, cursiva, código y sub/superíndice.
+
+## 8.1 Lo que el render no hace
+
+- **Imágenes en el cuerpo** (`![alt](ruta)`): no se incrustan. El único logo
+  que se dibuja es el de la portada y el encabezado (`client_logo`).
+- **Encabezados de nivel 5 y 6**: se omiten; usa hasta `####`.
+- **Un número suelto al inicio de un título** (`# 2026 Roadmap`) se respeta.
+  La numeración manual que sí se quita es la explícita (`1.`, `1)`, `1.2`) o
+  la que coincide con el número automático del encabezado (`# 1 Introducción`).
 
 ## 9. Qué formato pedir al generar
 

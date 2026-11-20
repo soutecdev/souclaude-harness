@@ -25,8 +25,8 @@ progress/                     progreso del proyecto y protocolo del Vault
   settings.json               permisos, effort y registro de hooks (schema-correcto)
   harness.json                lockfile: versión + hash + skills elegidas
   hooks/                      de Claude Code: milestone al iniciar la sesión y
-                              reglas-pr (checks de PR en la sesión mientras
-                              Actions está en pausa)
+                              reglas-pr (protección de `main`, secretos y checks
+                              de PR en la sesión, antes de CI)
   skills/                     las que elijas en el checkbox de init
     soutec-github             flujo Git/GitHub (obligatoria, se instala siempre)
     it-security-review        security review para IT
@@ -36,6 +36,13 @@ progress/                     progreso del proyecto y protocolo del Vault
     adr-new                   documentar decisiones con ADRs
     harness-upgrade           actualizar el harness desde Claude
     vault-milestones          análisis e iteración de milestones en el Vault
+    jira-sync · azdo-sync     espejo del tablero en Jira o Azure Boards (elige una)
+    soutec-github-solo        flujo Git del modo solo (en vez de soutec-github)
+.github/                      plantilla de PR, CODEOWNERS y workflows reglas-* y
+                              tag-release
+scripts/                      check-pr-rules, tag-release y release-publicar (los
+                              corren CI y el hook reglas-pr)
+.mcp.json                     conectores MCP de la skill de espejo que instales
 .agents/                      para Codex y Antigravity (en prueba)
   skills/                     las mismas skills que .claude/skills
   hooks.json, hooks/          hooks de Antigravity y su adaptador
@@ -75,8 +82,11 @@ El harness instala una de dos superficies:
 `.claude/harness.json` y los upgrades lo respetan. Una instalación existente
 (lockfile sin modo) lo elige en su **primer `upgrade`** — en no interactivo el
 default es `equipo`, para no cambiar automatizaciones. Cambiar de modo después:
-`npx souclaude upgrade --solo` (o `--equipo`); los archivos del modo anterior
-quedan marcados obsoletos y `--prune` ofrece borrarlos.
+`npx github:soutecdev/souclaude-harness#v3 upgrade --solo` (o `--equipo`); los archivos del modo anterior
+quedan marcados obsoletos y `--prune` ofrece borrarlos. De `.claude/settings.json` se
+retiran los permisos y hooks que sembró el modo anterior —solo los que siguen como el
+harness los escribió; lo que agregaste o cambiaste queda—, así que el resultado es el
+de una instalación de cero en el modo nuevo.
 
 ## Comandos
 
@@ -84,16 +94,19 @@ quedan marcados obsoletos y `--prune` ofrece borrarlos.
 |---|---|
 | `souclaude init` | Instala. Sirve igual en un repo vacío y en uno con 5 años de código. |
 | `souclaude upgrade` | Actualiza a la última versión. Aplica migraciones. |
-| `souclaude status` | Solo lectura. Exit 0 = al día · 1 = hay upgrade · 2 = drift. |
+| `souclaude status` | Solo lectura. Exit 0 = al día · 1 = hay upgrade · 2 = drift (ediciones locales o propuestas `.new` sin resolver). |
 | `souclaude adopt` | Para una estructura hecha a mano. **No toca ningún archivo**: solo escribe el lockfile. |
 | `souclaude monitor` | Panel de consumo de tokens de Claude Code. |
+| `souclaude vault-sync` | Pull/push seguro del Vault. Exit 0 = ok · 1 = falló · 2 = uso incorrecto · 3 = sin Vault. |
+| `souclaude verify` | Audita el propio harness (manifest vs `templates/base/`). Es lo que corre el CI. |
 
 Sin comando, se autodetecta: hay lockfile → `upgrade` · hay estructura previa →
 `adopt` · repo limpio → `init`.
 
 Flags que importan: `--dry-run` (imprime el plan, escribe cero bytes), `--yes`,
 `--force`, `--prune`, `--no-backup`, `--verbose`, `--solo`/`--equipo` (modo de
-trabajo del repo, ver arriba).
+trabajo del repo, ver arriba), `--no-github-protect` (no toca la protección de
+`main` en GitHub; por defecto, en modo equipo, `init`/`upgrade` la reescriben).
 
 ## `souclaude monitor`
 
@@ -131,7 +144,8 @@ monitor dentro de un repo con `project` declarado (fuera de un repo no hay a qu�
 proyecto atribuirla). Bonus: un repo nuevo con la config de máquina presente se
 autoconecta al Vault en el `init`, sin preguntas.
 
-Cuatro modos, excluyentes entre sí:
+Tres modos excluyentes (en vivo, `--once`, `--json`) y dos vistas que se combinan
+con ellos (`--compact`, `--agents`):
 
 - **En vivo** (default, con TTY): panel que se repinta solo, alternate buffer,
   reacciona a resize. `q` sale con el exit code del último snapshot, `p` pausa.
@@ -152,7 +166,7 @@ Flags útiles:
 | `--ascii` | Fuerza glifos ASCII (equivale a `SOUCLAUDE_ASCII=1`). |
 | `--no-refresh` | No consulta los límites de plan a la API. Sin este flag, el monitor le pega a `GET /api/oauth/usage` (el mismo endpoint que usa Claude Code) porque el caché de `~/.claude.json` solo se reescribe cuando el humano corre `/usage` — medido: cero refrescos en 12 minutos de actividad continua. Con `--no-refresh` el panel muestra la edad real del último dato en caché en vez de fingir que está al día. |
 | `--claude-home <ruta>` | Usa otra carpeta `~/.claude` (útil para fixtures y tests). También desactiva el refresco de red de los límites (ver abajo), porque un fixture no tiene credenciales reales que leer. |
-| `--publish` | Publica un snapshot agregado de esta cuenta en el Vault (ver "Multi-cuenta"). Opt-in, solo panel en vivo. |
+| `--publish` | Publica en el Vault el snapshot de la cuenta, la línea de `sessions.md` y el registro de consumo por sesión (ver "Multi-cuenta"). Con Vault configurado es el **default**; `--no-publish` lo apaga. Solo panel en vivo. |
 
 El refresco de red de los límites de plan (Ventana 5h/7d, Semanal por modelo, Extra) se
 desactiva en **tres** casos, no solo con `--no-refresh`: con `--no-refresh` explícito, en
@@ -272,6 +286,22 @@ cerrado y no vaya a cambiar hasta el mes que viene.
   permanente. Lo único que persiste es el snapshot en dólares que la propia API ya
   entregó.
 
+## Variables de entorno
+
+| Variable | Quién la lee | Para qué |
+|---|---|---|
+| `VAULT_PATH` | CLI y hooks | Ruta del Vault cuando el repo no tiene `.claude/vault.local.json`. |
+| `CI` | CLI | Con `true` o `1`: sin preguntas, sin instalar el CLI global, sin red en el monitor, y las confirmaciones escritas (`BORRAR`, `FORCE`) se deniegan. |
+| `NO_COLOR` / `FORCE_COLOR` | CLI | Apagan o fuerzan el color de la salida. |
+| `SOUCLAUDE_ASCII` | monitor | Con `1`, glifos ASCII (igual que `--ascii`). |
+| `SOUCLAUDE_LOCAL_ACCOUNTS` | monitor | Carpetas de configuración de otras cuentas de Claude en esta máquina, separadas como `PATH` (`;` en Windows, `:` en el resto), para verlas en el panel. |
+| `SOUCLAUDE_CLAUDE_HOME` | CLI y hooks | Reemplaza `~/.claude` como carpeta del estado de máquina (`souclaude/vault.json` y las cachés). Pensada para tests y fixtures. |
+| `SOUCLAUDE_HARNESS_REMOTO` | hooks de sesión | Remoto git del que se leen los tags de versión del harness. Por defecto, este repo. |
+| `SOUCLAUDE_GH_RELEASES` | hook `declarar-milestone` | Lista de tags separada por comas que reemplaza la consulta a `gh release view`. Solo para tests. |
+| `GITHUB_BASE_REF` / `GITHUB_HEAD_REF` | `check-pr-rules.mjs` | Las define GitHub Actions en un PR: base y rama del check. |
+| `CLAUDE_PROJECT_DIR` | hooks | La define Claude Code: raíz del proyecto. |
+| `ADO_MCP_AUTH_TOKEN` | conector de Azure DevOps | PAT para la skill `azdo-sync`. Nunca se commitea. |
+
 ## La garantía
 
 **Un archivo tuyo nunca se sobrescribe en silencio.**
@@ -287,19 +317,26 @@ lockfile que había, y qué querría emitir el harness hoy.
 | está, intacto | está | sí | se actualiza (no pierdes nada: no lo habías tocado) |
 | está, **editado por ti** | está | no | se respeta, no se toca |
 | está, **editado por ti** | está | sí | **nunca se pisa** → `.new` al lado |
-| está | está, ya no en el manifest | — | obsoleto: se ofrece con `--prune` + doble confirmación |
+| está | está, ya no en el manifest | — | obsoleto: `--prune` lo borra (con backup); si lo editaste, antes pide tipear `BORRAR` |
+| está, **no se puede leer** | — | — | el comando se detiene **antes de escribir nada** (no se trata como ausente) |
 
 Por eso init, adopción de un repo legacy y migración de versión **son el mismo code
 path**. No hay tres flujos: hay una tabla.
 
-Además: backup de todo lo sobrescrito en `.claude/backup-<timestamp>/`, `--prune` exige
-tipear `BORRAR`, y `--force` exige tipear `FORCE`. Nada destructivo ocurre sin
-confirmación explícita.
+Además: backup de todo lo sobrescrito o borrado en `.claude/backup-<timestamp>/`;
+`--prune` borra sin preguntar solo los obsoletos que no editaste y exige tipear
+`BORRAR` para los que sí; `--force` exige tipear `FORCE`. `--yes` nunca implica esas
+dos confirmaciones y en CI se deniegan. Nada se lee, escribe ni borra fuera del
+repo, diga lo que diga el lockfile.
 
 Para los dos archivos que el harness no posee del todo:
 - `.gitignore` — solo es dueño de un bloque delimitado. Tus líneas nunca se tocan.
 - `.claude/settings.json` — solo **agrega** claves que faltan. Nunca pisa un valor que
-  tú escribiste.
+  tú escribiste. La única vez que retira algo es al cambiar de modo, y solo lo que el
+  propio harness había sembrado para el modo anterior. Una regla sembrada que quites
+  vuelve en el siguiente `upgrade`: es parte de lo que el harness instala. Para que un
+  permiso `allow` deje de aplicarse, agrega esa misma regla en `ask` o en `deny`, que
+  en Claude Code le ganan.
 
 ## Desarrollo
 
@@ -342,10 +379,10 @@ El detalle de cada versión vive en `CHANGELOG.md`. Los hitos:
 
 `main` solo recibe merges desde `dev`: el trabajo entra a `dev` por PR de rama, y el
 release es un **PR de `dev` a `main`** (con la versión propuesta en el cuerpo). Tras
-ese merge, **el agente puede crear y pushear los tags** — no hace falta esperar al
-coordinador. Mientras GitHub Actions esté en pausa (SHS-M36) `tag-release.yml` no se
-dispara, así que los crea siempre el agente, con el mismo script (tag anotado
-`vX.Y.Z` y `v3` movido al mismo commit; idempotente, sin cambiar de rama):
+ese merge, el workflow `tag-release.yml` crea el tag `vX.Y.Z`, mueve `v3` y crea el
+GitHub Release — no hace falta esperar al coordinador. Si el workflow no corrió,
+el agente lo hace con el mismo script (tag anotado `vX.Y.Z` y `v3` movido al mismo
+commit; idempotente, sin cambiar de rama):
 
 ```bash
 git fetch origin && node scripts/tag-release.mjs --ref origin/main

@@ -18,9 +18,9 @@
 // reglas-pr antes de cada push. Solo existe en el repo del generador: no se
 // distribuye a consumidores ni se publica en el paquete (files de package.json).
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -68,7 +68,7 @@ export function renderBloques(f) {
       `npx github:${f.slug}#${f.tagMayor}`,
       '```',
       '',
-      'Opcional, una vez por máquina, el CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo):',
+      'El CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo) lo instalan y actualizan solos `init` y `upgrade`. Para instalarlo a mano, una vez por máquina:',
       '',
       '```bash',
       `npm install -g github:${f.slug}#${f.tagMayor}`,
@@ -140,7 +140,24 @@ function main() {
   process.exit(r.codigo)
 }
 
-// Solo como ejecutable: al importarse desde los tests no corre nada.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Solo como ejecutable: al importarse desde los tests no corre nada. Se comparan
+// rutas REALES (Node resuelve los enlaces simbolicos del script de entrada): con
+// la comparacion directa de import.meta.url contra process.argv[1], invocar el
+// script por una ruta con un enlace (symlink, junction, /tmp en macOS) lo dejaba
+// sin hacer nada y con exit 0 -- un check "en verde" que nunca corrio.
+function esPuntoDeEntrada(urlDelModulo) {
+  if (!process.argv[1]) return false
+  const real = (ruta) => {
+    try {
+      return realpathSync.native(ruta)
+    } catch {
+      return ruta
+    }
+  }
+  const [modulo, entrada] = [real(fileURLToPath(urlDelModulo)), real(process.argv[1])]
+  return process.platform === 'win32' ? modulo.toLowerCase() === entrada.toLowerCase() : modulo === entrada
+}
+
+if (esPuntoDeEntrada(import.meta.url)) {
   main()
 }

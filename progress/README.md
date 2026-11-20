@@ -89,7 +89,7 @@ de plan (P1 fracasó → P2): el plan viejo **no se borra**, la tarjeta del mile
 apunta al nuevo.
 
 **Ruta**: la ruta local del Vault se lee de `.claude/vault.local.json` (la escribe el
-instalador: `npx souclaude init` o `--vault-path`). Respaldo: la variable de entorno
+instalador: `init` o `upgrade --vault-path`). Respaldo: la variable de entorno
 `VAULT_PATH`. **No se lee del `.env`**: `.claude/settings.json` deniega `Read(./.env)`.
 Si no hay ruta configurada o no existe, el espejo se **omite sin fallar** y se deja una
 línea en `history.md` (`vault_skip · motivo`) — el trabajo local nunca se bloquea por
@@ -172,14 +172,14 @@ línea al final** de `Project-<PREFIJO>/sessions.md`, append-only como `history.
 ```
 
 Campos: fecha · rama o sesión · milestone · quién · máquina · tokens (entrada/salida)
-· resultado en pocas palabras. Los tokens salen del monitor local (`npx souclaude
+· resultado en pocas palabras. Los tokens salen del monitor local (`souclaude
 monitor` muestra el consumo por sesión); si no hay dato disponible, `tokens n/d` — la
 línea se escribe igual: el registro de **que la sesión existió y qué tocó** vale por
 sí solo. Los números agregados y fiables por cuenta y máquina los publica el monitor
 automáticamente en `00-System/monitor/` del Vault.
 
 **El monitor también escribe esta línea solo**: con el panel en vivo abierto
-(`npx souclaude monitor`) y el Vault configurado, cada sesión con consumo de este
+(`souclaude monitor`) y el Vault configurado, cada sesión con consumo de este
 proyecto publica su línea automáticamente y la va actualizando mientras la sesión
 sigue viva (milestone inferido de la rama, `quién` del campo `"quien"` de
 `.claude/vault.local.json` o el alias de la cuenta). La línea

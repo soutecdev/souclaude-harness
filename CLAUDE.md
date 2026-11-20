@@ -52,9 +52,9 @@ por PR.
 - Sincronizar la rama: `git fetch origin && git merge origin/dev`. **Nunca
   `git push --force`.**
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
-  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
-  publicar y después del merge de release `dev` → `main`: mientras GitHub Actions
-  esté en pausa (SHS-M36), con `git fetch origin && node scripts/tag-release.mjs
+  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) los crea el workflow
+  `tag-release.yml` al mergearse el release `dev` → `main`; si no corrió o el repo
+  no lo tiene, los creo yo con `git fetch origin && node scripts/tag-release.mjs
   --ref origin/main`.
 - **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
   quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
@@ -62,13 +62,13 @@ por PR.
   no lo menciones antes ni lo repitas en cada avance. Sin esa respuesta no lo abras:
   push a la rama y reportar.
 - **Si el pedido de PR incluye correr antes el security review, terminado el review
-  no te detengas**: seguí directo con push/PR si no hay hallazgos que bloqueen. El
+  no te detengas**: sigue directo con push/PR si no hay hallazgos que bloqueen. El
   security review es un paso intermedio del mismo pedido, no un punto de checkpoint —
   el usuario ya autorizó el PR al pedirlo. Si el review sí encuentra algo bloqueante,
-  ahí parás y reportás.
+  ahí paras y reportas.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
-- **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
+- **Checks de PR en la sesión** (además de los workflows `reglas-*` de CI): el hook `reglas-pr` de
   Claude Code deniega el `git push` que toca `main` de cualquier repo que no sea el
   Vault (SHS-M42) o que sube archivos de secretos y, al crear o editar el PR con
   `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs` y publica el
@@ -150,8 +150,10 @@ infraestructura y todo lo que toca frameworks, en inglés.
   frescura la exigen `souclaude verify`, el test-candado de la suite y el hook
   `reglas-pr` (deniega el push con drift). En cada release `dev` → `main`, revisa
   también la prosa de la carpeta.
-- Tests: `npm test` (Node >= 22.4). Quita `NO_COLOR` del entorno antes de correr los
-  tests de monitor-render.
+- Tests: `npm test` (Node >= 22.4); `npm run check` suma `verify --strict`. La suite
+  no depende del entorno: pasa con o sin terminal, con `NO_COLOR` y con las
+  variables de un PR de GitHub Actions. `npm run test:cobertura` (Node >= 22.8)
+  mide la cobertura del código del repo y falla si baja del piso.
 
 ## Economía de tokens
 

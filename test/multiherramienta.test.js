@@ -281,3 +281,13 @@ test('adaptador real: un Cwd con forma inesperada no evita el deny', () => {
   const r = adaptador(dir, 'reglas-pr', { toolCall: { name: 'run_command', args: { CommandLine: 'git push origin main', Cwd: { x: 1 } } } })
   assert.equal(JSON.parse(r.stdout).decision, 'deny')
 })
+
+test('adaptador: se reconoce como punto de entrada tambien por una ruta con otra forma', async () => {
+  const { esPuntoDeEntrada } = await import('../templates/base/agents/hooks/souclaude-antigravity.mjs')
+  const archivo = path.join(RAIZ, 'templates/base/agents/hooks/souclaude-antigravity.mjs')
+  const url = new URL('../templates/base/agents/hooks/souclaude-antigravity.mjs', import.meta.url).href
+  assert.equal(esPuntoDeEntrada(url, archivo), true)
+  assert.equal(esPuntoDeEntrada(url, path.join(RAIZ, 'templates', '..', 'templates/base/agents/hooks/souclaude-antigravity.mjs')), true)
+  assert.equal(esPuntoDeEntrada(url, path.join(RAIZ, 'package.json')), false)
+  assert.equal(esPuntoDeEntrada(url, undefined), false)
+})

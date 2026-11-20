@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/soutecdev/souclaude-harness/blob/dev/schemas/harness.manifest.schema.json",
+  "title": "Manifest del harness (templates/harness.manifest.json)",
+  "description": "Fuente de verdad de lo que el harness instala. Este esquema es el contrato de FORMA, para que el editor valide y autocomplete; las reglas que dependen del disco (que cada src exista, huerfanos, dest duplicados, stacks conocidos) las comprueba `souclaude verify`.",
+  "type": "object",
+  "required": ["harnessVersion", "skills", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "harnessVersion": { "$ref": "#/$defs/semver", "description": "Version del harness. Sube en cada release; el lockfile de cada repo guarda la que tiene instalada." },
+    "cliVersion": { "$ref": "#/$defs/semver", "description": "Version del CLI, si difiere de harnessVersion." },
+    "vault": {
+      "type": "object",
+      "required": ["repo"],
+      "additionalProperties": false,
+      "properties": { "repo": { "type": "string", "minLength": 1, "description": "URL del repo del Vault de la organizacion." } }
+    },
+    "skills": { "type": "array", "items": { "$ref": "#/$defs/skill" } },
+    "files": { "type": "array", "items": { "$ref": "#/$defs/file" } },
+    "dirs": { "type": "array", "items": { "$ref": "#/$defs/dir" } },
+    "obsolete": { "type": "array", "items": { "$ref": "#/$defs/obsolete" } }
+  },
+  "$defs": {
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "modos": {
+      "description": "Superficies a las que pertenece. Sin este campo, es comun a los dos modos.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["equipo", "solo"] }
+    },
+    "when": {
+      "description": "Condicion para emitirlo: `empty-repo` (solo en un repo sin codigo) o `stack:<id>` (solo si se detecta ese stack).",
+      "type": "string",
+      "pattern": "^(empty-repo|stack:[a-z0-9-]+)$"
+    },
+    "rutaRelativa": {
+      "description": "Ruta POSIX relativa dentro del repo destino: sin barra inicial, sin letra de unidad y sin segmentos `.` ni `..`.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![\\\\/])(?![A-Za-z]:)(?!.*(?:^|[\\\\/])\\.{1,2}(?:[\\\\/]|$))(?!.*[\\\\/]{2})(?!.*[\\\\/]$).+$"
+    },
+    "skill": {
+      "type": "object",
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "label": { "type": "string", "minLength": 1, "description": "Texto que muestra el selector de skills." },
+        "required": { "type": "boolean", "description": "No se puede desinstalar (la skill de Git de cada modo)." },
+        "modos": { "$ref": "#/$defs/modos" }
+      }
+    },
+    "file": {
+      "type": "object",
+      "required": ["id", "src", "dest", "policy"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Identificador unico del entry." },
+        "src": { "type": "string", "minLength": 1, "description": "Ruta bajo templates/ (un archivo, o la carpeta de fragmentos si la politica es append-block)." },
+        "dest": { "$ref": "#/$defs/rutaRelativa" },
+        "policy": {
+          "description": "managed: el harness lo posee y lo actualiza si esta intacto. user-owned: del usuario; editado, nunca se pisa (.new). append-block: el harness posee un bloque delimitado. merge-json: solo agrega claves que faltan.",
+          "enum": ["managed", "user-owned", "append-block", "merge-json"]
+        },
+        "render": { "type": "boolean", "description": "El template lleva variables {{...}} que se sustituyen al instalar." },
+        "critical": { "type": "boolean", "description": "`verify` falla si el template no existe." },
+        "binary": { "type": "boolean", "description": "Se copia byte a byte, sin lectura utf8 ni normalizacion de finales de linea." },
+        "modos": { "$ref": "#/$defs/modos" },
+        "when": { "$ref": "#/$defs/when" },
+        "skill": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "Solo se instala si esa skill esta seleccionada." }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["binary"], "properties": { "binary": { "const": true } } },
+          "then": { "properties": { "policy": { "const": "managed" }, "render": { "const": false } } }
+        }
+      ]
+    },
+    "dir": {
+      "type": "object",
+      "required": ["dest"],
+      "additionalProperties": false,
+      "properties": { "dest": { "$ref": "#/$defs/rutaRelativa" }, "when": { "$ref": "#/$defs/when" } }
+    },
+    "obsolete": {
+      "type": "object",
+      "required": ["dest", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "dest": { "$ref": "#/$defs/rutaRelativa" },
+        "reason": { "type": "string", "minLength": 1, "description": "Por que ya no se distribuye; se le muestra al usuario con --prune." }
+      }
+    }
+  }
+}

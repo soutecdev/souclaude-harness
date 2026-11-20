@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFile } from 'node:child_process'
 import { CARPETA_MONITOR } from './vault-monitor-publisher.js'
+import { gitReal } from '../../core/vault-sync.js'
 
 // Lee los snapshots de cuenta que las maquinas del equipo publican en
 // <vault>/00-System/monitor/*.json (ver vault-monitor-publisher.js y el ADR
@@ -117,13 +117,9 @@ function leerCarpeta(carpeta) {
   return { cuentas, warnings }
 }
 
-// Exportado para que monitor.js arme el pull opcional sin duplicar la
-// promisificacion de execFile.
+// Exportado para que monitor.js arme el pull opcional. Es el mismo git de
+// core/vault-sync.js: con plazo y sin prompts de credenciales, que sobre el
+// panel en vivo (TTY en modo raw) se escribirian encima de la pantalla.
 export function gitAsync(args) {
-  return new Promise((resolve, reject) => {
-    execFile('git', args, { encoding: 'utf8', windowsHide: true }, (err, stdout) => {
-      if (err) reject(err)
-      else resolve(stdout)
-    })
-  })
+  return gitReal(args)
 }

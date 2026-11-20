@@ -17,6 +17,8 @@
  *   matchea alias o uuid.
  * @returns {{totales: object, porCuenta: object[], porQuien: object[], porProyecto: object[], porMaquina: object[], porMilestone: object[], porDia: object[], porModelo: object[], sesiones: object[]}}
  */
+import { sanearCelda } from './formato.js'
+
 export function agregarUsage(registros, { desde = null, hasta = null, proyecto = null, quien = null, cuenta = null } = {}) {
   const sesiones = deduplicar(registros)
     .filter((r) => enPeriodo(r, desde, hasta))
@@ -57,9 +59,16 @@ function esMasNuevo(a, b) {
   return tokensDe(a) > tokensDe(b)
 }
 
+// El registro es COMPARTIDO: lo escriben otras maquinas y cualquiera con acceso
+// al Vault puede editarlo. Al entrar al dominio, un numero es un numero (un
+// "12" sumado como texto daba el total "012007") y un texto no trae caracteres
+// de control (--usage lo imprime tal cual en la terminal de quien consulta).
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0)
+const txt = (v) => (typeof v === 'string' ? sanearCelda(v) || null : null)
+
 function tokensDe(r) {
   const t = r?.tokens ?? {}
-  return (t.entrada ?? 0) + (t.cacheCreacion ?? 0) + (t.cacheLectura ?? 0) + (t.salida ?? 0)
+  return num(t.entrada) + num(t.cacheCreacion) + num(t.cacheLectura) + num(t.salida)
 }
 
 function enPeriodo(r, desde, hasta) {
@@ -73,30 +82,30 @@ function enPeriodo(r, desde, hasta) {
 function materializar(r) {
   const t = r.tokens ?? {}
   const desglose = {
-    entrada: t.entrada ?? 0,
-    salida: t.salida ?? 0,
-    cacheCreacion: t.cacheCreacion ?? 0,
-    cacheLectura: t.cacheLectura ?? 0,
+    entrada: num(t.entrada),
+    salida: num(t.salida),
+    cacheCreacion: num(t.cacheCreacion),
+    cacheLectura: num(t.cacheLectura),
   }
   return {
     sessionId: r.sessionId,
-    fecha: typeof r.fin === 'string' ? r.fin.slice(0, 10) : null,
-    inicio: typeof r.inicio === 'string' ? r.inicio : null,
-    fin: typeof r.fin === 'string' ? r.fin : null,
-    generadoEn: typeof r.generadoEn === 'string' ? r.generadoEn : null,
-    proyecto: r.proyecto ?? null,
-    rama: r.rama ?? null,
-    milestone: r.milestone ?? null,
-    quien: r.quien ?? null,
-    cuentaUuid: r.cuenta?.uuid ?? null,
-    cuentaAlias: r.cuenta?.alias ?? null,
-    maquina: r.maquina?.hostname ?? r.maquina?.machineID ?? null,
+    fecha: typeof r.fin === 'string' ? txt(r.fin.slice(0, 10)) : null,
+    inicio: txt(r.inicio),
+    fin: txt(r.fin),
+    generadoEn: txt(r.generadoEn),
+    proyecto: txt(r.proyecto),
+    rama: txt(r.rama),
+    milestone: txt(r.milestone),
+    quien: txt(r.quien),
+    cuentaUuid: txt(r.cuenta?.uuid),
+    cuentaAlias: txt(r.cuenta?.alias),
+    maquina: txt(r.maquina?.hostname) ?? txt(r.maquina?.machineID),
     tokensIn: desglose.entrada + desglose.cacheCreacion + desglose.cacheLectura,
     tokensOut: desglose.salida,
     desglose,
     porModelo: modelosDe(r),
-    costoUsd: r.costoUsd ?? 0,
-    llamadas: r.llamadas ?? 0,
+    costoUsd: num(r.costoUsd),
+    llamadas: num(r.llamadas),
   }
 }
 
@@ -105,10 +114,10 @@ function modelosDe(r) {
   return r.porModelo
     .filter((m) => typeof m?.alias === 'string' && m.alias !== '')
     .map((m) => ({
-      alias: m.alias,
-      tokensIn: m.tokensIn ?? 0,
-      tokensOut: m.tokensOut ?? 0,
-      costoUsd: m.costoUsd ?? 0,
+      alias: txt(m.alias) ?? 'n/d',
+      tokensIn: num(m.tokensIn),
+      tokensOut: num(m.tokensOut),
+      costoUsd: num(m.costoUsd),
     }))
 }
 

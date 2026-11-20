@@ -13,7 +13,7 @@ declarar, no hay validación de PR y no se espeja ningún tablero externo
 (Jira/Azure Boards). La única obligación de registro es el **worklog del Vault**
 (ver "El Vault"). Las skills viven en `.claude/skills/` y se aplican solas cuando
 el contexto lo amerita. Para volver a la metodología completa:
-`npx souclaude upgrade --equipo`.
+`npx github:soutecdev/souclaude-harness#v3 upgrade --equipo`.
 
 ## Git — modo fluido
 
@@ -53,7 +53,7 @@ El trato del modo solo: fluidez total a cambio de que la organización siga vien
 - `sessions.md` y el monitor de tokens (`souclaude monitor`) siguen funcionando
   exactamente igual que en modo equipo, sin pasos manuales.
 - La ruta local del Vault está en `.claude/vault.local.json` (la escribe
-  `npx souclaude`).
+  el instalador).
 - El Vault es un repo compartido de la organización: ahí se escribe con push
   directo a `main` y **jamás `git push --force`**, en ningún modo.
 

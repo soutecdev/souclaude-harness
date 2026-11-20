@@ -24,18 +24,50 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import md_to_pdf
-import md_to_docx
 
-FORMATS = {
-    "pdf": ("pdf", md_to_pdf.render),
-    "docx": ("docx", md_to_docx.render),
-    "doc": ("docx", md_to_docx.render),
-    "word": ("docx", md_to_docx.render),
-}
+FORMATS = {"pdf": "pdf", "docx": "docx", "doc": "docx", "word": "docx"}
+
+# El módulo que falta no siempre se llama como el paquete que lo trae.
+PAQUETES = {"docx": "python-docx", "PIL": "pillow"}
+
+
+def salida_utf8():
+    """Fuerza UTF-8 en stdout y stderr: la salida la lee Claude Code (como UTF-8)
+    y, en Windows, la consola usa otra página de códigos, así que las tildes de
+    los mensajes llegaban rotas. Es la misma función de soutec_md.py; se repite
+    acá porque el lanzador no puede importar el núcleo antes de saber si están
+    sus dependencias."""
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
+def falta_dependencia(error, fmt):
+    paquete = PAQUETES.get(error.name, error.name)
+    sys.exit(
+        f"Falta el paquete de Python '{paquete}' (módulo '{error.name}'), necesario para generar {fmt.upper()}.\n"
+        f"Instálalo en el entorno virtual de la skill: python -m pip install {paquete}"
+    )
+
+
+def cargar_motor(fmt):
+    """Importa solo el motor del formato pedido: generar un PDF no exige tener
+    python-docx instalado. Si falta una dependencia, lo dice con el nombre del
+    paquete de pip en vez de un traceback."""
+    try:
+        if fmt == "pdf":
+            import md_to_pdf
+            return md_to_pdf.render
+        import md_to_docx
+        return md_to_docx.render
+    except ModuleNotFoundError as error:
+        falta_dependencia(error, fmt)
 
 
 def main():
+    salida_utf8()
     ap = argparse.ArgumentParser(
         description="Convierte Markdown a PDF y/o DOCX corporativo Soutec.")
     ap.add_argument("input")
@@ -63,17 +95,20 @@ def main():
     if key in ("ambos", "both", "todo", "all", "pdf+docx"):
         targets = ["pdf", "docx"]
     elif key in FORMATS:
-        targets = [FORMATS[key][0]]
+        targets = [FORMATS[key]]
     else:
         sys.exit(f"Formato no reconocido: {args.to}. Usa pdf, docx o ambos.")
 
     base = os.path.splitext(args.output or args.input)[0]
     for fmt in targets:
-        render = md_to_pdf.render if fmt == "pdf" else md_to_docx.render
+        render = cargar_motor(fmt)
         out = f"{base}.{fmt}"
         if args.output and len(targets) == 1:
             out = args.output
-        render(args.input, out, args)
+        try:
+            render(args.input, out, args)
+        except ModuleNotFoundError as error:  # dependencias que un motor importa tarde
+            falta_dependencia(error, fmt)
         print(f"{fmt.upper()} generado: {out}")
 
 

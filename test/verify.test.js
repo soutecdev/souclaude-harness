@@ -12,6 +12,7 @@ import {
   findDuplicateIds,
   findDuplicateDests,
   findMissingCriticalFiles,
+  findInvalidEntries,
 } from '../src/core/verify.js'
 
 // Fabrica un directorio temporal con la forma de templates/: root/base/**.
@@ -149,4 +150,47 @@ test('verifyManifest: agrega en errors y warnings, no mezcla tipos', () => {
   assert.ok(warnings.every((w) => w.type === 'warning'))
   assert.ok(errors.some((e) => e.code === 'missing-src'))
   assert.ok(warnings.some((w) => w.code === 'orphan-template-file'))
+})
+
+// --- Validacion estructural: el contrato del manifest, entry por entry ---------
+
+test('verify: el manifest real del repo cumple el contrato estructural', () => {
+  assert.deepEqual(findInvalidEntries(loadManifest()), [])
+})
+
+test('verify: detecta policy, modos, when, skill y dest invalidos', () => {
+  const root = mkTemplatesRoot({ 'base/a.md': 'a\n' })
+  const base = { id: 'a', src: 'base/a.md', dest: 'a.md', policy: 'managed' }
+  const manifest = (entry, extra = {}) => ({ harnessVersion: '1.0.0', skills: [{ id: 'una' }], files: [{ ...base, ...entry }], ...extra })
+  const codigos = (m) => findInvalidEntries(m, root).map((e) => e.code)
+
+  assert.deepEqual(codigos(manifest({})), [])
+  assert.deepEqual(codigos(manifest({ skill: 'una', modos: ['equipo'], when: 'stack:node' })), [])
+  assert.deepEqual(codigos(manifest({ policy: 'manged' })), ['invalid-policy'], 'un typo de policy caia al default y se trataba como managed')
+  assert.deepEqual(codigos(manifest({ modos: ['equpo'] })), ['invalid-modos'], 'un modo inexistente deja el archivo fuera de todos los modos')
+  assert.deepEqual(codigos(manifest({ modos: [] })), ['invalid-modos'])
+  assert.deepEqual(codigos(manifest({ when: 'stack:cobol' })), ['invalid-when'])
+  assert.deepEqual(codigos(manifest({ when: 'repo-vacio' })), ['invalid-when'])
+  assert.deepEqual(codigos(manifest({ skill: 'no-existe' })), ['unknown-skill'])
+  assert.deepEqual(codigos(manifest({ dest: '../a.md' })), ['invalid-dest'])
+  assert.deepEqual(codigos(manifest({ dest: '/etc/a.md' })), ['invalid-dest'])
+  assert.deepEqual(codigos(manifest({ src: '../../package.json' })), ['invalid-src'])
+  assert.deepEqual(codigos(manifest({ binary: true, render: true })), ['invalid-binary'])
+  assert.deepEqual(codigos(manifest({}, { harnessVersion: '3.x' })), ['invalid-version'])
+  assert.deepEqual(codigos(manifest({}, { obsolete: [{ dest: '../x', reason: 'r' }] })), ['invalid-dest'])
+  assert.deepEqual(codigos(manifest({}, { dirs: [{ dest: 'C:/x' }] })), ['invalid-dest'])
+  assert.deepEqual(codigos(manifest({}, { skills: [{ id: 'una' }, { id: 'una' }] })), ['duplicate-skill'])
+  assert.deepEqual(codigos(manifest({}, { skills: [{ id: 'una', modos: ['duo'] }] })), ['invalid-modos'])
+})
+
+test('verify: un asset binario sin "binary": true y un seed merge-json roto se detectan', () => {
+  const root = mkTemplatesRoot({ 'base/seed.json': '{ "a": 1, }', 'base/ok.json': '{"a":1}' })
+  fs.writeFileSync(path.join(root, 'base', 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff, 0xfe]))
+  const m = (files) => ({ harnessVersion: '1.0.0', files })
+  const codigos = (files) => findInvalidEntries(m(files), root).map((e) => e.code)
+
+  assert.deepEqual(codigos([{ id: 'logo', src: 'base/logo.png', dest: 'logo.png', policy: 'managed' }]), ['binary-sin-declarar'])
+  assert.deepEqual(codigos([{ id: 'logo', src: 'base/logo.png', dest: 'logo.png', policy: 'managed', binary: true }]), [])
+  assert.deepEqual(codigos([{ id: 'seed', src: 'base/seed.json', dest: 's.json', policy: 'merge-json' }]), ['invalid-json-seed'])
+  assert.deepEqual(codigos([{ id: 'seed', src: 'base/ok.json', dest: 's.json', policy: 'merge-json' }]), [])
 })

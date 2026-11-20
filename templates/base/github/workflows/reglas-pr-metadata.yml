@@ -5,7 +5,7 @@ name: Reglas PR - metadata
 # protege el flujo de release (dev -> main) y que la revision de seguridad
 # tenga con que trabajar. Solo corre en PR: el script necesita gh pr view
 # para leer el cuerpo del PR. Este workflow y scripts/check-pr-rules.mjs los
-# distribuye y actualiza el harness (npx souclaude upgrade); no los edites a
+# distribuye y actualiza el harness (souclaude upgrade); no los edites a
 # mano en el repo consumidor.
 
 on:

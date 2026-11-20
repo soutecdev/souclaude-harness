@@ -477,6 +477,22 @@ test('snapshot-source: collect() agrega registroExtra a partir de usageHistory.l
   assert.deepEqual(snapshot.registroExtra, registroFake)
 })
 
+// El typedef Snapshot de application/ports.js es el unico contrato escrito entre
+// el adaptador y el dominio, y habia quedado tres campos atras de lo que
+// collect() devuelve. Este test lo ata al objeto real para que no vuelva a pasar.
+test('snapshot-source: el typedef Snapshot de ports.js declara exactamente los campos que collect() devuelve', async () => {
+  const fs = await import('node:fs')
+  const { fileURLToPath } = await import('node:url')
+  const ports = fs.readFileSync(fileURLToPath(new URL('../src/monitor/application/ports.js', import.meta.url)), 'utf8')
+  const bloque = ports.slice(ports.indexOf('@typedef {object} Snapshot'), ports.indexOf('*/', ports.indexOf('@typedef {object} Snapshot')))
+  const declarados = [...bloque.matchAll(/@property \{.*\} (\w+)/g)].map((m) => m[1])
+  assert.ok(declarados.length > 0, 'no se encontro el typedef Snapshot en ports.js')
+
+  const source = createSnapshotSource({ paths: resolveClaudeHome({ override: mkClaudeHome({}) }) })
+  const snapshot = await source.collect({ window: { desde: 0, hasta: AHORA }, ahora: AHORA })
+  assert.deepEqual([...declarados].sort(), Object.keys(snapshot).sort())
+})
+
 test('snapshot-source: sin usageHistory inyectado, registroExtra queda vacio (nunca se inventa)', async () => {
   const home = mkClaudeHome({})
   const paths = resolveClaudeHome({ override: home })

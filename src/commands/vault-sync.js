@@ -1,5 +1,5 @@
 import * as ui from '../ui.js'
-import { readVaultConfig, harnessDocsUrl } from '../core/vault.js'
+import { readVaultConfig, harnessDocsUrl, comandoNpx } from '../core/vault.js'
 import { pullRebaseSeguro, pushSeguro, gitReal } from '../core/vault-sync.js'
 
 // souclaude vault-sync: la via sancionada para mover el espejo (kanban, specs,
@@ -22,7 +22,7 @@ export async function vaultSync(flags, cwd, { git = gitReal } = {}) {
       [
         'Vault no configurado en esta maquina (.claude/vault.local.json o VAULT_PATH).',
         '    git clone <repo-del-vault> <ruta-fuera-de-este-repo>',
-        '    npx souclaude upgrade --vault-path <ruta>',
+        `    ${comandoNpx()} upgrade --vault-path <ruta>`,
         `Detalle en ${harnessDocsUrl('docs/vault-setup.md')}`,
       ].join('\n')
     )

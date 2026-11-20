@@ -307,7 +307,7 @@ otra máquina, nada de esto se hereda solo. En orden:
    paso a paso del login está en la guía de onboarding).
 2. **Clona el repo del proyecto** en una ruta **fuera de OneDrive**.
 3. **Clona el Vault** ({{VAULT_REPO}}) también fuera de OneDrive y conéctalo:
-   `npx souclaude upgrade --vault-path {{RUTA_VAULT}}`.
+   `npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path {{RUTA_VAULT}}`.
 4. **Añade a mano `"project"`** a `.claude/vault.local.json` (problema conocido
    de la fase 4: el CLI no lo escribe y el hook queda ciego en silencio si el
    Vault tiene más de un proyecto):
@@ -338,8 +338,6 @@ No uses este playbook: el flujo vive en la skill **`harness-upgrade`** y en el
 comando `souclaude upgrade` (con `souclaude status` para ver qué cambió antes).
 Regla de siempre: el upgrade va por rama + PR contra `dev`, como cualquier cambio.
 
-> Mientras el tag `v3` no esté publicado (problema 1), los upgrades llegan desde
-> la rama `dev`: anota el commit exacto en el mensaje, igual que en la fase 2.
 
 ---
 
@@ -420,7 +418,7 @@ Decisiones que el agente debe consultar, no resolver solo:
 
 Cuatro cosas que van a repetirse en cada proyecto hasta que se arreglen en origen:
 
-1. **El tag `v3` no existe.** El comando de instalación del README falla tal cual está escrito. *(Pendiente a propósito: el tag se publica cuando todo esté listo.)*
+1. ~~**El tag `v3` no existe.**~~ **Resuelto**: el tag móvil `v3` está publicado y el comando de instalación del README funciona tal cual.
 2. **`upgrade --vault-path` no escribe el campo `project`.** El hook queda ciego en silencio en cuanto el Vault tiene más de un proyecto.
 3. **`CODEOWNERS` referencia equipos `@org-soutec/...`**, que solo existen en organizaciones de GitHub. En una cuenta personal nunca resuelven: la aprobación obligatoria **no se aplica y no avisa**. Sumado a la falta de branch protection, la regla de "el coordinador mergea" queda sin respaldo técnico. *(En camino: la organización va a incorporar seguridad en los repos vía cuentas de equipo de GitHub — al migrar, los equipos de CODEOWNERS resuelven y este problema y su raíz desaparecen.)*
 4. ~~**El prefijo `SHS` no está en `id-registry.md`**~~ **Resuelto** (20-ago-2026): registrado en el Vault.
