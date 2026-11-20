@@ -560,7 +560,11 @@ function evaluar(values) {
 
   const resultados = []
   if (values.grupo === 'rama-commits') {
-    resultados.push(evaluaRama(rama, pr?.baseRefName ?? null))
+    // La base sale de contextoDelCheck y no solo del PR: el workflow de CI corre
+    // este grupo sin --pr y le pasa la base por GITHUB_BASE_REF. Mirando solo el
+    // PR, la base llegaba vacia y la excepcion del release (dev -> main) nunca
+    // aplicaba: este check salia rojo en todo PR de release.
+    resultados.push(evaluaRama(rama, base))
     resultados.push(...(cabeza ? evaluaCommits(commitsDeLaRama(baseLocal, cabeza)) : [sinCabeza('commits-formato')]))
   }
   if (values.grupo === 'secretos') {

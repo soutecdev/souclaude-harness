@@ -237,6 +237,13 @@ completa (SHS-M49) y la instalación para varias herramientas de IA (SHS-M48).
 
 ### Corregido
 
+- **El check `reglas-rama-commits` ya no sale rojo en el PR de release** (SHS-M50). El
+  workflow de CI corre ese grupo sin `--pr` y pasa la base por `GITHUB_BASE_REF`, pero
+  `check-pr-rules.mjs` solo miraba la base del PR: la excepción del release
+  `dev` → `main` nunca aplicaba y el check fallaba en todos los releases. Ahora
+  toma la base del contexto del check. De paso, en CI también se detecta un PR a
+  `main` que no venga de `dev`.
+
 - **«Un archivo tuyo nunca se sobrescribe en silencio» ahora vale también si el
   archivo no se puede leer.** Un error de lectura (archivo abierto por otro programa,
   retenido por el antivirus, placeholder de OneDrive sin conexión) se trataba como
