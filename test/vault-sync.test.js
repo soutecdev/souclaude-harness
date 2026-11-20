@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { pullRebaseSeguro, pushSeguro } from '../src/core/vault-sync.js'
+import { pullRebaseSeguro, pushSeguro, entornoGit, PLAZO_GIT_MS } from '../src/core/vault-sync.js'
 import { vaultSync } from '../src/commands/vault-sync.js'
 import { main } from '../src/cli.js'
 import { mkRepo, write } from './helpers.js'
@@ -224,4 +224,17 @@ test('vault-sync --status: exit 0 y consulta el working tree del Vault', async (
 test('cli: main reconoce vault-sync como comando (exit 3 en un repo sin Vault)', async () => {
   const code = await main(['vault-sync'], mkRepo())
   assert.equal(code, 3)
+})
+
+// El git del Vault corre desatendido casi siempre (agente sin TTY, monitor con
+// el panel en modo raw): ahi no puede quedarse esperando credenciales, y en
+// ningun caso puede colgarse sin plazo.
+test('entornoGit: sin prompts cuando nadie puede contestarlos; una persona en su terminal los conserva', () => {
+  const env = { PATH: '/bin', OTRA: '1' }
+  assert.equal(entornoGit({ isTTY: false }, env).GIT_TERMINAL_PROMPT, '0', 'agente / tuberia')
+  assert.equal(entornoGit(undefined, env).GIT_TERMINAL_PROMPT, '0', 'sin stdin')
+  assert.equal(entornoGit({ isTTY: true, isRaw: true }, env).GIT_TERMINAL_PROMPT, '0', 'panel en vivo del monitor')
+  assert.equal(entornoGit({ isTTY: true, isRaw: false }, env), env, 'terminal interactiva: el entorno no se toca')
+  assert.equal(entornoGit({ isTTY: false }, env).PATH, '/bin', 'el resto del entorno se conserva')
+  assert.ok(PLAZO_GIT_MS >= 30_000 && PLAZO_GIT_MS <= 10 * 60_000, 'plazo razonable para un pull/push')
 })

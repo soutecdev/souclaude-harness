@@ -1,9 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { loadManifest } from '../src/core/manifest.js'
+import { loadManifest, TEMPLATES_DIR } from '../src/core/manifest.js'
 import { toPosix } from '../src/core/fsx.js'
+import { hashContent, hashBytes } from '../src/core/hash.js'
 
 // Este test responde una pregunta distinta a la de verify.test.js: no si el
 // manifest es internamente consistente, sino si ESTE repo (el generador,
@@ -42,4 +45,28 @@ test('dogfood: todo archivo de .claude/ del repo esta en el manifest o en LOCAL_
     [],
     `Archivo(s) bajo .claude/ sin entry en el manifest ni en LOCAL_ONLY: ${unrecognized.join(', ')}`
   )
+})
+
+// El test de arriba mira que cada archivo este DECLARADO; este mira que ademas
+// sea el MISMO. Los archivos `managed` sin render que este repo usa sobre si
+// mismo (hooks, scripts, workflows, skills) son copias de lo que distribuye: si
+// alguien corrige el hook en .claude/hooks/ y olvida templates/base/ (o al
+// reves), el generador corre con un codigo y los consumidores reciben otro, y
+// nada lo delataba. Se compara con el mismo hash que usa el motor (LF
+// normalizado; bytes crudos para los binarios).
+test('dogfood: los archivos managed de este repo son identicos a su template', () => {
+  const tracked = new Set(
+    execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' }).split('\n').filter(Boolean).map((rel) => toPosix(rel))
+  )
+  const distintos = []
+  for (const entry of loadManifest().files) {
+    if (entry.policy !== 'managed' || entry.render || !tracked.has(entry.dest)) continue
+    const propio = fs.readFileSync(path.join(REPO_ROOT, ...entry.dest.split('/')))
+    const template = fs.readFileSync(path.join(TEMPLATES_DIR, ...entry.src.split('/')))
+    const iguales = entry.binary
+      ? hashBytes(propio) === hashBytes(template)
+      : hashContent(propio.toString('utf8')) === hashContent(template.toString('utf8'))
+    if (!iguales) distintos.push(`${entry.dest} != templates/${entry.src}`)
+  }
+  assert.deepEqual(distintos, [], `Copias desincronizadas: ${distintos.join(', ')}`)
 })

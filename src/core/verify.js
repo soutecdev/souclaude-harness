@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { TEMPLATES_DIR } from './manifest.js'
-import { toPosix } from './fsx.js'
+import { toPosix, esDestSeguro } from './fsx.js'
 import { SIGNATURES } from './detect.js'
 import { MODOS } from './plan.js'
 
@@ -157,8 +157,71 @@ export function findMissingCriticalFiles(manifest, root = TEMPLATES_DIR) {
   return errors
 }
 
+export const POLITICAS = ['managed', 'user-owned', 'append-block', 'merge-json']
+
+// El contrato del manifest, entry por entry. No hay JSON Schema ni tipos: sin
+// esto, una policy mal tipeada caia al `default` de desiredContent (se trataba
+// como managed), un "modos" con un valor inexistente dejaba el archivo fuera de
+// TODOS los modos sin avisar, y un asset binario sin `binary: true` se leia como
+// utf8 y se instalaba corrupto. Se valida aca, que es lo que corre el CI.
+export function findInvalidEntries(manifest, root = TEMPLATES_DIR) {
+  const errors = []
+  const mal = (code, message) => errors.push({ type: ERROR, code, message })
+  const stacks = new Set(SIGNATURES.map((s) => s.stack))
+  const skills = manifest.skills ?? []
+  const idsDeSkills = new Set(skills.map((s) => s.id))
+  const modosValidos = (modos) => modos === undefined || (Array.isArray(modos) && modos.length > 0 && modos.every((m) => MODOS.includes(m)))
+
+  if (idsDeSkills.size !== skills.length) mal('duplicate-skill', 'manifest.skills[] tiene ids repetidos.')
+  for (const s of skills) {
+    if (typeof s.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(s.id)) mal('invalid-skill', `manifest.skills[]: id invalido (${JSON.stringify(s.id)}).`)
+    if (!modosValidos(s.modos)) mal('invalid-modos', `skill "${s.id}": "modos" debe ser una lista no vacia de ${MODOS.join(' | ')}.`)
+  }
+
+  for (const entry of manifest.files ?? []) {
+    const quien = `entry "${entry.id}"`
+    if (typeof entry.id !== 'string' || entry.id === '') mal('invalid-id', `manifest.files[]: entry sin id (dest ${JSON.stringify(entry.dest)}).`)
+    if (typeof entry.src !== 'string' || !esDestSeguro(entry.src)) mal('invalid-src', `${quien}: "src" debe ser una ruta relativa dentro de templates/ (${JSON.stringify(entry.src)}).`)
+    if (!esDestSeguro(entry.dest)) mal('invalid-dest', `${quien}: "dest" debe ser una ruta relativa dentro del repo destino (${JSON.stringify(entry.dest)}).`)
+    if (!POLITICAS.includes(entry.policy)) mal('invalid-policy', `${quien}: policy ${JSON.stringify(entry.policy)} no es una de ${POLITICAS.join(' | ')}.`)
+    if (!modosValidos(entry.modos)) mal('invalid-modos', `${quien}: "modos" debe ser una lista no vacia de ${MODOS.join(' | ')}.`)
+    if (entry.when !== undefined && entry.when !== 'empty-repo' && !(typeof entry.when === 'string' && entry.when.startsWith('stack:') && stacks.has(entry.when.slice('stack:'.length)))) {
+      mal('invalid-when', `${quien}: "when" ${JSON.stringify(entry.when)} no es "empty-repo" ni "stack:<${[...stacks].join('|')}>".`)
+    }
+    if (entry.skill !== undefined && !idsDeSkills.has(entry.skill)) mal('unknown-skill', `${quien}: la skill "${entry.skill}" no esta en manifest.skills[].`)
+    if (entry.binary && (entry.render || entry.policy !== 'managed')) mal('invalid-binary', `${quien}: un binario solo puede ser managed y sin render.`)
+
+    if (entry.policy === 'append-block' || typeof entry.src !== 'string' || !esDestSeguro(entry.src)) continue
+    let bytes
+    try {
+      bytes = fs.readFileSync(path.join(root, ...entry.src.split('/')))
+    } catch {
+      continue // el src ausente lo reporta findMissingSrcFiles
+    }
+    const texto = bytes.toString('utf8')
+    if (!entry.binary && (bytes.includes(0) || !Buffer.from(texto, 'utf8').equals(bytes))) {
+      mal('binary-sin-declarar', `${quien}: ${entry.src} no es texto utf8 y no lleva "binary": true; se instalaria corrupto.`)
+    }
+    if (entry.policy === 'merge-json') {
+      try {
+        JSON.parse(texto)
+      } catch (err) {
+        mal('invalid-json-seed', `${quien}: ${entry.src} no es JSON valido (${err.message}).`)
+      }
+    }
+  }
+
+  for (const d of manifest.dirs ?? []) if (!esDestSeguro(d.dest)) mal('invalid-dest', `manifest.dirs[]: dest invalido (${JSON.stringify(d.dest)}).`)
+  for (const o of manifest.obsolete ?? []) if (!esDestSeguro(o.dest)) mal('invalid-dest', `manifest.obsolete[]: dest invalido (${JSON.stringify(o.dest)}).`)
+  if (typeof manifest.harnessVersion !== 'string' || !/^\d+\.\d+\.\d+$/.test(manifest.harnessVersion)) {
+    mal('invalid-version', `manifest.harnessVersion debe ser X.Y.Z (${JSON.stringify(manifest.harnessVersion)}).`)
+  }
+  return errors
+}
+
 export function verifyManifest(manifest, root = TEMPLATES_DIR) {
   const errors = [
+    ...findInvalidEntries(manifest, root),
     ...findMissingSrcFiles(manifest, root),
     ...findDuplicateIds(manifest),
     ...findDuplicateDests(manifest),

@@ -21,6 +21,17 @@ export function harnessDocsUrl(rel) {
   return `${base}/blob/main/${rel}`
 }
 
+// Como invocar al instalador desde un repo consumidor: SIEMPRE con el repo de
+// GitHub y el tag movil de la serie, nunca `npx souclaude`. Fuera de este repo
+// npx busca ese nombre corto en el registro publico de npm, donde no es el del
+// harness (el paquete se llama souclaude-harness y no se publica) y esta libre:
+// quien lo registre ejecuta su codigo en la maquina de quien siga la instruccion.
+export function comandoNpx() {
+  const { repository, version } = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'))
+  const slug = repository.url.replace(/^git\+/, '').replace(/\.git$/, '').replace(/^https:\/\/github\.com\//, '')
+  return `npx github:${slug}#v${String(version).split('.')[0]}`
+}
+
 // La config del Vault es de MAQUINA, no de proyecto: la ruta local difiere en
 // cada equipo. Por eso no va al lockfile (.claude/harness.json se commitea) ni
 // al .env (los agentes lo tienen denegado por permissions.deny en
@@ -256,7 +267,10 @@ function resolverPorRegistro(cwd, vaultPath, carpetas) {
 // maquinas a la vez -- en cuanto aparece el segundo. Lo retira T003, una vez que
 // la migracion de upgrade haya completado los vault.local.json viejos.
 export function carpetaProyecto(vaultPath, config) {
-  if (config?.project) return config.project
+  // `project` termina como segmento de ruta (sessions.md, tableros) y como
+  // argumento de `git add`: si no tiene la forma de una carpeta de proyecto
+  // (un "../algo", algo que empiece con "-"), es como si no estuviera declarado.
+  if (config?.project) return NOMBRE_PROYECTO.test(String(config.project)) ? config.project : null
   const carpetas = carpetasProyecto(vaultPath)
   return carpetas.length === 1 ? carpetas[0] : null
 }
@@ -298,7 +312,10 @@ export function vaultRemote(abs) {
 // llamador degrada a warning: el Vault nunca bloquea la instalacion.
 export function cloneVault(repo, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true })
-  git(['clone', repo, dest], { stdio: 'inherit' })
+  // "--": la URL sale de un flag, del manifest o de vars.VAULT_REPO del lockfile
+  // (que se commitea y llega por PR). Sin el separador, un valor que empiece con
+  // "-" (--upload-pack=..., --config=...) se leeria como opcion de git clone.
+  git(['clone', '--', repo, dest], { stdio: 'inherit' })
   return dest
 }
 
@@ -307,7 +324,7 @@ function manualHint(repo) {
     [
       'El repo quedo sin Vault conectado. Para conectarlo despues:',
       `    git clone ${repo} <ruta>`,
-      '    npx souclaude upgrade --vault-path <ruta>',
+      `    ${comandoNpx()} upgrade --vault-path <ruta>`,
       `Detalle en ${harnessDocsUrl('docs/vault-setup.md')}`,
     ].join('\n')
   )

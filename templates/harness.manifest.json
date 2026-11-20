@@ -1,5 +1,6 @@
 {
-  "harnessVersion": "3.18.1",
+  "$schema": "../schemas/harness.manifest.schema.json",
+  "harnessVersion": "3.20.0",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
@@ -23,6 +24,10 @@
     {
       "id": "security-report-standard",
       "label": "security-report-standard — estándar de informes de seguridad"
+    },
+    {
+      "id": "cloudflare-security-audit",
+      "label": "cloudflare-security-audit — auditoría de seguridad de Cloudflare (solo a pedido, con /cloudflare-security-audit)"
     },
     {
       "id": "soutec-md-a-pdf",
@@ -70,6 +75,39 @@
       "policy": "user-owned",
       "critical": true,
       "modos": ["solo"]
+    },
+    {
+      "id": "agents-md",
+      "src": "base/AGENTS.md",
+      "dest": "AGENTS.md",
+      "render": true,
+      "policy": "managed"
+    },
+    {
+      "id": "codex-hooks",
+      "src": "base/codex/hooks.json",
+      "dest": ".codex/hooks.json",
+      "policy": "merge-json",
+      "modos": ["equipo"]
+    },
+    {
+      "id": "codex-hooks-solo",
+      "src": "base/codex/hooks-solo.json",
+      "dest": ".codex/hooks.json",
+      "policy": "merge-json",
+      "modos": ["solo"]
+    },
+    {
+      "id": "antigravity-hooks",
+      "src": "base/agents/hooks.json",
+      "dest": ".agents/hooks.json",
+      "policy": "merge-json"
+    },
+    {
+      "id": "antigravity-hooks-adaptador",
+      "src": "base/agents/hooks/souclaude-antigravity.mjs",
+      "dest": ".agents/hooks/souclaude-antigravity.mjs",
+      "policy": "managed"
     },
     {
       "id": "notes",
@@ -240,6 +278,146 @@
       "skill": "security-report-standard"
     },
     {
+      "id": "skill-cloudflare-security-audit",
+      "src": "base/claude/skills/cloudflare-security-audit/SKILL.md",
+      "dest": ".claude/skills/cloudflare-security-audit/SKILL.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-ai-and-llm-md",
+      "src": "base/claude/skills/cloudflare-security-audit/AI-AND-LLM.md",
+      "dest": ".claude/skills/cloudflare-security-audit/AI-AND-LLM.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-attack-classes-md",
+      "src": "base/claude/skills/cloudflare-security-audit/ATTACK-CLASSES.md",
+      "dest": ".claude/skills/cloudflare-security-audit/ATTACK-CLASSES.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-client-side-md",
+      "src": "base/claude/skills/cloudflare-security-audit/CLIENT-SIDE.md",
+      "dest": ".claude/skills/cloudflare-security-audit/CLIENT-SIDE.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-cloud-and-deployment-md",
+      "src": "base/claude/skills/cloudflare-security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "dest": ".claude/skills/cloudflare-security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-data-isolation-and-lifecycle-md",
+      "src": "base/claude/skills/cloudflare-security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "dest": ".claude/skills/cloudflare-security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-desktop-mobile-and-local-ipc-md",
+      "src": "base/claude/skills/cloudflare-security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "dest": ".claude/skills/cloudflare-security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-hunting-md",
+      "src": "base/claude/skills/cloudflare-security-audit/HUNTING.md",
+      "dest": ".claude/skills/cloudflare-security-audit/HUNTING.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-license",
+      "src": "base/claude/skills/cloudflare-security-audit/LICENSE",
+      "dest": ".claude/skills/cloudflare-security-audit/LICENSE",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-memory-safety-and-binary-md",
+      "src": "base/claude/skills/cloudflare-security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "dest": ".claude/skills/cloudflare-security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-origen-md",
+      "src": "base/claude/skills/cloudflare-security-audit/ORIGEN.md",
+      "dest": ".claude/skills/cloudflare-security-audit/ORIGEN.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-protocols-rpc-and-messaging-md",
+      "src": "base/claude/skills/cloudflare-security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "dest": ".claude/skills/cloudflare-security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-reconnaissance-md",
+      "src": "base/claude/skills/cloudflare-security-audit/RECONNAISSANCE.md",
+      "dest": ".claude/skills/cloudflare-security-audit/RECONNAISSANCE.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-report-schema-json",
+      "src": "base/claude/skills/cloudflare-security-audit/report-schema.json",
+      "dest": ".claude/skills/cloudflare-security-audit/report-schema.json",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-resource-exhaustion-and-availability-md",
+      "src": "base/claude/skills/cloudflare-security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "dest": ".claude/skills/cloudflare-security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-supply-chain-and-release-md",
+      "src": "base/claude/skills/cloudflare-security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "dest": ".claude/skills/cloudflare-security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-validate-coverage-ledger-cjs",
+      "src": "base/claude/skills/cloudflare-security-audit/validate-coverage-ledger.cjs",
+      "dest": ".claude/skills/cloudflare-security-audit/validate-coverage-ledger.cjs",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-validate-findings-cjs",
+      "src": "base/claude/skills/cloudflare-security-audit/validate-findings.cjs",
+      "dest": ".claude/skills/cloudflare-security-audit/validate-findings.cjs",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-validation-and-reporting-md",
+      "src": "base/claude/skills/cloudflare-security-audit/VALIDATION-AND-REPORTING.md",
+      "dest": ".claude/skills/cloudflare-security-audit/VALIDATION-AND-REPORTING.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
+      "id": "skill-cloudflare-security-audit-web-protocol-and-auth-md",
+      "src": "base/claude/skills/cloudflare-security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "dest": ".claude/skills/cloudflare-security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "policy": "managed",
+      "skill": "cloudflare-security-audit"
+    },
+    {
       "id": "skill-soutec-md-a-pdf",
       "src": "base/claude/skills/soutec-md-a-pdf/SKILL.md",
       "dest": ".claude/skills/soutec-md-a-pdf/SKILL.md",
@@ -278,6 +456,13 @@
       "id": "skill-soutec-md-a-pdf-launcher",
       "src": "base/claude/skills/soutec-md-a-pdf/scripts/md_to_soutec.py",
       "dest": ".claude/skills/soutec-md-a-pdf/scripts/md_to_soutec.py",
+      "policy": "managed",
+      "skill": "soutec-md-a-pdf"
+    },
+    {
+      "id": "skill-soutec-md-a-pdf-requirements",
+      "src": "base/claude/skills/soutec-md-a-pdf/requirements.txt",
+      "dest": ".claude/skills/soutec-md-a-pdf/requirements.txt",
       "policy": "managed",
       "skill": "soutec-md-a-pdf"
     },
@@ -414,10 +599,6 @@
     {
       "dest": ".claudeignore",
       "reason": "Claude Code nunca soporto .claudeignore: el archivo se ignora en silencio. La exclusion real se configura en permissions.deny de .claude/settings.json, que este harness ya emite."
-    },
-    {
-      "dest": "AGENTS.md",
-      "reason": "El harness 3.0 elimino el flujo SDD/CCEM con agentes: el modelo trabaja sin orquestacion fija."
     },
     {
       "dest": ".claude/agents/orchestrator.md",

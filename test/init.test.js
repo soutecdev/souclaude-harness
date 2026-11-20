@@ -16,6 +16,7 @@ const SKILLS = [
   'soutec-github',
   'it-security-review',
   'security-report-standard',
+  'cloudflare-security-audit',
   'soutec-md-a-pdf',
   'adr-new',
   'harness-upgrade',
@@ -42,13 +43,17 @@ test('init en repo vacio: emite el harness completo + scaffolding', async () => 
   }
   // Los archivos extra de las skills con mas de un archivo.
   assert.ok(files.includes('.claude/skills/it-security-review/report-template.md'))
+  assert.ok(files.includes('.claude/skills/cloudflare-security-audit/LICENSE'))
+  assert.ok(files.includes('.claude/skills/cloudflare-security-audit/validate-findings.cjs'))
   assert.ok(files.includes('.claude/skills/soutec-md-a-pdf/assets/soutec_logo.png'))
   assert.ok(files.includes('docs/decisions/_template.md'))
 
   // El flujo SDD/CCEM ya no existe: ni agentes, ni constitucion, ni specs.
   assert.ok(!files.some((f) => f.startsWith('.claude/agents/')), 'se emitio un agente')
   assert.ok(!files.some((f) => f.startsWith('specs/')), 'se emitio specs/')
-  assert.ok(!files.includes('AGENTS.md'))
+  // AGENTS.md volvio en SHS-M48, pero como puntero a CLAUDE.md para Codex y
+  // Antigravity, no como el orquestador del flujo SDD.
+  assert.ok(files.includes('AGENTS.md'))
   assert.ok(!files.includes('docs/constitution.md'))
 
   // Scaffolding: solo porque el repo estaba vacio.
@@ -124,6 +129,7 @@ test('--skills: instala solo lo elegido, pero soutec-github entra siempre', asyn
   // Las no elegidas no se emiten.
   assert.ok(!files.includes('.claude/skills/soutec-md-a-pdf/SKILL.md'))
   assert.ok(!files.includes('.claude/skills/it-security-review/SKILL.md'))
+  assert.ok(!files.some((f) => f.startsWith('.claude/skills/cloudflare-security-audit/')))
   assert.ok(!files.includes('.claude/skills/harness-upgrade/SKILL.md'))
 
   // La seleccion queda en el lockfile, y el upgrade la respeta sin re-preguntar.

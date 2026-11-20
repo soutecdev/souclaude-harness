@@ -9,7 +9,7 @@
 
 | Opción | Cuándo | Trade-off |
 |---|---|---|
-| **Repo git** (recomendado) | Varias personas y agentes escribiendo | Historial, PRs para lo estratégico, sin conflictos silenciosos. Es lo que asume la §7 de la guía. |
+| **Repo git** (recomendado) | Varias personas y agentes escribiendo | Historial y sin conflictos silenciosos; lo estratégico se cuida por convención (§4), no por PR. Es lo que asume la §7 de la guía. |
 | Carpeta sincronizada (OneDrive/SharePoint) | Una sola persona, arranque rápido | Sin historial ni PRs; convención manual para evitar pisar archivos. Migrable a git después. |
 
 Este runbook cubre el camino **repo git**. Si arrancas con carpeta, salta la §1 y usa la
@@ -24,7 +24,7 @@ carpeta directamente como base del §2.
 > git clone https://github.com/soutecdev/soubunker-vault.git
 > ```
 >
-> Y ni eso hace falta a mano: `npx souclaude` en cualquier repo de proyecto pregunta si lo
+> Y ni eso hace falta a mano: `npx github:soutecdev/souclaude-harness#v3` en cualquier repo de proyecto pregunta si lo
 > tienes y lo clona por ti (§4). El resto de esta sección es **la creación desde cero**, que
 > ya se hizo una vez y se conserva como referencia.
 
@@ -121,8 +121,9 @@ kanban-plugin: board
 EOF
 ```
 
-Repite por cada prefijo de `id-registry.md`. Los `roca_*.yaml` **no** se crean a mano:
-nacen en la próxima `/rock-plan`.
+Repite por cada prefijo de `id-registry.md`. Los `roca_*.yaml` no los crea ni los escribe
+el harness: los comandos `/rock-*` se eliminaron en la 3.0.0, y si el equipo mantiene la
+capa de rocas la opera una persona (ver `vault-guide.md`).
 
 ## 3. Conectar con Obsidian
 
@@ -139,8 +140,9 @@ carpeta `Vault/` que acabas de clonar. No hay import ni sync propietario.
    activo se renderiza como tablero; sin él, se ve como Markdown plano (las columnas son
    `## Backlog`, `## En curso`, `## En review`, `## Hecho`).
 4. **Opcional — Git dentro de Obsidian**: plugin **Obsidian Git** para hacer
-   pull/commit/push sin salir de la app. Útil para los dueños de roca que no viven en la
-   terminal. La regla de `main` protegido sigue aplicando: lo estratégico va por PR.
+   pull/commit/push sin salir de la app. Útil para quien no vive en la terminal. El `main`
+   del Vault se escribe por push directo, sin PR ni protección de rama (§4): antes de
+   escribir, `git pull --rebase`.
 
 **Importante**: Obsidian y git son capas independientes sobre la misma carpeta. Obsidian
 edita archivos; git los versiona. No hay conflicto entre ambos mientras respetes la
@@ -148,7 +150,7 @@ partición por proyecto de la §7 de la guía.
 
 ## 4. Conectar cada repo de código al Vault
 
-**Lo hace el instalador.** Al correr `npx souclaude` (harness ≥ 2.3.0) en un repo de
+**Lo hace el instalador.** Al correr `npx github:soutecdev/souclaude-harness#v3` (harness ≥ 2.3.0) en un repo de
 proyecto, después de aplicar el plan aparece el paso del Vault:
 
 1. *¿Tienes el Vault clonado en esta máquina?*
@@ -160,9 +162,9 @@ proyecto, después de aplicar el plan aparece el paso del Vault:
 Sin modo interactivo:
 
 ```powershell
-npx souclaude upgrade --vault-path "C:/ruta/a/soubunker-vault"
-npx souclaude init --no-vault          # omitir el paso por completo
-npx souclaude init --vault-repo <url>  # clonar otro repo (casos raros)
+npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path "C:/ruta/a/soubunker-vault"
+npx github:soutecdev/souclaude-harness#v3 init --no-vault          # omitir el paso por completo
+npx github:soutecdev/souclaude-harness#v3 init --vault-repo <url>  # clonar otro repo (casos raros)
 ```
 
 Con `--yes` o en CI el paso **nunca clona**: solo usa `--vault-path` si se lo pasas. Si no
@@ -196,13 +198,13 @@ un PR.
 
 ## 5. Checklist final
 
-- [ ] `Vault/` es un repo git aparte, con `main` protegido para lo estratégico.
+- [ ] `Vault/` es un repo git aparte; su `main` se escribe por push directo, sin PR ni protección de rama (lo estratégico se cuida por convención, §4).
 - [ ] `00-System/` tiene `id-registry.md` (prefijos con dueño), `metodologia-roca.md` y
       `templates/plantilla_apertura_roca.yaml`.
 - [ ] Una `Project-<PREFIJO>/` por proyecto activo, cada una con `kanban.md` semilla.
 - [ ] `.gitignore` ignora el estado local de Obsidian, versiona el resto de `.obsidian/`.
 - [ ] Obsidian abre la carpeta como vault y el plugin **Kanban** está habilitado.
-- [ ] Cada repo de código corrió `npx souclaude` y tiene su `.claude/vault.local.json`.
+- [ ] Cada repo de código corrió `npx github:soutecdev/souclaude-harness#v3` y tiene su `.claude/vault.local.json`.
 - [ ] El `main` del Vault **no** exige revisión: los agentes pushean directo (§4).
 - [ ] Regla de oro anunciada: **sin milestone del Vault no hay rama, y una rama por
       milestone** (las tareas son commits en esa rama, no ramas propias).

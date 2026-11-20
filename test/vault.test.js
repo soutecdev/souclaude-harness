@@ -853,6 +853,16 @@ test('upgrade repetido sobre un proyecto ya completo no vuelve a escribir ni pus
 // escribir sessions.md (src/commands/monitor.js:220). Estos dos casos son el
 // escenario que rompio en silencio desde el 2026-08-19.
 
+test('carpetaProyecto: un project que no es una carpeta Project-<PREFIJO> es como no declarado', () => {
+  const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude vault '))
+  fs.mkdirSync(path.join(vault, 'Project-SHS'))
+  fs.mkdirSync(path.join(vault, 'Project-RAM'))
+  for (const malo of ['../afuera', '/etc', 'Project-SHS/../../x', '--pathspec-from-file=x', 'Project SHS', '-x']) {
+    assert.equal(carpetaProyecto(vault, { project: malo }), null, malo)
+  }
+  assert.equal(carpetaProyecto(vault, { project: 'Project-RAM' }), 'Project-RAM')
+})
+
 test('carpetaProyecto: con project declarado y varias carpetas devuelve la declarada', () => {
   const vault = mkVault(['Project-CSC', 'Project-OBS', 'Project-SHS'])
 

@@ -12,9 +12,23 @@ import { execFile } from 'node:child_process'
 //   (todo OneDrive) no son un problema y no hay inyeccion posible.
 // - Nada de aca lanza: los llamadores deciden con { ok, motivo }.
 
+// Plazo, y sin prompts cuando nadie puede contestarlos. Este git corre casi
+// siempre desatendido: el agente via `souclaude vault-sync` (sin TTY) o el
+// monitor publicando en segundo plano (TTY en modo raw, con el panel pintado).
+// Sin plazo, un pull esperando credenciales o una red muerta colgaba el comando
+// -- y la publicacion del monitor -- para siempre; con plazo falla y el llamador
+// responde pull_fallo / push_fallo, que son reintentables. Una persona en una
+// terminal normal conserva el prompt de credenciales.
+export const PLAZO_GIT_MS = 120_000
+
+export function entornoGit(stdin = process.stdin, env = process.env) {
+  const alguienPuedeContestar = stdin?.isTTY === true && stdin.isRaw !== true
+  return alguienPuedeContestar ? env : { ...env, GIT_TERMINAL_PROMPT: '0' }
+}
+
 export function gitReal(args) {
   return new Promise((resolve, reject) => {
-    execFile('git', args, { encoding: 'utf8', windowsHide: true }, (err, stdout) => {
+    execFile('git', args, { encoding: 'utf8', windowsHide: true, timeout: PLAZO_GIT_MS, env: entornoGit() }, (err, stdout) => {
       if (err) reject(err)
       else resolve(stdout)
     })

@@ -18,6 +18,17 @@ if (!process.env.SOUCLAUDE_CLAUDE_HOME) {
   process.env.SOUCLAUDE_CLAUDE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
 }
 
+// Los tests que corren init/upgrade en proceso llegan a githubProtectionStep, que
+// lanza `gh auth status` de verdad: con la sesion de gh del dev eso eran
+// credenciales reales y una llamada de red en cada test (103 invocaciones, la
+// mayor parte del tiempo de la suite). Con un GH_CONFIG_DIR vacio y sin tokens en
+// el entorno, gh responde "sin sesion" al instante, no sale a internet y la
+// proteccion de main se omite igual que en una maquina sin gh configurado.
+process.env.GH_CONFIG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude gh '))
+for (const token of ['GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN']) {
+  delete process.env[token]
+}
+
 // El directorio temporal lleva un espacio a proposito: el repo real del usuario vive
 // en "...\Soutec Ignacio Alvarez\..." bajo OneDrive. Si el CLI se rompe con espacios
 // en la ruta, se tiene que romper acá y no en la máquina de un dev.

@@ -11,6 +11,38 @@ export function readIfExists(abs) {
   }
 }
 
+// Lectura para el MOTOR DE PLAN: distingue "no existe" de "existe y no se pudo
+// leer". readIfExists trata cualquier fallo como ausencia, y eso esta bien para
+// config opcional; para clasificar un archivo del usuario, no. Un archivo que
+// existe pero no se deja leer (abierto por otro programa, retenido por el
+// antivirus, placeholder de OneDrive sin conexion, permisos) se clasificaba como
+// `create` y el motor escribia encima: sin .new y sin backup, justo lo que la
+// garantia del harness promete que nunca pasa. Aca solo ENOENT/ENOTDIR son
+// "ausente"; cualquier otro error corta el plan ANTES de escribir un byte.
+export function leerParaElPlan(abs, dest, { binario = false } = {}) {
+  try {
+    return binario ? fs.readFileSync(abs) : fs.readFileSync(abs, 'utf8')
+  } catch (err) {
+    if (err?.code === 'ENOENT' || err?.code === 'ENOTDIR') return null
+    throw new Error(
+      `No se pudo leer ${dest} (${err?.code ?? err?.message ?? 'error desconocido'}): existe, pero no se deja leer ` +
+        '(¿abierto en otro programa, retenido por el antivirus, pendiente de descarga en OneDrive, o es una carpeta?). ' +
+        'No se escribio nada. Cierralo o espera a que sincronice y vuelve a correr el comando.'
+    )
+  }
+}
+
+// Un `dest` del manifest o una clave del lockfile es siempre una ruta POSIX
+// relativa DENTRO del repo. El lockfile se commitea y llega por PR como cualquier
+// otro archivo: una clave "../algo" hacia que --prune borrara, y el motor
+// escribiera, fuera del repo. Nada con forma de ruta absoluta, de unidad de
+// Windows o con segmentos `..` / `.` / vacios pasa de aca.
+export function esDestSeguro(dest) {
+  if (typeof dest !== 'string' || dest === '' || dest.includes('\0')) return false
+  if (/^[\\/]/.test(dest) || /^[A-Za-z]:/.test(dest)) return false
+  return !dest.split(/[\\/]/).some((seg) => seg === '' || seg === '.' || seg === '..')
+}
+
 export function exists(abs) {
   try {
     fs.accessSync(abs)

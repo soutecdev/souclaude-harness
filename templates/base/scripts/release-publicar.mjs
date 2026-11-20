@@ -19,7 +19,8 @@
 //   hito:   `- AAAA-MM-DD · vX.Y.Z - <titulo> · <descripcion>` (descripcion <= 300 caracteres)
 
 import { execFileSync } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
+import { realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
 export const MAX_PALABRAS_TITULO = 6
@@ -198,8 +199,25 @@ function main() {
   if (hito) console.log(`hito: ${hito}`)
 }
 
-// Solo como ejecutable: al importarse desde los tests no corre nada.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Solo como ejecutable: al importarse desde los tests no corre nada. Se comparan
+// rutas REALES (Node resuelve los enlaces simbolicos del script de entrada): con
+// la comparacion directa de import.meta.url contra process.argv[1], invocar el
+// script por una ruta con un enlace (symlink, junction, /tmp en macOS) lo dejaba
+// sin hacer nada y con exit 0 -- un check "en verde" que nunca corrio.
+function esPuntoDeEntrada(urlDelModulo) {
+  if (!process.argv[1]) return false
+  const real = (ruta) => {
+    try {
+      return realpathSync.native(ruta)
+    } catch {
+      return ruta
+    }
+  }
+  const [modulo, entrada] = [real(fileURLToPath(urlDelModulo)), real(process.argv[1])]
+  return process.platform === 'win32' ? modulo.toLowerCase() === entrada.toLowerCase() : modulo === entrada
+}
+
+if (esPuntoDeEntrada(import.meta.url)) {
   try {
     main()
   } catch (e) {

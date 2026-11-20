@@ -66,7 +66,7 @@ export async function confirm({ message, initialValue = false, yes }) {
 export async function confirmDestructive({ message, word }) {
   if (isCI()) return false
   const answer = await guard(
-    await p.text({ message: `${message}\n  Escribi ${pc.bold(word)} para confirmar (cualquier otra cosa cancela):` })
+    await p.text({ message: `${message}\n  Escribe ${pc.bold(word)} para confirmar (cualquier otra cosa cancela):` })
   )
   return String(answer).trim() === word
 }

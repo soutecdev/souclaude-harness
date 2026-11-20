@@ -16,7 +16,7 @@ npm test             # node:test, sin dependencias de testing
 node bin/cli.mjs init --dry-run --yes   # probar sin escribir nada
 ```
 
-Requisitos: **Node ≥ 20** y git. No hay build step: el código que editas es el que se
+Requisitos: **Node ≥ 22.4** (el equipo trabaja con 24, ver `.nvmrc`) y git. No hay build step: el código que editas es el que se
 publica.
 
 ---
@@ -30,7 +30,7 @@ src/
   ui.js                  prompts (clack); respeta --yes / CI=true
   commands/
     _shared.js           resolveVars() + planAndApply() -- el flujo común
-    init · upgrade · status · adopt
+    init · upgrade · status · adopt · verify · monitor · vault-sync
   core/
     manifest.js          carga templates/harness.manifest.json
     detect.js            detecta el stack del repo host + su enforcer
@@ -41,11 +41,19 @@ src/
     lockfile.js          lee/escribe .claude/harness.json
     plan.js  ◄           EL MOTOR: clasifica cada archivo (la tabla)
     apply.js             ejecuta el plan (write guard + backup)
+    fsx.js               lectura/escritura; esDestSeguro (nada sale del repo)
+    verify.js            contrato del manifest + huerfanos (souclaude verify)
+    vault.js · vault-sync.js · vault-seeds.js   conexion y espejo del Vault
+    github-protect.js    proteccion de main via gh
+    cli-global.js · version-remota.js · novedades.js   CLI global y avisos
+  monitor/               panel de tokens (domain · application · adapters)
   migrations/index.js    transforms mecánicos versionados
 templates/
   harness.manifest.json  ◄ qué archivos se emiten y con qué política
   base/                  el harness tal cual (con {{VARS}})
   fragments/gitignore/   fragmentos por stack
+scripts/                 check-pr-rules · tag-release · release-publicar ·
+                         gen-docs-metodologia (los tres primeros se distribuyen)
 test/                    node:test + helpers
 ```
 
@@ -61,32 +69,36 @@ edita `templates/` y, si hace falta, una línea en el manifest.
 Editas `templates/base/<ruta>` y listo. El efecto en repos ya instalados depende de la
 **política** del archivo (ver [Cómo funciona](#cómo-funciona-por-detrás)):
 
-- **`managed`** (skills, comandos, templates SDD): el `upgrade` lo sobrescribe solo si el
+- **`managed`** (skills, hooks, workflows, scripts): el `upgrade` lo sobrescribe solo si el
   usuario no lo tocó. Es lo normal para todo lo que el harness "posee".
-- **`user-owned`** (`CLAUDE.md`, constitución, `notes.md`, PR template, CODEOWNERS): en un
-  repo ya instalado **no se pisa**; el dev recibe un `.new`. Cámbialo sabiendo eso.
+- **`user-owned`** (`CLAUDE.md`, `notes.md`, PR template, CODEOWNERS, `jira.json`,
+  `azdo.json`): mientras siga intacto se actualiza igual que un `managed`; en cuanto el
+  dev lo edita (lo habitual) **no se pisa** y recibe un `.new`. Cámbialo sabiendo eso:
+  para que una corrección llegue a un archivo ya editado hace falta una migración.
 
-Después: `npm test`, y **subí la versión** (receta 6) para que `status` marque el upgrade.
+Después: `npm test`, y **sube la versión** (receta 6) para que `status` marque el upgrade.
 
 ### 2. Agregar un archivo nuevo al harness
 
 1. Crea el template en `templates/base/<ruta>`. **Los dotfiles se guardan sin el punto**
    (`templates/base/gitignore`, no `.gitignore`) y el nombre real va en `dest`.
-2. Agregá una entrada en `templates/harness.manifest.json` → `files[]`:
+2. Agrega una entrada en `templates/harness.manifest.json` → `files[]` (la forma de cada entrada está en
+   `schemas/harness.manifest.schema.json`; el manifest lo declara en `$schema`, así que el
+   editor valida y autocompleta mientras escribes):
    ```json
    { "id": "mi-doc", "src": "base/docs/mi-doc.md", "dest": "docs/mi-doc.md",
      "render": true, "policy": "managed" }
    ```
    - `render: true` si el template usa `{{VARS}}`.
    - `when: "empty-repo"` si solo va en repos nuevos (como `src/`, `README.md`).
-3. Si usas una variable nueva (`{{FOO}}`), resolvela en `src/commands/_shared.js` →
+3. Si usas una variable nueva (`{{FOO}}`), resuélvela en `src/commands/_shared.js` →
    `resolveVars()`.
-4. Agregá o extendé un test en `test/`.
-5. Subí la versión (receta 6).
+4. Agrega o extiende un test en `test/`.
+5. Sube la versión (receta 6).
 
 ### 3. Agregar un stack o un fragmento de `.gitignore`
 
-- `src/core/detect.js` → `SIGNATURES`: agregá el stack (con su `enforcer` para P2).
+- `src/core/detect.js` → `SIGNATURES`: agrega el stack (con su `enforcer` para P2).
 - `templates/fragments/gitignore/<stack>.txt`: el fragmento. Se concatena con `base.txt`
   cuando ese stack se detecta.
 
@@ -103,7 +115,7 @@ Después: `npm test`, y **subí la versión** (receta 6) para que `status` marqu
 
 El seed-merge y el hash-diff **solo agregan / sobrescriben lo intacto**; no reescriben lo
 que el usuario editó. Para un cambio mecánico sobre lo que ya hay en disco (ej. remover
-una clave inválida), agregá una migración en `src/migrations/index.js`:
+una clave inválida), agrega una migración en `src/migrations/index.js`:
 
 ```js
 {
@@ -122,19 +134,22 @@ función chica. **Nada de un DSL de migraciones.**
 
 1. Sube `harnessVersion` en `templates/harness.manifest.json` (y `version` en
    `package.json`, se mueven juntas).
-2. Actualiza `CHANGELOG.md`.
-3. `npm test`.
+2. Actualiza `CHANGELOG.md`, regenera `docs/metodologia` con
+   `node scripts/gen-docs-metodologia.mjs` y sube la versión que citan `README.md`
+   y `CLAUDE.md`: `verify`, la suite y el hook `reglas-pr` fallan si quedan atrás.
+   Si agregaste una migración, ajusta su `to` a esta versión.
+3. `npm run check` (`verify --strict` + la suite).
 4. Release: **`main` solo recibe merges desde `dev`**. El trabajo entra a `dev` por PR
    de rama; el release es un PR de `dev` a `main` con la versión propuesta en el
    cuerpo.
-5. Tags — **los puede crear el agente**, después del merge del release a `main`. La
+5. Tags — **los crea `tag-release.yml`** al mergearse el release a `main`. La
    convención: un tag **inmutable** `vX.Y.Z` por release, y un tag **móvil por major**
    (`v1`, `v2`, `v3`) que apunta al último release de su serie. Un breaking sube el
    major y estrena su propio tag móvil; los tags móviles viejos quedan congelados en
    el último release de su serie, así ningún proyecto recibe un breaking sin pedirlo.
-   Con Actions en pausa (SHS-M36), `tag-release.yml` no se dispara: el agente corre
-   el mismo script, que lee la versión de `origin/main`, crea el tag anotado y mueve
-   el móvil (idempotente, sin cambiar de rama):
+   Si el workflow no corrió, el agente corre el mismo script, que lee la versión de
+   `origin/main`, crea el tag anotado y mueve el móvil (idempotente, sin cambiar de
+   rama):
    ```bash
    git fetch origin && node scripts/tag-release.mjs --ref origin/main
    ```
@@ -176,9 +191,9 @@ evita que `autocrlf` de git y los editores de Windows marquen todo como "modific
 | Política | Significado |
 |---|---|
 | `managed` | El harness manda. Se sobrescribe solo si el hash en disco coincide con el lockfile. |
-| `user-owned` | Se siembra una vez y **nunca más se toca**. Si el template cambió, se escribe `.new`. |
+| `user-owned` | Pensado para que el usuario lo edite. Intacto, se actualiza; una vez editado **nunca se pisa**: si el template cambió, se escribe `.new`. |
 | `append-block` | El harness es dueño de un bloque delimitado dentro del archivo (`.gitignore`). Tus líneas no se tocan. |
-| `merge-json` | Solo **agrega** claves que faltan (`settings.json`). Nunca pisa un valor que escribiste. |
+| `merge-json` | Solo **agrega** claves que faltan (`settings.json`). Nunca pisa un valor que escribiste. Al cambiar de modo retira lo que el harness sembró para el modo anterior (`retirarSemilla`). |
 
 ### La clasificación (`src/core/plan.js`)
 
@@ -198,8 +213,11 @@ Comparando disco × lockfile × template, cada archivo recibe un veredicto:
 
 ### La ejecución (`src/core/apply.js`)
 
-- **Write guard**: solo escribe lo que está en el plan que el usuario vio. Cualquier ruta
-  fuera del plan tira error. (Es la herramienta comiéndose su propio P10.)
+- **Write guard**: solo escribe lo que está en el plan que el usuario vio, y ninguna
+  ruta del plan ni del lockfile puede salir del repo (`esDestSeguro`): si alguna lo
+  intenta, no se aplica nada.
+- **Leer antes de decidir**: un archivo que existe pero no se puede leer corta el plan
+  antes de escribir; nunca se clasifica como ausente.
 - **Backup**: copia todo lo que va a sobrescribir a `.claude/backup-<timestamp>/` antes de
   tocarlo.
 - **Nunca pisa un archivo tuyo en silencio**: `conflict`/`foreign` van a `.new`;
@@ -227,6 +245,7 @@ Comparando disco × lockfile × template, cada archivo recibe un veredicto:
 ```bash
 npm test
 node --test "test/migrate.test.js"     # un archivo
+npm run test:cobertura                  # cobertura del código del repo; falla bajo el piso (Node >= 22.8)
 UPDATE_GOLDEN=1 npm test                # regenerar golden files (si los agregas)
 ```
 

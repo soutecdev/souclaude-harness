@@ -222,15 +222,13 @@ adaptas mejor que un template genérico.
    `base: main`, condicionado a `github.event.pull_request.merged == true`,
    usando el runtime del stack detectado (no `actions/setup-node` si el
    proyecto no es Node).
-   PAUSA TEMPORAL (SHS-M36): mientras GitHub Actions esté en pausa, genera el
-   workflow **pausado**, igual que los que distribuye el harness: solo
-   `on: workflow_dispatch:`, con el `on:` de arriba comentado justo encima y el
-   comentario `PAUSA TEMPORAL (SHS-M36)`. Hasta que vuelva, el tag lo crea el
-   agente corriendo el script del stack tras el merge de release (skill
-   `soutec-github`, "Versionamiento"). Al revertir la pausa, este workflow no lo
-   restaura `upgrade`: hay que descomentarlo a mano.
-5. **Nunca crea el GitHub Release**: eso lo sigue haciendo el coordinador a
-   mano, igual que en el resto de la organización.
+   Si un upgrade anterior dejó este workflow **pausado** (solo
+   `on: workflow_dispatch:` y el marcador `PAUSA TEMPORAL (SHS-M36)`), la pausa
+   ya se revirtió: descomenta su `on:` a mano, porque `upgrade` no restaura un
+   archivo que generaste tú.
+5. **El workflow no crea el GitHub Release** en stacks no Node
+   (`release-publicar.mjs` solo se distribuye con Node): lo cierra el agente con
+   "Cierre del release" de la skill `soutec-github`.
 
 Usa `scripts/tag-release.mjs` y `.github/workflows/tag-release.yml` (el ejemplo
 Node del propio harness) como referencia del contrato, no como plantilla a

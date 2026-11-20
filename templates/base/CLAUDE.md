@@ -9,12 +9,14 @@ Dominio: [describir en 1-2 líneas qué hace este proyecto].
 
 Harness `{{HARNESS_VERSION}}`. Sin agentes ni flujos fijos: el modelo trabaja
 directo. Las skills viven en `.claude/skills/` y se aplican solas cuando el
-contexto lo amerita (se eligen al instalar con `npx souclaude`; `soutec-github`
+contexto lo amerita (se eligen al instalar el harness; `soutec-github`
 es obligatoria y siempre está):
 
 - `soutec-github` — flujo Git/GitHub obligatorio de SOUTEC.
 - `it-security-review` — security review para IT (si está instalada).
 - `security-report-standard` — estándar de informes de seguridad (si está instalada).
+- `cloudflare-security-audit` — auditoría de seguridad de Cloudflare; solo a pedido,
+  con `/cloudflare-security-audit` (si está instalada).
 - `soutec-md-a-pdf` — Markdown a PDF con identidad Soutec (si está instalada).
 - `adr-new` — documentar decisiones con ADRs (si está instalada).
 - `harness-upgrade` — actualizar el harness (si está instalada).
@@ -48,9 +50,9 @@ por PR.
 - Sincronizar la rama: `git fetch origin && git merge origin/dev`. **Nunca
   `git push --force`.**
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
-  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
-  publicar y después del merge de release `dev` → `main`: mientras GitHub Actions
-  esté en pausa (SHS-M36), con `git fetch origin && node scripts/tag-release.mjs
+  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) los crea el workflow
+  `tag-release.yml` al mergearse el release `dev` → `main`; si no corrió o el repo
+  no lo tiene, los creo yo con `git fetch origin && node scripts/tag-release.mjs
   --ref origin/main`.
 - **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
   quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
@@ -59,7 +61,7 @@ por PR.
   push a la rama y reportar.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
-- **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
+- **Checks de PR en la sesión** (además de los workflows `reglas-*` de CI): el hook `reglas-pr` de
   Claude Code deniega el `git push` que toca `main` de cualquier repo que no sea el
   Vault (SHS-M42) o que sube archivos de secretos y, al crear o editar el PR con
   `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs` y publica el
@@ -96,7 +98,7 @@ trabajo local sigue.
 `jira-sync`): mismo criterio, con Azure DevOps Boards como destino en lugar de
 Jira.
 
-La ruta local del Vault está en `.claude/vault.local.json` (la escribe `npx souclaude`).
+La ruta local del Vault está en `.claude/vault.local.json` (la escribe el instalador).
 Antes de empezar a trabajar: `souclaude vault-sync` y lee
 `Project-<PREFIJO>/milestones.md` y `kanban.md`. Si el milestone o la tarea ya está
 **En curso** con otro dueño u otra máquina: **para y pregunta**. Al tomar o cerrar

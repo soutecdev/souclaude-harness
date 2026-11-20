@@ -946,7 +946,7 @@ const slides = [
       { type: 'spacer', h: 16 },
       {
         type: 'bullets', items: [
-          '`npx souclaude monitor` abre el panel en vivo; `--usage` da el informe completo con filtros por proyecto, contribuyente y cuenta.',
+          '`souclaude monitor` abre el panel en vivo; `--usage` da el informe completo con filtros por proyecto, contribuyente y cuenta.',
           'Con el panel abierto, **cada sesión publica sola su línea** en `sessions.md` y la actualiza mientras sigue viva.',
           'Una línea que editaste a mano *nunca se pisa*: el monitor solo actualiza la que escribió él, byte a byte.'
         ]

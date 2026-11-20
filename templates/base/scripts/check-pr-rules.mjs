@@ -6,17 +6,22 @@
 // este script): #7 no esta documentada en el skill, #10 no aplica a este repo.
 //
 // Las 7 reglas se agrupan en tres --grupo (SHS-M33): un fallo de formato de
-// commit no debe verse igual de grave que un secreto filtrado. Mientras GitHub
-// Actions esta en pausa (SHS-M36) no las corre CI: las corre el hook de Claude
-// Code reglas-pr (.claude/hooks/reglas-pr.mjs, SHS-M39) en la sesion del
-// agente. "Bloqueante" = el hook deniega el push o le devuelve el FAIL al
-// agente (y, con Actions activo, github-protect.js lo exige como check
-// requerido); "informativo" = se reporta, pero no frena nada.
+// commit no debe verse igual de grave que un secreto filtrado. Las corren los
+// workflows reglas-*.yml en CI y, antes, el hook de Claude Code reglas-pr
+// (.claude/hooks/reglas-pr.mjs, SHS-M39) en la sesion del agente.
+// "Bloqueante" = el hook deniega el push o le devuelve el FAIL al agente, y
+// github-protect.js lo exige como check requerido de main; "informativo" = se
+// reporta, pero no frena nada.
 //
 //   rama-commits  -> #1 rama-formato, #2 commits-formato          (informativo)
 //   secretos      -> #3 sin-secretos                              (bloqueante)
 //   pr-metadata   -> #5 base=dev, #6 mergeable, #8 version,
 //                    #9 secciones-PR                              (bloqueante)
+//
+// Ademas, dos AVISOS que nunca cambian el codigo de salida ni aparecen si no hay
+// nada que decir: posibles credenciales en el CONTENIDO de las lineas agregadas
+// (grupo secretos, al validar un PR: no con --sin-pushear) y, en un PR dev ->
+// main, una version sugerida distinta de la de package.json (grupo pr-metadata).
 //
 // Uso:
 //   node scripts/check-pr-rules.mjs --grupo rama-commits [--pr <n|url>]
@@ -35,8 +40,8 @@
 // Las reglas en skip (no medibles en este contexto) se reportan pero no fallan.
 
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { pathToFileURL } from 'node:url'
+import { readFileSync, realpathSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
 // El prefijo opcional en mayusculas es el ID rastreable que la skill exige
@@ -65,14 +70,37 @@ const COMMIT_MENSAJES_PROHIBIDOS = ['update', 'fix', 'cosas', 'ya', 'ahora si', 
 // .env.example (y sus variantes sample/template/dist) es la plantilla sin
 // valores que la propia skill pide commitear y que el harness siembra: no es un
 // secreto. Cualquier otro .env.* si lo es (.env.local, .env.staging...).
+// Las llaves privadas SSH (id_rsa, id_ed25519...; la .pub no) y los .p12 -- el
+// mismo contenedor PKCS#12 que .pfx -- entran por coherencia con lo que
+// .claude/settings.json ya le impide LEER al agente (Read(./**/id_rsa*)): lo que
+// no puede leer, tampoco deberia poder subir.
 const SECRETO_ARCHIVOS = [
   /(^|\/)\.env(?!\.(?:example|sample|template|dist)$)(\..+)?$/,
   /\.pem$/,
   /\.key$/,
   /\.pfx$/,
+  /\.p12$/,
+  /(^|\/)id_(rsa|dsa|ecdsa|ed25519)$/,
   /(^|\/)credentials\.json$/,
   /(^|\/)secrets\.json$/,
 ]
+// Contenido: patrones de ALTA confianza -- cabeceras de clave privada y tokens
+// con prefijo propio -- sobre las lineas que se AGREGAN. No es un escaner de
+// secretos (para eso estan gitleaks o la proteccion de push de GitHub): es una
+// red para el descuido mas comun, pegar una credencial en un archivo cualquiera,
+// que el chequeo por nombre de archivo no puede ver. INFORMA, no bloquea: un
+// falso positivo (una clave de ejemplo en la documentacion) no debe trabar un
+// merge. Nunca imprime el valor: solo el tipo, el archivo y la linea.
+const SECRETO_CONTENIDO = [
+  ['clave privada', /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----/],
+  ['clave de acceso de AWS', /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
+  ['token de GitHub', /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{50,})\b/],
+  ['clave de API de Anthropic', /\bsk-ant-[A-Za-z0-9_-]{24,}/],
+  ['token de Slack', /\bxox[abeprs]-[A-Za-z0-9-]{20,}/],
+  ['clave de API de Google', /\bAIza[0-9A-Za-z_-]{35}\b/],
+  ['token de npm', /\bnpm_[A-Za-z0-9]{36}\b/],
+]
+const MAX_HALLAZGOS_DE_CONTENIDO = 20
 
 // Sin prompts de credenciales: un check que se cuelga esperando un usuario
 // que no existe (hook, CI) es peor que uno que falla.
@@ -158,15 +186,44 @@ function commitsDeLaRama(baseRef, cabeza) {
 }
 
 // Diff de arboles: lo que el PR agregaria a la base al mergearse.
+//
+// --no-renames: con la deteccion de renombres activa (el default de git), un
+// `git mv notas.txt .env` figura como R (renombrado) y no como A (agregado), y
+// el filtro lo dejaba pasar: bastaba renombrar un archivo ya versionado para
+// subir credenciales con el check en verde. Sin deteccion, el nombre nuevo es
+// un alta, que es lo que es para quien clona el repo.
 function archivosAgregados(baseRef, cabeza) {
-  return rutas(['diff', `${baseRef}..${cabeza}`, '--diff-filter=A', '--name-only', '-z'])
+  return rutas(['diff', `${baseRef}..${cabeza}`, '--no-renames', '--diff-filter=A', '--name-only', '-z'])
 }
 
 // Commit por commit, todo lo que un push subiria: un archivo agregado en un
 // commit y borrado en el siguiente no aparece en el diff de arboles, pero el
 // push sube igual el commit que lo contiene.
 function archivosSinPushear(cabeza) {
-  return rutas(['log', cabeza, '--not', '--remotes=origin', '--diff-filter=A', '--name-only', '-z', '--format='])
+  return rutas(['log', cabeza, '--not', '--remotes=origin', '--no-renames', '--diff-filter=A', '--name-only', '-z', '--format='])
+}
+
+// El texto de lo que se agrega o modifica, sin contexto (-U0): es lo que revisa
+// secretosEnContenido. Tiene su propio plazo, bien por debajo del que el hook
+// le da a este script: el resultado que bloquea (el de nombres de archivo) no
+// puede perderse por esperar a un aviso. Un diff gigante corta por maxBuffer.
+// En los dos casos el chequeo de contenido se informa como no revisado; nunca
+// tumba el check. --no-ext-diff y --no-textconv: leer el diff no ejecuta los
+// programas que el repo tenga configurados para eso.
+const PLAZO_DEL_CONTENIDO = 8_000
+
+function diffDe(args) {
+  return execFileSync('git', ['-c', 'core.quotePath=false', ...args, '--no-renames', '--diff-filter=AM', '-U0', '--no-color', '--no-ext-diff', '--no-textconv'], {
+    encoding: 'utf8',
+    env: ENTORNO,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: PLAZO_DEL_CONTENIDO,
+  })
+}
+
+function diffAgregado(baseRef, cabeza) {
+  return diffDe(['diff', `${baseRef}..${cabeza}`])
 }
 
 function tagsRemotos() {
@@ -264,6 +321,53 @@ export function evaluaSecretos(archivos, donde = 'agregados') {
   return { regla: 'sin-secretos', cumple: true, detalle: `sin archivos de credenciales ${donde}` }
 }
 
+// Hallazgos sobre la salida de `git diff -U0` (o `git log -p -U0`): solo las
+// lineas agregadas, con su archivo y su numero de linea en la version nueva.
+export function secretosEnContenido(diff) {
+  const hallazgos = []
+  let archivo = null
+  let linea = 0
+  for (const l of diff.split('\n')) {
+    if (l.startsWith('+++ ')) {
+      archivo = l.startsWith('+++ b/') ? l.slice(6) : null // /dev/null: el archivo se borra
+    } else if (l.startsWith('@@')) {
+      linea = Number(l.match(/^@@ -\d+(?:,\d+)? \+(\d+)/)?.[1] ?? 0)
+    } else if (archivo && l.startsWith('+')) {
+      for (const [tipo, patron] of SECRETO_CONTENIDO) {
+        if (patron.test(l.slice(1))) hallazgos.push({ archivo, linea, tipo })
+      }
+      linea++
+    } else if (l.startsWith(' ')) {
+      linea++
+    }
+  }
+  return hallazgos
+}
+
+// Sin hallazgos no devuelve nada (el check queda igual que siempre); con
+// hallazgos, un aviso que no cambia el codigo de salida.
+export function evaluaContenido(hallazgos, donde = 'agregadas') {
+  if (hallazgos.length === 0) return null
+  const lista = hallazgos.slice(0, MAX_HALLAZGOS_DE_CONTENIDO).map((h) => `${h.tipo} en ${h.archivo}:${h.linea}`)
+  const resto = hallazgos.length > MAX_HALLAZGOS_DE_CONTENIDO ? ` y ${hallazgos.length - MAX_HALLAZGOS_DE_CONTENIDO} mas` : ''
+  return {
+    regla: 'sin-secretos-en-contenido',
+    cumple: null,
+    aviso: true,
+    detalle: `posible credencial en las lineas ${donde} (informativo, no bloquea): ${lista.join('; ')}${resto}. Si es real, sacala y rotala: ya quedo en el historial.`,
+  }
+}
+
+// El chequeo de contenido nunca cambia el resultado del grupo: si no se puede
+// leer el diff, se dice y se sigue.
+function contenidoSinBloquear(leerDiff, donde) {
+  try {
+    return evaluaContenido(secretosEnContenido(leerDiff()), donde)
+  } catch (e) {
+    return { regla: 'sin-secretos-en-contenido', cumple: null, detalle: `no se pudo revisar el contenido (${describeError(e)})` }
+  }
+}
+
 function evaluaBaseDev(baseRefName, nombreRama) {
   if (baseRefName == null) {
     return { regla: 'pr-apunta-a-dev', cumple: null, detalle: 'no hay datos de PR (falta --pr o gh)' }
@@ -354,6 +458,31 @@ export function evaluaVersion(pr, baseRefName) {
   return { regla: 'version-semver', cumple: true, detalle: `${propuesta} > ${ultimo ?? '(sin tags previos)'}` }
 }
 
+// El tag del release sale de package.json (scripts/tag-release.mjs), no del
+// cuerpo del PR. Si no coinciden, el merge etiqueta otra version -- o ninguna, si
+// package.json no subio --. Se avisa ANTES del merge; no bloquea, y sin
+// package.json (un repo que no es de Node) no hay nada que comparar.
+export function evaluaVersionDelPaquete(pr, baseRefName, leerVersion) {
+  if (pr == null || baseRefName !== 'main') return null
+  const seccion = extraeSeccion(pr.body ?? '', 'Requiere versión / release')
+  if (seccion == null || !/- \[x\] S[ií]/i.test(seccion)) return null
+  const propuesta = seccion.match(/Versi[oó]n sugerida:\s*v(\d+\.\d+\.\d+)/i)?.[1]
+  if (!propuesta) return null
+  let enPaquete
+  try {
+    enPaquete = leerVersion()
+  } catch {
+    return null
+  }
+  if (typeof enPaquete !== 'string' || enPaquete === propuesta) return null
+  return {
+    regla: 'version-package-json',
+    cumple: null,
+    aviso: true,
+    detalle: `el PR propone v${propuesta} pero package.json dice ${enPaquete}: tag-release etiqueta lo que diga package.json. Sube "version" antes del merge o corrige la version sugerida (informativo, no bloquea).`,
+  }
+}
+
 function plantillaPR() {
   try {
     return readFileSync('.github/pull_request_template.md', 'utf8')
@@ -431,14 +560,23 @@ function evaluar(values) {
 
   const resultados = []
   if (values.grupo === 'rama-commits') {
-    resultados.push(evaluaRama(rama, pr?.baseRefName ?? null))
+    // La base sale de contextoDelCheck y no solo del PR: el workflow de CI corre
+    // este grupo sin --pr y le pasa la base por GITHUB_BASE_REF. Mirando solo el
+    // PR, la base llegaba vacia y la excepcion del release (dev -> main) nunca
+    // aplicaba: este check salia rojo en todo PR de release.
+    resultados.push(evaluaRama(rama, base))
     resultados.push(...(cabeza ? evaluaCommits(commitsDeLaRama(baseLocal, cabeza)) : [sinCabeza('commits-formato')]))
   }
   if (values.grupo === 'secretos') {
     if (values['sin-pushear']) {
+      // Antes de un push corre solo lo que puede denegarlo. El aviso de contenido
+      // va en el check del PR, que es donde se muestra: aca el hook no lo
+      // mostraba, y esperar a ese diff (`git log -p` de todo lo que el push sube)
+      // le podia costar el plazo y, con el, el resultado que si bloquea.
       resultados.push(evaluaSecretos(archivosSinPushear(values.cabeza || 'HEAD'), 'en commits sin pushear'))
     } else {
       resultados.push(cabeza ? evaluaSecretos(archivosAgregados(baseLocal, cabeza)) : sinCabeza('sin-secretos'))
+      if (cabeza) resultados.push(contenidoSinBloquear(() => diffAgregado(baseLocal, cabeza), 'agregadas'))
     }
   }
   if (values.grupo === 'pr-metadata') {
@@ -448,9 +586,10 @@ function evaluar(values) {
     resultados.push(evaluaBaseDev(pr?.baseRefName ?? null, rama))
     resultados.push(evaluaMergeable(pr))
     resultados.push(evaluaVersion(pr, pr?.baseRefName ?? null))
+    resultados.push(evaluaVersionDelPaquete(pr, pr?.baseRefName ?? null, () => JSON.parse(sh(['git', 'show', `${cabeza}:package.json`])).version))
     resultados.push(evaluaSeccionesCompletas(pr))
   }
-  return resultados
+  return resultados.filter(Boolean)
 }
 
 function main() {
@@ -489,7 +628,7 @@ function main() {
 
   let huboFalse = false
   for (const r of resultados) {
-    const marca = r.cumple === true ? 'OK  ' : r.cumple === false ? 'FAIL' : 'skip'
+    const marca = r.aviso ? 'AVISO' : r.cumple === true ? 'OK  ' : r.cumple === false ? 'FAIL' : 'skip'
     console.log(`[${marca}] ${r.regla}: ${r.detalle}`)
     if (r.cumple === false) huboFalse = true
   }
@@ -497,7 +636,24 @@ function main() {
   process.exit(huboFalse ? 1 : 0)
 }
 
-// Solo como ejecutable: al importarse desde los tests no corre nada.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Solo como ejecutable: al importarse desde los tests no corre nada. Se comparan
+// rutas REALES (Node resuelve los enlaces simbolicos del script de entrada): con
+// la comparacion directa de import.meta.url contra process.argv[1], invocar el
+// script por una ruta con un enlace (symlink, junction, /tmp en macOS) lo dejaba
+// sin hacer nada y con exit 0 -- un check "en verde" que nunca corrio.
+function esPuntoDeEntrada(urlDelModulo) {
+  if (!process.argv[1]) return false
+  const real = (ruta) => {
+    try {
+      return realpathSync.native(ruta)
+    } catch {
+      return ruta
+    }
+  }
+  const [modulo, entrada] = [real(fileURLToPath(urlDelModulo)), real(process.argv[1])]
+  return process.platform === 'win32' ? modulo.toLowerCase() === entrada.toLowerCase() : modulo === entrada
+}
+
+if (esPuntoDeEntrada(import.meta.url)) {
   main()
 }
