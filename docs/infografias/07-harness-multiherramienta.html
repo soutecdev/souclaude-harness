@@ -146,7 +146,7 @@ b,strong{font-weight:700}
 
   <section class="ficha">
     <span class="pestana">Un minuto · De qué va esto</span>
-    <p><b>Una instalación sirve para las tres herramientas, sin preguntar cuál usas.</b> <span class="k">init</span> y <span class="k">upgrade</span> dejan siempre lo mismo, así que un repo puede trabajarse con una herramienta hoy y con otra mañana. El soporte de Claude Code no cambia; el de Codex y Antigravity está <b>en prueba</b>.</p>
+    <p><b>Una instalación sirve para las tres herramientas, sin preguntar cuál usas.</b> <span class="k">init</span> y <span class="k">upgrade</span> dejan siempre lo mismo, así que un repo puede trabajarse con una herramienta hoy y con otra mañana. El soporte de Claude Code no cambia; el de Codex y Antigravity está <b>en prueba</b>. La misma versión trae el harness endurecido tras una auditoría.</p>
   </section>
 
   <section class="ficha">
@@ -215,6 +215,16 @@ b,strong{font-weight:700}
       <div class="renglon renglon--ancho"><div><b>Push a main</b></div><p>Se deniega cualquier <span class="k">git push</span> que toque <span class="k">main</span>.</p></div>
       <div class="renglon renglon--ancho"><div><b>Secretos</b></div><p>Se deniega el push que subiría un <span class="k">.env</span>, una llave o un token.</p></div>
       <div class="renglon renglon--ancho"><div><b>Inicio de sesión</b></div><p>El agente empieza sabiendo que todo trabajo pertenece a un milestone del Vault.</p></div>
+    </div>
+  </section>
+
+  <section class="ficha">
+    <span class="pestana">También en la 3.20.0 · Harness endurecido</span>
+    <p>Una auditoría completa del harness, de Raul Sanchez, corrigió controles que fallaban en silencio. De 24 formas de escribir un push a <span class="k">main</span>, el hook anterior dejaba pasar 19.</p>
+    <div class="renglones">
+      <div class="renglon renglon--ancho"><div><b>Hook reglas-pr</b></div><p>Deniega el push aunque se escriba de otra forma, y <b>pregunta</b> ante lo que no puede leer o un push forzado.</p></div>
+      <div class="renglon renglon--ancho"><div><b>Secretos</b></div><p>El check ya no se evade con <span class="k">git mv</span>.</p></div>
+      <div class="renglon renglon--ancho"><div><b>Motor</b></div><p>Un archivo que no se puede leer ya no se sobrescribe, y <span class="k">--prune</span> no borra fuera del repo.</p></div>
     </div>
   </section>
 
