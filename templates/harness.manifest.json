@@ -167,6 +167,12 @@
       "policy": "managed"
     },
     {
+      "id": "agent-harness-upgrader",
+      "src": "base/claude/agents/harness-upgrader.md",
+      "dest": ".claude/agents/harness-upgrader.md",
+      "policy": "managed"
+    },
+    {
       "id": "gitignore",
       "src": "fragments/gitignore",
       "dest": ".gitignore",

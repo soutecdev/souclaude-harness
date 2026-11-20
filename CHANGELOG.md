@@ -2,6 +2,24 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+### Agregado
+
+- **El harness se actualiza solo en la sesión, sin pedir confirmación**
+  (SHS-M43-T005). Cuando el aviso de SessionStart detecta una versión nueva de la
+  misma major, ordena lanzar en segundo plano el subagente `harness-upgrader`. El
+  procedimiento es agnóstico a la herramienta: vive en la nueva sección «Modo
+  autónomo» de la skill `harness-upgrade` (instalada para Claude Code, Codex y
+  Antigravity). En Claude Code lo lanza el nuevo `.claude/agents/harness-upgrader.md`
+  (managed, un envoltorio que remite a la skill); en otra herramienta, la sesión
+  lanza su propio subagente con esa consigna o, si no puede, la corre ella misma.
+  Usa el tag exacto, no toca secciones del usuario ni hunks ambiguos de los `.new`,
+  commitea solo los archivos del upgrade en la rama actual (sin push) y cierra con
+  «Harness actualizado: vX a vY». En `main`, `master` o con HEAD suelto el aviso solo
+  avisa; sin la skill instalada queda el aviso manual (ADR
+  `20261120-upgrade-automatico-con-subagente.md`).
+
 ## [3.21.0] — 2026-11-20
 
 El harness se instala con un único prompt que cubre todos los puntos de partida

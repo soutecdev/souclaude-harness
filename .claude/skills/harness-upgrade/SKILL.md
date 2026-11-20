@@ -1,6 +1,6 @@
 ---
 name: harness-upgrade
-description: Actualiza el harness CCEM de este repo (skills, comandos, templates SDD, settings) a la última versión publicada, sin pisar nada que hayas editado tú. Actívate cuando el usuario pida actualizar, upgradear o traer la última versión del harness (ej. "actualiza el harness", "hay una versión nueva del harness", "upgradea el harness"), y también cuando el aviso del harness al inicio de la sesión anuncie una versión nueva y el usuario acepte actualizar.
+description: Actualiza el harness CCEM de este repo (skills, comandos, templates SDD, settings) a la última versión publicada, sin pisar nada que hayas editado tú. Actívate cuando el usuario pida actualizar, upgradear o traer la última versión del harness (ej. "actualiza el harness", "hay una versión nueva del harness", "upgradea el harness"), y también cuando el aviso del harness al inicio de la sesión anuncie una versión nueva: en ese caso corre sin preguntar, en un subagente harness-upgrader en segundo plano (sección "Modo autónomo").
 ---
 
 # /harness-upgrade
@@ -19,7 +19,12 @@ No hace falta que el usuario pida cada paso por separado.
 
    **El harness avisa solo**: al inicio de cada sesión, el hook de SessionStart
    compara la versión instalada con el último tag publicado y, si hay una
-   nueva, la anuncia (SHS-M43). Si ese aviso ya te dijo cuál es la última
+   nueva, la anuncia (SHS-M43). **En una rama de trabajo el upgrade corre
+   solo, sin pedirle confirmación al usuario**: el aviso ordena lanzar en
+   segundo plano el subagente `harness-upgrader`, que sigue la sección «Modo
+   autónomo» (más abajo). Este flujo paso a paso queda para cuando el usuario
+   lo pide y para `main`/`master` o HEAD suelto, donde el aviso solo avisa.
+   Si ese aviso ya te dijo cuál es la última
    versión (ej. `v3.18.0`), usa el **tag exacto** en todos los comandos de este
    flujo — `npx -y github:soutecdev/souclaude-harness#v3.18.0 …` — en lugar del
    tag móvil `#v3`: la caché de npx puede servir un CLI viejo del tag móvil y
@@ -149,6 +154,68 @@ No hace falta que el usuario pida cada paso por separado.
 
    Si no hubo nada relevante que avisar más allá de "actualizado a la última
    versión", con esa línea alcanza.
+
+## Modo autónomo (subagente `harness-upgrader`)
+
+Lo dispara el aviso de inicio de sesión ante una versión nueva de la misma
+major: **sin preguntarle al usuario**, la sesión lanza en segundo plano un
+subagente llamado `harness-upgrader` y sigue con lo que le pidieron. El
+subagente es el mismo en cualquier herramienta:
+
+- **Claude Code**: `.claude/agents/harness-upgrader.md` (lo instala el
+  harness) y remite a esta sección.
+- **Otra herramienta** (Codex, Antigravity…): si tiene subagentes, lanza uno
+  —con el nombre `harness-upgrader` si su mecanismo lo permite— con la
+  consigna «sigue la skill harness-upgrade, sección Modo autónomo, para
+  actualizar de vX a vY». Si no puede lanzar subagentes, la propia sesión
+  corre esta sección, también sin preguntar, y luego sigue con lo pedido.
+
+El subagente es autosuficiente: **no le pregunta nada a nadie**; ante
+cualquier duda elige la opción que no toca lo del usuario y la reporta. No
+crea ramas, no hace push, no abre PRs y no toca el Vault. Recibe la versión
+instalada (`vX`) y la nueva (`vY`); si no las trae, `vX` es `harnessVersion`
+de `.claude/harness.json` y `vY` la que imprima `status`.
+
+1. **Precondiciones** (si alguna falla, no toca nada):
+   `git rev-parse --abbrev-ref HEAD` y `git status --porcelain`. Termina sin
+   actualizar, con el motivo, si la rama es `main` o `master`, si HEAD está
+   suelto, o si hay un merge, rebase, cherry-pick o revert en curso (existe
+   `.git/MERGE_HEAD`, `.git/rebase-merge`, `.git/rebase-apply`,
+   `.git/CHERRY_PICK_HEAD` o `.git/REVERT_HEAD`). Anota la salida de
+   `git status --porcelain`: son cambios previos del usuario y **ninguno
+   entra en el commit**.
+2. **Upgrade**, siempre con el **tag exacto**, nunca `#v3`:
+   `npx -y github:soutecdev/souclaude-harness#vY upgrade --dry-run --prune` y
+   luego `… upgrade --prune`. Si un comando falla, no reintenta con variantes
+   ni con `--force`: termina con el error literal. Si avisa "este CLI es vX,
+   pero el último release publicado es vZ", repite una vez con `#vZ` y usa
+   `vZ` en el resto. Nunca `upgrade --force` ni editar `.claude/harness.json`.
+3. **Archivos `.new`**, hunk por hunk
+   (`git diff --no-index <archivo> <archivo>.new`), con el criterio del paso 4
+   del flujo manual: los hunks de secciones del harness se aplican; los de
+   secciones del usuario o ambiguos **no**. Si no quedó ningún hunk sin
+   resolver, borra el `.new`; si quedó alguno, deja el `.new` sin commitear y
+   lo reporta. Si el original tenía cambios previos del usuario, no lo toca.
+4. **No resuelve**: obsoletos editados por el usuario (los reporta con su
+   ruta), la ficha del Observatorio ni la Roca.
+5. **Commit en la rama actual**: compara `git status --porcelain` con el del
+   paso 1 y agrega **solo** los archivos que cambió el upgrade, por ruta
+   explícita (borrados incluidos): `git add -- <ruta1> <ruta2> …`. Nunca
+   `git add -A`, `git add .` ni `git commit -a`. Commit
+   `chore: actualizar harness vX a vY`, sin push. Si nada cambió, no hay
+   commit.
+6. **Reporte** a la sesión que lo lanzó, en español neutro y breve: versión
+   anterior → nueva y hash corto del commit; novedades, una línea cada una
+   (del recuadro «Novedades del harness» del `upgrade`); qué se borró, qué
+   `.new` se resolvió y cuáles quedaron, qué obsoletos editados quedan y qué
+   archivos quedaron fuera por cambios previos; si cambiaron hooks o
+   settings, que hay que reiniciar la herramienta; y si `souclaude --version`
+   no coincide con la versión nueva. La **última línea** es exactamente
+   `Harness actualizado: vX a vY` o
+   `Harness no actualizado: <motivo en una línea>`.
+
+La sesión, al recibir el reporte, le pasa al usuario esa última línea y, si
+el reporte lo pide, que reinicie la herramienta.
 
 ## CLI global `souclaude`
 

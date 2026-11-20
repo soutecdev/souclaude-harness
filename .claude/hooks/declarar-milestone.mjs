@@ -238,6 +238,46 @@ function ultimaConocidaPorMajor(ahoraMs) {
   }
 }
 
+// Rama actual leida de .git/HEAD (sin lanzar git): 'main', 'feature/x',
+// 'HEAD' si esta suelto, o null si no se pudo saber (worktree, .git raro).
+function ramaActual(root) {
+  try {
+    const head = fs.readFileSync(path.join(root, '.git', 'HEAD'), 'utf8').trim()
+    const m = head.match(/^ref: refs\/heads\/(.+)$/)
+    if (m) return m[1]
+    return /^[0-9a-f]{40,64}$/.test(head) ? 'HEAD' : null
+  } catch {
+    return null
+  }
+}
+
+// Ante una version nueva de la misma major el harness se actualiza solo, sin
+// pedirle confirmacion al usuario (SHS-M43-T005): la sesion lanza en segundo
+// plano el subagente harness-upgrader, que sigue la seccion "Modo autonomo" de
+// la skill harness-upgrade y commitea en la rama actual. El procedimiento vive
+// en la skill para que sirva a cualquier herramienta (Claude Code, Codex,
+// Antigravity). En main/master o con HEAD suelto no se commitea nunca, y sin la
+// skill instalada queda el aviso manual.
+function instruccionUpgrade(root, instalada, ultima) {
+  const rama = ramaActual(root)
+  const skill = ['.claude', '.agents'].some((dir) =>
+    fs.existsSync(path.join(root, dir, 'skills', 'harness-upgrade', 'SKILL.md'))
+  )
+  if (rama === 'main' || rama === 'master' || rama === 'HEAD') {
+    return [
+      `Estas en ${rama === 'HEAD' ? 'HEAD suelto' : rama}: el harness no se actualiza solo aqui. Avisale al usuario una sola vez que hay version nueva y que se actualiza desde una rama de trabajo (skill harness-upgrade); luego sigue con lo que pidio.`,
+    ]
+  }
+  if (!skill) {
+    return ['Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.']
+  }
+  return [
+    `Actualiza el harness ya, sin pedirle confirmacion al usuario: lanza en segundo plano el subagente harness-upgrader con el prompt "Actualiza el harness de v${instalada} a v${ultima}." y sigue con lo que pidio el usuario.`,
+    'Si tu herramienta no tiene el agente harness-upgrader, lanza un subagente propio (con ese nombre si puedes) con la consigna de la skill harness-upgrade, seccion "Modo autonomo"; si no puedes lanzar subagentes, corre tu esa seccion sin preguntar y luego sigue.',
+    'Cuando termine, dile al usuario la ultima linea del reporte ("Harness actualizado: vX a vY" o el motivo por el que no se actualizo) y, si el reporte lo pide, que reinicie la herramienta.',
+  ]
+}
+
 function avisoVersionNueva(root) {
   try {
     // El repo del propio generador no se avisa a si mismo.
@@ -258,7 +298,7 @@ function avisoVersionNueva(root) {
     const ultima = porMajor[major]
     if (esVersion(ultima) && compararSemver(ultima, instalada) > 0) {
       lineas.push(`Version nueva del harness: v${ultima} (instalada: v${instalada}).`)
-      lineas.push('Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.')
+      lineas.push(...instruccionUpgrade(root, instalada, ultima))
     }
     const majorsNuevas = Object.keys(porMajor)
       .map(Number)
