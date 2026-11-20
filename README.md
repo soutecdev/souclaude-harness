@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.19.0**
+**v3.20.0**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.
@@ -16,7 +16,8 @@ Sin registry, sin `.npmrc`, sin token. Solo hace falta git y Node ≥22.4.
 ## Qué instala
 
 ```
-CLAUDE.md                     contexto del proyecto para Claude
+CLAUDE.md                     contexto del proyecto: las instrucciones, para cualquier herramienta
+AGENTS.md                     puntero a CLAUDE.md para Codex y Antigravity (en prueba)
 docs/decisions/               ADRs + su template (skill adr-new)
 notes.md                      scratchpad persistente
 progress/                     progreso del proyecto y protocolo del Vault
@@ -42,6 +43,10 @@ progress/                     progreso del proyecto y protocolo del Vault
 scripts/                      check-pr-rules, tag-release y release-publicar (los
                               corren CI y el hook reglas-pr)
 .mcp.json                     conectores MCP de la skill de espejo que instales
+.agents/                      para Codex y Antigravity (en prueba)
+  skills/                     las mismas skills que .claude/skills
+  hooks.json, hooks/          hooks de Antigravity y su adaptador
+.codex/hooks.json             hooks de Codex (usa los scripts de .claude/hooks)
 .gitignore                    bloque gestionado, tus líneas intactas
 ```
 

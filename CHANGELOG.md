@@ -2,11 +2,10 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Sin publicar]
+## [3.20.0] — 2026-11-18
 
-Resultado de una auditoría completa del harness. Al publicar: poner el número de
-versión, ajustar a él el `to` de las dos migraciones nuevas y regenerar
-`docs/metodologia`.
+Dos cambios en este release: el endurecimiento del harness tras una auditoría
+completa (SHS-M49) y la instalación para varias herramientas de IA (SHS-M48).
 
 ### Seguridad
 
@@ -317,6 +316,30 @@ versión, ajustar a él el `to` de las dos migraciones nuevas y regenerar
 
 ### Agregado
 
+- **El harness se instala para Claude Code, Codex y Antigravity** (SHS-M48). Toda
+  instalación emite la superficie de las tres herramientas, sin preguntar cuál se
+  usa: un mismo repo puede trabajarse con más de una. **El soporte de Codex y
+  Antigravity está en prueba**: se construyó contra su documentación y con entradas
+  simuladas, sin correrlo en la herramienta real. Las guías para quienes lo prueben
+  están en `docs/pruebas-multiherramienta/`.
+  - **Instrucciones**: `AGENTS.md` (managed) remite a `CLAUDE.md`, que sigue siendo
+    el único archivo de instrucciones, y trae la tabla de equivalencias entre
+    herramientas. Sale de la lista de archivos obsoletos.
+  - **Skills**: cada skill se emite también en `.agents/skills/`, la carpeta que
+    leen Codex y Antigravity. Se declara una sola vez en el manifest;
+    `loadManifest()` deriva el gemelo.
+  - **Hooks**: `.codex/hooks.json` registra `reglas-pr` y el hook de inicio de
+    sesión con los mismos scripts de `.claude/hooks/` (Codex usa el contrato de
+    Claude Code). Para Antigravity, `.agents/hooks.json` y el adaptador
+    `.agents/hooks/souclaude-antigravity.mjs`, que solo traduce su formato.
+  - **Los repos ya instalados reciben estos archivos en su próximo
+    `upgrade`.** Un `AGENTS.md` o un `hooks.json` que ya existían no
+    se pisan: el primero queda con la propuesta en `AGENTS.md.new` y los segundos
+    se funden.
+  - Fuera de este cambio: permisos (`permissions.deny`) y conectores MCP para
+    Codex y Antigravity; en Antigravity tampoco corre el check automático tras
+    crear el PR. Decisión y alternativas en
+    `docs/decisions/20261118-harness-para-varias-herramientas-de-ia.md`.
 - `souclaude verify` valida el contrato del manifest entry por entry (policy,
   modos, `when`, skill, rutas, binarios sin `binary: true`, seeds JSON inválidos).
 - Test que exige que las copias de este repo (`.claude/`, `scripts/`, workflows)

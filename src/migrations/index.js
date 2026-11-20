@@ -97,7 +97,7 @@ export const migrations = [
     // sin esta migracion el comando viejo quedaria registrado al lado del nuevo.
     // `to` es el primer release que la incluye: ajustarlo al publicar.
     id: 'v3-settings-session-start-ruta-absoluta',
-    to: '3.19.0',
+    to: '3.20.0',
     dest: '.claude/settings.json',
     describe:
       'settings.json: el hook de SessionStart pasa a `${CLAUDE_PROJECT_DIR}` (la ruta relativa fallaba si la sesión había cambiado de carpeta) y gana un plazo de 60 s',
@@ -131,7 +131,7 @@ export const migrations = [
     // tocan. La busqueda tolera CRLF (el archivo en disco puede tenerlo); el
     // motor escribe siempre LF. `to` es el primer release que la incluye.
     id: 'v3-claude-md-actions-reactivado',
-    to: '3.19.0',
+    to: '3.20.0',
     dest: 'CLAUDE.md',
     describe: 'CLAUDE.md: GitHub Actions ya no está en pausa — se corrigen los dos pasajes que escribió el harness (tags de versión y checks de PR)',
     transform(content) {
