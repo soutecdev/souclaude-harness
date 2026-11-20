@@ -71,51 +71,63 @@ for (const hook of Object.keys(HOOKS)) {
   })
 }
 
-// Upgrade automatico en sesion (SHS-M43-T005): con el subagente instalado y en
-// una rama de trabajo, el aviso ordena lanzarlo sin preguntar; en main/master
-// o con HEAD suelto solo avisa; sin el agente queda el aviso manual.
-function conAgenteYHead(dir, head) {
-  write(dir, '.claude/agents/harness-upgrader.md', '---\nname: harness-upgrader\n---\n')
+// Upgrade automatico en sesion (SHS-M43-T005): con la skill harness-upgrade
+// instalada (en .claude/ o .agents/, cualquier herramienta) y en una rama de
+// trabajo, el aviso ordena actualizar sin confirmacion via el subagente
+// harness-upgrader; en main/master o con HEAD suelto solo avisa; sin la skill
+// queda el aviso manual.
+function conSkillYHead(dir, head, base = '.claude') {
+  write(dir, `${base}/skills/harness-upgrade/SKILL.md`, '---\nname: harness-upgrade\n---\n')
   write(dir, '.git/HEAD', `${head}\n`)
   return dir
 }
 
+const LANZA = /Actualiza el harness ya, sin pedirle confirmacion al usuario: lanza en segundo plano el subagente harness-upgrader/
+
 for (const hook of Object.keys(HOOKS)) {
-  test(`${hook}: en rama de trabajo con el agente instalado ordena lanzar harness-upgrader`, () => {
+  test(`${hook}: en rama de trabajo con la skill instalada ordena actualizar sin confirmacion`, () => {
     const remoto = remotoConTags(['v3.16.2', 'v3.18.0'])
-    const dir = conAgenteYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo')
+    const dir = conSkillYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo')
     const salida = correrHook(hook, dir, { remoto, home: homeTmp() })
-    assert.match(salida, /Sin preguntarle al usuario, lanza ya en segundo plano el subagente harness-upgrader/)
+    assert.match(salida, LANZA)
     assert.match(salida, /Actualiza el harness de v3\.16\.2 a v3\.18\.0\./)
+    // Agnostico a la herramienta: sin el agente, subagente propio con la consigna de la skill.
+    assert.match(salida, /subagente propio .*skill harness-upgrade, seccion "Modo autonomo"/)
     assert.doesNotMatch(salida, /ofrecele actualizar/)
   })
 }
 
-test('en main con el agente instalado no lanza el subagente: solo avisa', () => {
+test('la skill solo en .agents/ (Codex, Antigravity) tambien activa el upgrade automatico', () => {
+  const remoto = remotoConTags(['v3.18.0'])
+  const dir = conSkillYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo', '.agents')
+  assert.match(correrHook('declarar-milestone', dir, { remoto, home: homeTmp() }), LANZA)
+})
+
+test('en main o master con la skill instalada no lanza el subagente: solo avisa', () => {
   const remoto = remotoConTags(['v3.18.0'])
   for (const rama of ['main', 'master']) {
-    const dir = conAgenteYHead(consumidorCon('3.16.2'), `ref: refs/heads/${rama}`)
+    const dir = conSkillYHead(consumidorCon('3.16.2'), `ref: refs/heads/${rama}`)
     const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
     assert.match(salida, new RegExp(`Estas en ${rama}: el harness no se actualiza solo aqui`))
-    assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+    assert.doesNotMatch(salida, LANZA)
   }
 })
 
 test('con HEAD suelto no lanza el subagente: solo avisa', () => {
   const remoto = remotoConTags(['v3.18.0'])
-  const dir = conAgenteYHead(consumidorCon('3.16.2'), 'a'.repeat(40))
+  const dir = conSkillYHead(consumidorCon('3.16.2'), 'a'.repeat(40))
   const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
   assert.match(salida, /Estas en HEAD suelto/)
-  assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+  assert.doesNotMatch(salida, LANZA)
 })
 
-test('en rama de trabajo sin el agente instalado queda el aviso manual', () => {
+test('en rama de trabajo sin la skill instalada queda el aviso manual', () => {
   const remoto = remotoConTags(['v3.18.0'])
   const dir = consumidorCon('3.16.2')
   write(dir, '.git/HEAD', 'ref: refs/heads/feature/M7-algo\n')
   const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
   assert.match(salida, /ofrecele actualizar con la skill harness-upgrade/)
-  assert.doesNotMatch(salida, /lanza ya en segundo plano/)
+  assert.doesNotMatch(salida, LANZA)
 })
 
 // Los demas casos cubren la logica compartida: con un solo hook alcanza.

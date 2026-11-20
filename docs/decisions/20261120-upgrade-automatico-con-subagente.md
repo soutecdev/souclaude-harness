@@ -23,10 +23,20 @@ ni flujos fijos: el modelo trabaja directo»).
 ## Decision
 
 Ante una versión nueva **de la misma major**, el aviso de los hooks de
-SessionStart (`declarar-milestone.mjs` y `worklog-solo.mjs`) ordena al modelo
-lanzar en segundo plano, sin preguntar, el subagente `harness-upgrader`
-(`.claude/agents/harness-upgrader.md`, gestionado por el manifest), y seguir
-con lo que pidió el usuario. El subagente:
+SessionStart (`declarar-milestone.mjs` y `worklog-solo.mjs`) le dice a la
+sesión que hay una versión nueva y le ordena actualizar **sin pedirle
+confirmación al usuario**: lanzar en segundo plano el subagente
+`harness-upgrader` y seguir con lo que pidió el usuario.
+
+**El procedimiento es agnóstico a la herramienta.** Vive en una sola fuente, la
+sección «Modo autónomo» de la skill `harness-upgrade`, que el harness instala
+para Claude Code (`.claude/skills/`) y para Codex y Antigravity
+(`.agents/skills/`). En Claude Code, `.claude/agents/harness-upgrader.md`
+(gestionado por el manifest) es un envoltorio delgado que remite a esa sección.
+En otra herramienta, la sesión lanza un subagente propio —con el nombre
+`harness-upgrader` si su mecanismo lo permite— con esa consigna, y si no puede
+lanzar subagentes corre la sección ella misma, también sin preguntar. Así cada
+agente adapta el mecanismo y el procedimiento no se duplica. El subagente:
 
 - corre el flujo de `harness-upgrade` con el **tag exacto** de la versión nueva;
 - no toca secciones que llenó el usuario ni resuelve hunks ambiguos: los deja
@@ -35,19 +45,21 @@ con lo que pidió el usuario. El subagente:
   la **rama actual**, sin push, sin PR y sin tocar el Vault;
 - termina con «Harness actualizado: vX a vY» o «Harness no actualizado: motivo».
 
-Es la única excepción a «sin agentes» de la v3.0: el agente existe porque el
-trabajo tiene que correr aislado y en paralelo a la sesión, no como un rol del
-flujo.
+El archivo del agente de Claude Code es la única excepción a «sin agentes» de
+la v3.0, y no lleva lógica propia: existe porque el trabajo tiene que correr
+aislado y en paralelo a la sesión, no como un rol del flujo.
 
 Límites duros, resueltos en el hook antes de que el modelo decida nada: en
 `main`, `master` o HEAD suelto el aviso solo avisa (ahí no se commitea nunca), y
-si el repo todavía no tiene el subagente queda el aviso manual de siempre. La
+si el repo no tiene la skill `harness-upgrade` queda el aviso manual de siempre. La
 major nueva sigue siendo una migración manual.
 
 ## Consequences
 
 ### Positivas
 - Los consumidores se mantienen al día sin depender de que alguien diga que sí.
+- Sirve igual en Claude Code, Codex y Antigravity: una sola fuente del
+  procedimiento, y cada herramienta pone su mecanismo de subagentes.
 - Se conserva lo que motivó el rechazo de la alternativa C del ADR anterior: el
   cambio llega a `dev` dentro del PR de la rama de trabajo, con su propio commit
   `chore: actualizar harness vX a vY`, revisable y revertible por separado.
@@ -78,6 +90,13 @@ major nueva sigue siendo una migración manual.
 bloquearía el arranque de la sesión.
 **Por qué se descartó**: el upgrade necesita criterio y tiempo que un hook no
 tiene.
+
+### Alternativa D: el procedimiento completo en `.claude/agents/harness-upgrader.md`
+**Pros**: un archivo, formato nativo de Claude Code.
+**Cons**: Codex y Antigravity no leen `.claude/agents/`: el upgrade automático
+quedaría solo para Claude Code, o habría que duplicar el procedimiento por
+herramienta.
+**Por qué se descartó**: el harness es agnóstico al agente (SHS-M48).
 
 ### Alternativa C: el modelo principal corre la skill en primer plano
 **Pros**: sin agente nuevo.

@@ -200,25 +200,30 @@ function ramaActual(root) {
   }
 }
 
-// Ante una version nueva de la misma major el harness se actualiza solo
-// (SHS-M43-T005): el modelo lanza en segundo plano el subagente
-// harness-upgrader, que commitea en la rama actual. En main/master o con HEAD
-// suelto no se commitea nunca, y sin el agente instalado (lockfile previo a
-// el) queda el aviso manual con la skill harness-upgrade.
+// Ante una version nueva de la misma major el harness se actualiza solo, sin
+// pedirle confirmacion al usuario (SHS-M43-T005): la sesion lanza en segundo
+// plano el subagente harness-upgrader, que sigue la seccion "Modo autonomo" de
+// la skill harness-upgrade y commitea en la rama actual. El procedimiento vive
+// en la skill para que sirva a cualquier herramienta (Claude Code, Codex,
+// Antigravity). En main/master o con HEAD suelto no se commitea nunca, y sin la
+// skill instalada queda el aviso manual.
 function instruccionUpgrade(root, instalada, ultima) {
   const rama = ramaActual(root)
-  const agente = fs.existsSync(path.join(root, '.claude', 'agents', 'harness-upgrader.md'))
+  const skill = ['.claude', '.agents'].some((dir) =>
+    fs.existsSync(path.join(root, dir, 'skills', 'harness-upgrade', 'SKILL.md'))
+  )
   if (rama === 'main' || rama === 'master' || rama === 'HEAD') {
     return [
       `Estas en ${rama === 'HEAD' ? 'HEAD suelto' : rama}: el harness no se actualiza solo aqui. Avisale al usuario una sola vez que hay version nueva y que se actualiza desde una rama de trabajo (skill harness-upgrade); luego sigue con lo que pidio.`,
     ]
   }
-  if (!agente) {
+  if (!skill) {
     return ['Avisale al usuario una sola vez y ofrecele actualizar con la skill harness-upgrade; luego sigue con lo que pidio.']
   }
   return [
-    `Sin preguntarle al usuario, lanza ya en segundo plano el subagente harness-upgrader con el prompt "Actualiza el harness de v${instalada} a v${ultima}." y sigue con lo que pidio el usuario.`,
-    'Cuando el subagente termine, dile al usuario su ultima linea ("Harness actualizado: vX a vY" o el motivo por el que no se actualizo) y, si su reporte lo pide, que reinicie Claude Code.',
+    `Actualiza el harness ya, sin pedirle confirmacion al usuario: lanza en segundo plano el subagente harness-upgrader con el prompt "Actualiza el harness de v${instalada} a v${ultima}." y sigue con lo que pidio el usuario.`,
+    'Si tu herramienta no tiene el agente harness-upgrader, lanza un subagente propio (con ese nombre si puedes) con la consigna de la skill harness-upgrade, seccion "Modo autonomo"; si no puedes lanzar subagentes, corre tu esa seccion sin preguntar y luego sigue.',
+    'Cuando termine, dile al usuario la ultima linea del reporte ("Harness actualizado: vX a vY" o el motivo por el que no se actualizo) y, si el reporte lo pide, que reinicie la herramienta.',
   ]
 }
 
