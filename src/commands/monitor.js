@@ -399,7 +399,7 @@ async function enVivoLoop({ source, clock, opciones, caps, modo, flags, usageHis
 // inexistente, etc).
 async function emitRouter(flags, cwd) {
   if (typeof flags.hito !== 'string' || flags.hito === '') {
-    ui.log.error('Falta --hito: obligatorio para emitir telemetria del router (ver SKILL ccem-model-router).')
+    ui.log.error('Falta --hito: obligatorio para emitir telemetria del router.')
     return 2
   }
 

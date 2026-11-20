@@ -31,6 +31,18 @@ const EOL = '\r\n'
 
 const PROCESS_EVENTS = ['exit', 'SIGINT', 'SIGTERM', 'uncaughtException']
 
+// Que tecla trae lo que llego por stdin. Si el loop estaba ocupado, un chunk
+// puede traer la misma tecla varias veces: comparar el chunk entero contra una
+// sola tecla hacia que pulsar Ctrl+C dos veces -- justo lo que uno hace cuando
+// el panel no responde -- no saliera.
+export function accionDeTecla(chunk) {
+  const key = typeof chunk === 'string' ? chunk : String(chunk)
+  if (key.includes(KEY_CTRL_C)) return 'interrumpir'
+  if (/^q+$/.test(key)) return 'salir'
+  if (/^p+$/.test(key)) return 'pausa'
+  return null
+}
+
 export function createTtyRenderer({ stdout = process.stdout, stdin = process.stdin } = {}) {
   const tty = stdout.isTTY === true
   const canRaw = tty && typeof stdin?.setRawMode === 'function'
@@ -73,28 +85,29 @@ export function createTtyRenderer({ stdout = process.stdout, stdin = process.std
 
   function onData(chunk) {
     const key = typeof chunk === 'string' ? chunk : String(chunk)
+    const accion = accionDeTecla(key)
 
     // Ctrl+C primero y sin condiciones: si el comando no registro callback,
     // igual salimos con la terminal sana en vez de colgarnos.
-    if (key === KEY_CTRL_C) {
+    if (accion === 'interrumpir') {
       stop()
-      if (keyCallback) keyCallback(key)
+      if (keyCallback) keyCallback(KEY_CTRL_C)
       else process.exit(130)
       return
     }
 
-    if (key === 'q') {
+    if (accion === 'salir') {
       stop()
-      if (keyCallback) keyCallback(key)
+      if (keyCallback) keyCallback('q')
       else process.exit(0)
       return
     }
 
-    if (key === 'p') {
+    if (accion === 'pausa') {
       paused = !paused
     }
 
-    if (keyCallback) keyCallback(key)
+    if (keyCallback) keyCallback(accion === 'pausa' ? 'p' : key)
   }
 
   function fireResize() {

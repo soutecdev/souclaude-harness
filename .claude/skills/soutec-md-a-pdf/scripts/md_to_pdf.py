@@ -50,7 +50,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import soutec_md as core
 from soutec_md import (
     parse_front_matter, truthy, extract_title, md_to_blocks, today_es,
-    inline_to_rl, plain,
+    inline_to_rl, plain, toc_markup,
 )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -141,7 +141,9 @@ class SectionBanner(Flowable):
     def __init__(self, number, title):
         super().__init__()
         self.number = number
-        self.title = re.sub(r"<[^>]+>", "", title)   # el banner usa texto plano
+        # Texto plano y literal, tal como lo entrega plain(): ya no trae
+        # etiquetas, y un «<» que quede es parte del título, no marcado.
+        self.title = title
         self.key = f"sec{number}"
         # No dejar la franja huérfana al pie: si el contenido que sigue no cabe
         # bajo el banner, ReportLab mueve el banner a la página siguiente.
@@ -456,10 +458,10 @@ class SoutecDoc(BaseDocTemplate):
             # Destino /FitH a la altura del banner; el 4º campo del TOCEntry (la
             # key) hace la entrada del índice clicable y anclada al encabezado.
             self.canv.bookmarkHorizontalAbsolute(flowable.key, self._anchor_top(flowable))
-            txt = f"{flowable.number}&nbsp;&nbsp;{re.sub(r'<[^>]+>', '', flowable.title)}"
-            self.notify("TOCEntry", (0, txt, self.page, flowable.key))
-            self.canv.addOutlineEntry(re.sub(r"<[^>]+>", "", flowable.title),
-                                      flowable.key, level=0)
+            # El título es texto literal y el índice lo interpreta como marcado:
+            # va escapado. El marcador del PDF, en cambio, lo toma tal cual.
+            self.notify("TOCEntry", (0, f"{flowable.number}&nbsp;&nbsp;{toc_markup(flowable.title)}", self.page, flowable.key))
+            self.canv.addOutlineEntry(flowable.title, flowable.key, level=0)
         elif isinstance(flowable, Paragraph):
             name = flowable.style.name
             if name in ("H2", "H3"):
@@ -473,7 +475,10 @@ class SoutecDoc(BaseDocTemplate):
                     flowable._bkey = key
                 self.canv.bookmarkHorizontalAbsolute(key, self._anchor_top(flowable))
                 lvl = 1 if name == "H2" else 2
-                self.notify("TOCEntry", (lvl, flowable.getPlainText(), self.page, key))
+                # getPlainText() devuelve el texto ya sin escapar y el índice lo
+                # vuelve a interpretar como marcado: un título con «<» o «&»
+                # (p. ej. código en línea) se reinyectaba como etiquetas.
+                self.notify("TOCEntry", (lvl, toc_markup(flowable.getPlainText()), self.page, key))
 
 
 # ============================================================
@@ -516,7 +521,7 @@ def blocks_to_flowables(blocks, S):
             story.append(_make_table(b, S))
             suppress_indent = False
         elif t == "code":
-            story.append(_make_code(b["text"], S))
+            story.extend(_make_code(b["text"], S))
             suppress_indent = False
         elif t == "callout":
             # Los blockquotes se renderizan como nota en texto plano (sin caja ni
@@ -593,19 +598,34 @@ def _wrap_spaced(fl):
     return fl
 
 
+# Un bloque de hasta estas líneas no se separa de su contexto; uno más largo
+# tiene que poder continuar en la página siguiente.
+CODE_KEEP_LINES = 25
+
+
 def _make_code(text, S):
-    pre = Preformatted(text, S["code"])
-    tbl = Table([[pre]], colWidths=[CONTENT_W])
+    """Devuelve la lista de flowables del bloque de código.
+
+    Una fila por línea: una tabla se parte entre filas, así que un bloque más alto
+    que la página sigue en la siguiente. Con el bloque entero en una sola celda,
+    ReportLab abortaba el PDF con LayoutError."""
+    lineas = text.rstrip("\n").split("\n")
+    filas = [[Preformatted(linea or " ", S["code"])] for linea in lineas]
+    ultima = len(filas) - 1
+    tbl = Table(filas, colWidths=[CONTENT_W])
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), CODEBG),
         ("LINEBEFORE", (0, 0), (0, -1), 2.5, DEEP),
         ("BOX", (0, 0), (-1, -1), 0.6, RULE),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, ultima), (-1, ultima), 6),
     ]))
-    return KeepTogether([Spacer(0, 0.1 * cm), tbl, Spacer(0, 0.2 * cm)])
+    bloque = [Spacer(0, 0.1 * cm), tbl, Spacer(0, 0.2 * cm)]
+    return [KeepTogether(bloque)] if len(filas) <= CODE_KEEP_LINES else bloque
 
 
 # ============================================================
@@ -615,7 +635,7 @@ def render(md_path, out_path, args):
     global _TOTAL_PAGES
     _TOTAL_PAGES = None
 
-    with open(md_path, "r", encoding="utf-8") as f:
+    with open(md_path, "r", encoding="utf-8-sig") as f:
         raw = f.read()
     meta, body = parse_front_matter(raw)
 
@@ -641,6 +661,8 @@ def render(md_path, out_path, args):
             sys.exit(f"No se encontró el logo del cliente: {client_logo}\n"
                      "Envía la imagen del logo (PNG/JPG, preferible con fondo "
                      "transparente) o corrige la ruta con --client-logo.")
+        if not client_logo.lower().endswith((".png", ".jpg", ".jpeg")):
+            sys.exit(f"El logo del cliente debe ser una imagen PNG o JPG: {client_logo}")
 
     want_cover = not args.no_cover
     want_toc = not args.no_toc
@@ -722,6 +744,7 @@ def render(md_path, out_path, args):
 
 
 def main():
+    core.salida_utf8()
     ap = argparse.ArgumentParser(description="Convierte Markdown a PDF corporativo Soutec (ReportLab).")
     ap.add_argument("input")
     ap.add_argument("output", nargs="?")

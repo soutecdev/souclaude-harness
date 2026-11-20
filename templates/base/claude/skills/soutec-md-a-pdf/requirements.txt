@@ -1,0 +1,13 @@
+# Dependencias de la skill soutec-md-a-pdf.
+#
+# Son las versiones con las que se probó de punta a punta (PDF y DOCX) el
+# 2026-11-18, con Python 3.14. Instálalas en el entorno virtual de la skill:
+#
+#   python -m pip install -r requirements.txt
+#
+# Si tu Python no tiene alguna de estas versiones, instala la más reciente que
+# haya para él y vuelve a generar un documento de prueba.
+reportlab==5.1.0
+pillow==13.0.0
+Markdown==3.11.3
+python-docx==1.2.0

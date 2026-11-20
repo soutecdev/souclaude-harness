@@ -20,6 +20,9 @@
  * @property {object[]} archivos  Entradas del indice de transcripts de este tick.
  * @property {object[]} vivos     Procesos de ~/.claude/sessions con procesoVivo resuelto.
  * @property {object|null} limites  Limites de uso ya proyectados al dominio.
+ * @property {{abierto: object|null, archivados: object[]}} registroExtra  Historico local de gasto extra; vacio si no se inyecto usageHistory.
+ * @property {object|null} cuenta  Identidad de la cuenta local (viene del mismo archivo que los limites); null si no se pudo leer.
+ * @property {object[]} cuentasRemotas  Snapshots crudos de las otras cuentas (Vault, SOUCLAUDE_LOCAL_ACCOUNTS); [] sin lector.
  * @property {object[]|null} registrosUsage  Registros v1 del Vault (crudos); null = sin Vault configurado.
  * @property {{file: string, reason: string}[]} avisos  Todos los warnings concatenados.
  */

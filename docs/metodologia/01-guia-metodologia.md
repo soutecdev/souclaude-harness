@@ -5,7 +5,7 @@ repo de SOUTEC. En una lectura sabes qué instala, cómo se trabaja y dónde est
 detalle de cada cosa.
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.18.1**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.20.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 ## La idea en una frase
@@ -40,7 +40,7 @@ se lo recuerda al arrancar), y cada movimiento de tarjeta se pushea en el moment
 npx github:soutecdev/souclaude-harness#v3
 ```
 
-Opcional, una vez por máquina, el CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo):
+El CLI global (habilita `souclaude status`, `souclaude monitor` y `souclaude vault-sync` desde cualquier repo) lo instalan y actualizan solos `init` y `upgrade`. Para instalarlo a mano, una vez por máquina:
 
 ```bash
 npm install -g github:soutecdev/souclaude-harness#v3
@@ -78,6 +78,7 @@ aceptar su ofrecimiento — y la skill `harness-upgrade` corre el flujo completo
 | `soutec-github-solo` | solo · obligatoria | flujo Git fluido del modo solo |
 | `it-security-review` | equipo y solo | workflow de security review para IT |
 | `security-report-standard` | equipo y solo | estándar de informes de seguridad |
+| `cloudflare-security-audit` | equipo y solo | auditoría de seguridad de Cloudflare (solo a pedido, con /cloudflare-security-audit) |
 | `soutec-md-a-pdf` | equipo y solo | Markdown a PDF con identidad Soutec |
 | `adr-new` | equipo y solo | documentar decisiones con ADRs |
 | `harness-upgrade` | equipo y solo | actualizar el harness desde Claude |

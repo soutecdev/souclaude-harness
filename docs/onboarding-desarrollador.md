@@ -52,20 +52,21 @@ logins por ti; estos tres pasos son tuyos):
   El login es una sola vez por máquina; el token queda guardado en tu perfil.
   Aprobar y mergear PRs sigue siendo del coordinador: `gh` no cambia quién
   decide, solo quién tipea.
-- (Próximamente, milestone SHS-M10: `npx souclaude init/upgrade` verificará estos
+- (Próximamente, milestone SHS-M10: `npx github:soutecdev/souclaude-harness#v3 init/upgrade` verificará estos
   requisitos y avisará con el paso exacto si falta alguno.)
 
 ```bash
-npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
+npx github:soutecdev/souclaude-harness#v3 init        # en un repo nuevo (o `upgrade` en uno ya instalado)
 ```
 
 - El instalador pregunta qué **skills** instalar (`soutec-github` es obligatoria;
   para esta metodología necesitas también `vault-milestones` y `jira-sync`).
 - Conecta el **Vault**: si no está clonado en tu máquina, el CLI ofrece clonarlo.
-  La ruta queda en `.claude/vault.local.json` (local, gitignorado). **Añade a mano
-  el campo `"project"`** (`"project": "Project-<PREFIJO>"`): el CLI todavía no lo
-  escribe, y sin él el hook de sesión no encuentra el tablero cuando el Vault
-  tiene más de un proyecto — y no avisa.
+  La ruta queda en `.claude/vault.local.json` (local, gitignorado), junto con el
+  campo `"project"` (`"project": "Project-<PREFIJO>"`): el instalador lo declara
+  solo. Si el Vault tiene varios proyectos, `init` pregunta cuál es; sin terminal
+  interactiva, pásalo con `--vault-project Project-<PREFIJO>`. Si falta, el hook
+  de sesión lo avisa.
 - **Conector Jira** (una vez por máquina): abre Claude Code en el repo, corre
   `/mcp`, aprueba el servidor `atlassian` (lo trae el `.mcp.json` del harness) y
   completa el OAuth en el navegador. El token queda guardado entre sesiones.
@@ -92,7 +93,7 @@ npx souclaude init        # en un repo nuevo (o `upgrade` en uno ya instalado)
   próximo `souclaude upgrade`.
 
 > **¿Trabajas solo?** El harness también se instala en **modo solo** (single
-> coder): `npx souclaude init --solo`, o eligiéndolo en el prompt. Sin
+> coder): `npx github:soutecdev/souclaude-harness#v3 init --solo`, o eligiéndolo en el prompt. Sin
 > milestones ni PRs obligatorios — el agente mergea directo a `dev` y `main` — y
 > la trazabilidad se reduce a una línea por bloque de trabajo en
 > `Project-<PREFIJO>/worklog.md` del Vault. Esta guía describe el **modo

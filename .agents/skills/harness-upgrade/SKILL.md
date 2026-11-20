@@ -1,0 +1,239 @@
+---
+name: harness-upgrade
+description: Actualiza el harness CCEM de este repo (skills, comandos, templates SDD, settings) a la última versión publicada, sin pisar nada que hayas editado tú. Actívate cuando el usuario pida actualizar, upgradear o traer la última versión del harness (ej. "actualiza el harness", "hay una versión nueva del harness", "upgradea el harness"), y también cuando el aviso del harness al inicio de la sesión anuncie una versión nueva y el usuario acepte actualizar.
+---
+
+# /harness-upgrade
+
+Una sola instrucción del usuario dispara todo el flujo: buscar la versión nueva,
+aplicarla, borrar lo que ya no se usa y mergear lo que corresponda de los `.new`.
+No hace falta que el usuario pida cada paso por separado.
+
+## Qué hacer
+
+1. **Estado actual.** Corre:
+
+   ```
+   npx -y github:soutecdev/souclaude-harness#v3 status
+   ```
+
+   **El harness avisa solo**: al inicio de cada sesión, el hook de SessionStart
+   compara la versión instalada con el último tag publicado y, si hay una
+   nueva, la anuncia (SHS-M43). Si ese aviso ya te dijo cuál es la última
+   versión (ej. `v3.18.0`), usa el **tag exacto** en todos los comandos de este
+   flujo — `npx -y github:soutecdev/souclaude-harness#v3.18.0 …` — en lugar del
+   tag móvil `#v3`: la caché de npx puede servir un CLI viejo del tag móvil y
+   hacer que `status` diga "al día" sin estarlo. Por lo mismo, si `status` o
+   `upgrade` avisan "este CLI es vX, pero el último release publicado es vY",
+   repite el comando con `#vY`.
+
+   Si ya está en la última versión y no hay archivos obsoletos ni `.new`
+   pendientes, avisa eso en una línea y termina — no hay nada más que hacer,
+   salvo verificar el CLI global (sección "CLI global `souclaude`", más
+   abajo) y el paso 5 (ficha del Observatorio): esa verificación corre
+   igual aunque el harness no haya cambiado, pero solo **actúa** si encuentra
+   una diferencia real contra la Roca — no es un paso que reescriba o pushee
+   en cada corrida.
+
+2. **Diagnóstico en seco**, siempre antes de tocar nada:
+
+   ```
+   npx -y github:soutecdev/souclaude-harness#v3 upgrade --dry-run --prune
+   ```
+
+   El plan distingue dos grupos de obsoletos: los que se pueden borrar sin
+   preguntar (contenido del harness, intacto desde que lo escribió) y los que tú
+   editaste (exigen revisión, nunca se borran solos). Usa ese plan para armar el
+   resumen del paso 3 — no le pidas OK al usuario todavía.
+
+3. Aplica directo, sin esperar confirmación intermedia:
+
+   ```
+   npx -y github:soutecdev/souclaude-harness#v3 upgrade --prune
+   ```
+
+   Esto actualiza los archivos que no editaste, deja `.new` al lado de los que sí
+   editaste y **borra sin preguntar** los obsoletos que nunca tocaste. Los
+   obsoletos que sí editaste **no se borran solos**: quedan reportados para que
+   los revises en el paso 6 (reporte final).
+
+   El mismo `upgrade` instala o actualiza solo el CLI global `souclaude` si
+   falta o está en otra versión. Apenas termine, verifícalo según la sección
+   "CLI global `souclaude`" (más abajo) y resuelve cualquier fallo antes de
+   seguir: sin ese CLI no hay `souclaude vault-sync` ni `souclaude monitor`.
+
+4. **Si el upgrade dejó archivos `.new`**, es porque el harness cambió una
+   sección que tú también habías editado. Revisa cada uno:
+
+   ```
+   git diff --no-index CLAUDE.md CLAUDE.md.new
+   ```
+
+   Mergea por hunk, nunca el archivo entero:
+   - Hunks en secciones propias del harness (reglas de Git, "Los dos repos",
+     Language, Behavior expectations, y equivalentes en otros archivos
+     gestionados) → toma la versión del `.new`.
+   - Hunks en secciones que el usuario llenó (Contexto, Reglas técnicas
+     críticas, contenido específico del proyecto) → conserva el original, **sin
+     tocarlo**.
+   - Si un hunk es ambiguo, conserva el original y avísalo en el reporte final
+     en vez de decidir por tu cuenta.
+
+   Borra el `.new` después de mergear. Nunca copies un `.new` entero encima del
+   original sin pasar por esta revisión hunk por hunk.
+
+5. **Ficha del Observatorio, solo si hace falta.** Si el repo tiene el Vault
+   conectado (`.claude/vault.local.json`), verifica si la sección
+   "Planificación" de `Project-<PREFIJO>/OBSERVATORIO.md` ya refleja la Roca
+   vigente del proyecto — el mismo chequeo que al instalar el harness,
+   detallado en la skill `soutec-github` (sección "Ficha del Observatorio"):
+   busca `Roca_<trimestre>_<PREFIJO>.md`, toma el trimestre vigente y lleva
+   todos sus hitos a "Planificación" con el formato de la plantilla
+   (`- AAAA-MM-DD · <PREFIJO>-H<n> · <título> · cumplido`: fecha real y marca
+   `cumplido` si el hito se cumplió; si no, la fecha planificada). Los hitos de
+   Roca nunca van en "Hitos" ni en "Próxima versión", que son solo de
+   releases: si un upgrade anterior los dejó ahí, muévelos a "Planificación".
+   **Si ya coinciden, no hay nada que hacer** — esto no es un paso que
+   reescriba o pushee en cada upgrade. Solo si falta, cambió (fecha, título o
+   marca) o sobra una línea, corrígela y pushea al Vault en el momento. Sin
+   Vault conectado, no hay nada que hacer.
+
+   **Sin Roca vigente, pregúntala una vez — no es bloqueante.** No todos los
+   proyectos son Rocas. Al final del flujo, junto al reporte, pregúntale al
+   usuario si el proyecto tiene Roca y, si la tiene, que te la pase: lo normal
+   es el export de Ninety/EOS (un PDF con objetivo, alcance, entregables,
+   criterios y la tabla de Milestones Title / Completed / Due / Owner), que
+   lees con `Read`. Con eso **carga todo en el Vault** sin inventar nada:
+   crea `Project-<PREFIJO>/Roca_<trimestre>_<PREFIJO>.md` (con todo el
+   contenido y la tabla "Alta rápida" Title / Due date / Completed) y su
+   `.yaml` según `00-System/templates/plantilla_apertura_roca.yaml`, agrega
+   sus hitos a "Planificación" de la ficha y pushea en el momento. Detalle
+   completo (año de las fechas, trimestre, formato de las líneas) en la skill
+   `soutec-github`, sección "Ficha del Observatorio". Si el usuario dice que
+   el proyecto no es una Roca, no la tiene a mano o prefiere dejarla para
+   después, sigue sin más: no es un error ni un bloqueo.
+
+6. **Reporte final.** Ábrelo con las novedades de la versión instalada en una
+   caja de guiones, dentro de un bloque de código (así se ve monoespaciada y
+   distinta del resto del mensaje). Una línea por novedad, resumida desde el
+   recuadro «Novedades del harness» que el `upgrade` imprime al terminar (sale
+   del CHANGELOG empaquetado) — no pegues las entradas completas:
+
+   ```
+   ------------------------------------------------------------
+     NOVEDADES DEL HARNESS vX.Y.Z
+   ------------------------------------------------------------
+     - Primera novedad, en una línea
+     - Segunda novedad, en una línea
+   ------------------------------------------------------------
+   ```
+
+   Si el upgrade cruzó varias versiones, una caja por versión (las que mostró
+   el `upgrade`). Después de la caja, el resumen corto:
+   - versión anterior → versión nueva.
+   - CLI global `souclaude`: ya estaba al día, se instaló o actualizó (con qué
+     versión), o qué quedó sin resolver y por qué.
+   - qué se borró sin preguntar (obsoletos sin editar).
+   - qué obsoletos editados quedaron pendientes de revisión (con la ruta).
+   - qué `.new` se mergearon y qué se preservó de lo suyo en cada uno.
+   - cualquier archivo que se saltó por stack (ver sección de abajo).
+   - qué cambió en "Planificación" de OBSERVATORIO.md, si algo cambió.
+   - si el proyecto no tiene Roca vigente: la pregunta del paso 5 y qué
+     respondió el usuario.
+   - si el upgrade sumó o cambió hooks en `.claude/settings.json` (por ejemplo
+     `reglas-pr`, SHS-M39): que **reinicie Claude Code** para que los cargue —
+     los hooks se leen al iniciar la sesión, no en caliente.
+
+   Si no hubo nada relevante que avisar más allá de "actualizado a la última
+   versión", con esa línea alcanza.
+
+## CLI global `souclaude`
+
+`init` y `upgrade` instalan o actualizan el CLI global solos (fuera de CI), así
+que casi siempre ya está listo. Verifícalo siempre, aunque el harness no haya
+cambiado:
+
+```
+souclaude --version
+```
+
+Tiene que existir y mostrar la misma versión que `harnessVersion` de
+`.claude/harness.json`. Si no la muestra, instálalo o actualízalo:
+
+```
+npm install -g github:soutecdev/souclaude-harness#v3
+```
+
+Si falla, diagnostica y resuelve; no te quedes en el aviso. Causas conocidas:
+
+| Síntoma | Causa | Qué hacer |
+|---|---|---|
+| `souclaude: command not found`, pero `npm ls -g souclaude-harness` lo muestra | La carpeta de binarios globales de npm no está en el `PATH` | Obtén la carpeta con `npm prefix -g` (en Windows los binarios quedan ahí mismo; en macOS/Linux, en `<prefix>/bin`). Agrégala al `PATH` del usuario y prueba de nuevo con una terminal nueva. |
+| `EACCES` / `permission denied` (macOS/Linux) | El prefijo global de npm es del sistema (`/usr/local`) | **Nunca uses `sudo`.** `npm config set prefix ~/.npm-global`, agrega `~/.npm-global/bin` al `PATH` y reinstala. |
+| `EPERM` / `EBUSY` (Windows) | Un `souclaude monitor` en ejecución bloquea los archivos del paquete | Cierra el monitor y reinstala. |
+| Error de `git` o `Repository not found` / `403` | Falta `git` o no hay credenciales de GitHub con acceso a `soutecdev/souclaude-harness` | Con `git ls-remote https://github.com/soutecdev/souclaude-harness.git` confirma el acceso. Si falta autenticación, pide al usuario que corra `! gh auth login`. |
+| `ETIMEDOUT` / `ENOTFOUND` | Sin red o con proxy | Reintenta una vez. Si sigue, revisa `npm config get proxy` y repórtalo. |
+| La instalación termina pero `souclaude --version` sigue viejo | Otro `souclaude` gana en el `PATH` (un `npm link`, otra instalación) o quedó una versión en caché | `where souclaude` (Windows) o `which -a souclaude` para ver cuál gana; `npm uninstall -g souclaude-harness` y reinstala. |
+| El aviso de inicio de sesión anuncia una versión nueva, pero `status` dice que está al día | La caché de npx sirvió un CLI viejo del tag móvil `#v3` | Corre el flujo con el tag exacto de esa versión (`npx -y github:soutecdev/souclaude-harness#v<versión> …`) y reinstala el CLI global con ese mismo tag. |
+| `Unsupported engine` o errores de sintaxis al correr | Node menor a 22.4 | Actualizar Node es decisión del usuario: repórtalo con la versión actual (`node --version`). |
+
+Después de cada corrección, vuelve a correr `souclaude --version`. Si tras dos
+intentos sigue fallando, para y repórtalo con el error exacto: el harness del
+repo quedó bien igual, lo que falta es la máquina.
+
+## Único punto donde SÍ hay que parar
+
+- Un obsoleto que el usuario editó no se borra sin que él lo apruebe. Repórtalo
+  en el paso 6 y pregúntale si quiere que lo borres.
+- Un hunk ambiguo de un `.new` no se resuelve solo: se deja como está y se
+  reporta.
+- Sin Roca vigente, pregúntale al usuario al final si el proyecto tiene una
+  (paso 5). No todos los proyectos son Rocas: si no la entrega, el flujo
+  termina igual.
+
+Fuera de esos casos, el flujo completo corre sin pedir OK intermedio — para
+eso es "una sola instrucción".
+
+## Tag-release fuera de Node
+
+El harness solo distribuye `scripts/tag-release.mjs` y
+`.github/workflows/tag-release.yml` en repos donde detecta Node (`package.json`).
+Si el `init`/`upgrade` reporta *"No se instalaron por stack"* para esos dos
+archivos, es tu trabajo escribirlos a mano para el stack real del proyecto — no
+hay variantes empaquetadas por lenguaje: el contrato es siempre el mismo y tú lo
+adaptas mejor que un template genérico.
+
+1. **Fuente de versión**: lee el SemVer del archivo que ese stack usa para
+   versionar (`pyproject.toml`/`setup.cfg` en Python, `Cargo.toml` en Rust, el
+   `.csproj` en .NET, etc.). Si no hay una fuente de versión obvia, para y
+   pregunta — no inventes un esquema.
+2. **Tags**: crea el tag anotado e inmutable `vX.Y.Z` (falla si no es SemVer
+   válido) y mueve a la fuerza el tag móvil de la major, `vX`, al mismo commit.
+3. **Idempotencia**: si `vX.Y.Z` ya existe, no falla ni duplica — solo lo
+   reporta y sale en 0. El tag móvil sí se reasigna siempre.
+4. **Disparo**: workflow de GitHub Actions en `pull_request` `closed` con
+   `base: main`, condicionado a `github.event.pull_request.merged == true`,
+   usando el runtime del stack detectado (no `actions/setup-node` si el
+   proyecto no es Node).
+   Si un upgrade anterior dejó este workflow **pausado** (solo
+   `on: workflow_dispatch:` y el marcador `PAUSA TEMPORAL (SHS-M36)`), la pausa
+   ya se revirtió: descomenta su `on:` a mano, porque `upgrade` no restaura un
+   archivo que generaste tú.
+5. **El workflow no crea el GitHub Release** en stacks no Node
+   (`release-publicar.mjs` solo se distribuye con Node): lo cierra el agente con
+   "Cierre del release" de la skill `soutec-github`.
+
+Usa `scripts/tag-release.mjs` y `.github/workflows/tag-release.yml` (el ejemplo
+Node del propio harness) como referencia del contrato, no como plantilla a
+copiar literal.
+
+Si el `upgrade` marca esos archivos como `obsoleto` (por ejemplo porque el
+harness los instaló sin condicionar por stack antes de SHS-M28, o el stack del
+proyecto cambió), reemplázalos por la variante de tu stack en el mismo
+momento — no dejes el script Node muerto en el repo.
+
+## Qué NO hacer
+
+- No corras `upgrade --force`. Pisa lo que el usuario escribió.
+- No borres un obsoleto editado sin su OK explícito.
+- No edites `.claude/harness.json` a mano. Es el lockfile: lo gestiona el CLI.

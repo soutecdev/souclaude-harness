@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { hashContent, hashBytes } from './hash.js'
-import { writeFileLF, writeFileBytes, ensureDir, readBytesIfExists } from './fsx.js'
+import { writeFileLF, writeFileBytes, ensureDir, readBytesIfExists, esDestSeguro } from './fsx.js'
 import { extractBlock } from './block.js'
 import { writeLockfile } from './lockfile.js'
 import { CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, NOOP, OBSOLETE, MIGRATE, writeActions } from './plan.js'
@@ -9,6 +9,15 @@ import { CREATE, UPDATE, RESTORE, CONFLICT, FOREIGN, NOOP, OBSOLETE, MIGRATE, wr
 export function backupDirName(now = new Date()) {
   const p = (n) => String(n).padStart(2, '0')
   return `backup-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}T${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`
+}
+
+// Toda ruta que apply() toca (escribir, respaldar, borrar) sale de aca: una ruta
+// relativa del plan resuelta contra el repo, o un error. Es el guard que de
+// verdad puede fallar -- el de mas abajo compara el plan contra si mismo --: por
+// mas que un plan llegue adulterado, nada se escribe ni se borra fuera del repo.
+function dentroDelRepo(cwd, rel) {
+  if (!esDestSeguro(rel)) throw new Error(`bloqueado: ruta fuera del repo (${rel})`)
+  return path.join(cwd, ...rel.split('/'))
 }
 
 export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false, pruneEdited = false, backup = true, now }) {
@@ -23,8 +32,16 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
   const allowed = new Set(writes.map((a) => a.writePath).filter(Boolean))
   const backupRoot = path.join(cwd, '.claude', backupDirName(now))
 
+  // Antes de tocar nada: si alguna ruta del plan se sale del repo, no se aplica
+  // ninguna (ni las validas que vienen antes en la lista).
+  for (const dir of plan.dirs) dentroDelRepo(cwd, dir.dest)
+  for (const action of plan.actions) {
+    dentroDelRepo(cwd, action.dest)
+    if (action.writePath) dentroDelRepo(cwd, action.writePath)
+  }
+
   for (const dir of plan.dirs) {
-    const abs = path.join(cwd, ...dir.dest.split('/'))
+    const abs = dentroDelRepo(cwd, dir.dest)
     ensureDir(abs)
     const keep = path.join(abs, '.gitkeep')
     if (fs.readdirSync(abs).length === 0) writeFileLF(keep, '')
@@ -34,9 +51,12 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
     if (action.verdict === OBSOLETE) {
       if (!prune) continue
       if (!action.autoPrune && !pruneEdited) continue
-      const abs = path.join(cwd, ...action.dest.split('/'))
+      const abs = dentroDelRepo(cwd, action.dest)
+      // Lo que se BORRA se respalda siempre, tambien con --no-backup (ese flag
+      // habla de lo que se sobrescribe): antes la copia se hacia igual pero sin
+      // reportarla, y el usuario no se enteraba de que tenia de donde recuperar.
       const saved = saveBackup(cwd, backupRoot, action.dest)
-      if (backup && saved) backedUp.push(saved)
+      if (saved) backedUp.push(saved)
       fs.rmSync(abs, { force: true })
       removed.push(action.dest)
       continue
@@ -62,7 +82,7 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
       if (saved) backedUp.push(saved)
     }
 
-    const target = path.join(cwd, ...action.writePath.split('/'))
+    const target = dentroDelRepo(cwd, action.writePath)
     if (action.binary) writeFileBytes(target, action.content)
     else writeFileLF(target, action.content)
     written.push({ dest: action.writePath, verdict: action.verdict })
@@ -77,7 +97,7 @@ export function apply({ plan, cwd, manifest, vars, detected, lock, prune = false
 // El backup copia bytes tal cual: sin normalizacion LF, para no corromper
 // binarios y para que el respaldo sea una copia fiel, no una version "arreglada".
 function saveBackup(cwd, backupRoot, dest) {
-  const src = path.join(cwd, ...dest.split('/'))
+  const src = dentroDelRepo(cwd, dest)
   const content = readBytesIfExists(src)
   if (content == null) return null
   writeFileBytes(path.join(backupRoot, ...dest.split('/')), content)

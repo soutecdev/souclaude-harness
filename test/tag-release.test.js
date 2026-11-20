@@ -112,4 +112,44 @@ test('tag-release --ref origin/main: taggea el release con el tag movil local vi
   // Idempotente: una segunda corrida no duplica ni falla.
   const otra = correrTagRelease(dev, ['--ref', 'origin/main'])
   assert.match(otra, /\[skip\] v3\.16\.0 ya existe/)
+  assert.doesNotMatch(otra, /\[aviso\]/, 'el mismo commit ya taggeado no es un release sin tag')
+})
+
+// Un merge a main que no subio `version` deja el tag donde estaba: el release
+// nuevo queda sin tag y el movil no avanza. Antes el script decia "[skip] ya
+// existe" y salia 0, igual que en una segunda corrida inocente.
+test('tag-release: si la version no subio, avisa que el release quedo sin tag nuevo (y sigue saliendo 0)', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude tags '))
+  const remoto = path.join(base, 'remoto.git')
+  execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remoto])
+  const repo = path.join(base, 'repo')
+  execFileSync('git', ['clone', '-q', remoto, repo], { stdio: 'ignore' })
+  // GITHUB_ACTIONS se fija a mano: la suite tambien corre dentro de Actions.
+  const correr = (enActions) =>
+    execFileSync(process.execPath, [SCRIPT], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, ...IDENTIDAD, GITHUB_ACTIONS: enActions ? 'true' : '' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+  const c1 = commitearVersion(repo, '1.2.0')
+  assert.match(correr(false), /\[OK\] v1\.2\.0 creado y pusheado/)
+
+  // Otro merge a main, sin tocar la version.
+  fs.writeFileSync(path.join(repo, 'README.md'), 'cambio\n')
+  git(repo, 'add', '-A')
+  git(repo, 'commit', '-q', '-m', 'docs: cambio')
+  git(repo, 'push', '-q', 'origin', 'HEAD:main')
+  const c2 = git(repo, 'rev-parse', 'HEAD')
+
+  const salida = correr(false)
+  assert.match(salida, /\[skip\] v1\.2\.0 ya existe/)
+  assert.match(salida, new RegExp(`\\[aviso\\] v1\\.2\\.0 ya existe en ${c1.slice(0, 7)} y este release es ${c2.slice(0, 7)}`))
+  assert.doesNotMatch(salida, /::warning/, 'fuera de Actions no se emite la anotacion')
+  // Dentro de Actions, ademas, como anotacion visible en el resumen del workflow.
+  assert.match(correr(true), /^::warning title=Release sin tag nuevo::v1\.2\.0 ya existe/m)
+  // Nada se movio: el tag sigue en el release anterior.
+  assert.equal(git(repo, 'rev-parse', 'v1.2.0^{commit}'), c1)
+  assert.equal(git(repo, 'rev-parse', 'v1^{commit}'), c1)
 })

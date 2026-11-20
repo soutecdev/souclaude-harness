@@ -161,7 +161,7 @@ test('init --solo: catalogo de skills del modo (github-solo required, sin skills
     assert.ok(!has(dir, `.claude/skills/${s}/SKILL.md`), `se instalo la skill de equipo ${s}`)
   }
   // Las comunes a ambos modos siguen entrando.
-  for (const s of ['adr-new', 'harness-upgrade', 'soutec-md-a-pdf', 'it-security-review', 'security-report-standard']) {
+  for (const s of ['adr-new', 'harness-upgrade', 'soutec-md-a-pdf', 'it-security-review', 'security-report-standard', 'cloudflare-security-audit']) {
     assert.ok(has(dir, `.claude/skills/${s}/SKILL.md`), `falta la skill comun ${s}`)
   }
   const lock = JSON.parse(read(dir, '.claude/harness.json'))

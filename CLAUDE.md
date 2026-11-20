@@ -9,7 +9,7 @@ organización.
 
 ## Harness
 
-Harness `3.18.1`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
+Harness `3.20.0`. Sin agentes ni flujos fijos: el modelo trabaja directo. Las skills
 viven en `.claude/skills/` y se aplican solas cuando el contexto lo amerita (en un
 proyecto consumidor se eligen al instalar con `npx souclaude`; `soutec-github` es
 obligatoria y siempre está):
@@ -17,6 +17,8 @@ obligatoria y siempre está):
 - `soutec-github` — flujo Git/GitHub obligatorio de SOUTEC.
 - `it-security-review` — security review para IT.
 - `security-report-standard` — estándar de informes de seguridad.
+- `cloudflare-security-audit` — auditoría de seguridad de Cloudflare; solo a pedido,
+  con `/cloudflare-security-audit`.
 - `soutec-md-a-pdf` — Markdown a PDF con identidad Soutec.
 - `adr-new` — documentar decisiones con ADRs.
 - `harness-upgrade` — actualizar el harness.
@@ -50,9 +52,9 @@ por PR.
 - Sincronizar la rama: `git fetch origin && git merge origin/dev`. **Nunca
   `git push --force`.**
 - **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
-  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) sí puedo crearlos, solo al
-  publicar y después del merge de release `dev` → `main`: mientras GitHub Actions
-  esté en pausa (SHS-M36), con `git fetch origin && node scripts/tag-release.mjs
+  Los **tags de versión** (`vX.Y.Z` + tag móvil por major) los crea el workflow
+  `tag-release.yml` al mergearse el release `dev` → `main`; si no corrió o el repo
+  no lo tiene, los creo yo con `git fetch origin && node scripts/tag-release.mjs
   --ref origin/main`.
 - **El PR se abre solo con el visto bueno del usuario**: cuando lo pide, dice que
   quiere mergear o responde que sí a tu pregunta. **Pregúntale una sola vez, cuando
@@ -60,13 +62,13 @@ por PR.
   no lo menciones antes ni lo repitas en cada avance. Sin esa respuesta no lo abras:
   push a la rama y reportar.
 - **Si el pedido de PR incluye correr antes el security review, terminado el review
-  no te detengas**: seguí directo con push/PR si no hay hallazgos que bloqueen. El
+  no te detengas**: sigue directo con push/PR si no hay hallazgos que bloqueen. El
   security review es un paso intermedio del mismo pedido, no un punto de checkpoint —
   el usuario ya autorizó el PR al pedirlo. Si el review sí encuentra algo bloqueante,
-  ahí parás y reportás.
+  ahí paras y reportas.
 - Al abrir el PR: completar `.github/pull_request_template.md` de verdad. Si piden
   correcciones, push a la **misma** rama — nunca un PR nuevo.
-- **Checks de PR en la sesión** (Actions en pausa, SHS-M36): el hook `reglas-pr` de
+- **Checks de PR en la sesión** (además de los workflows `reglas-*` de CI): el hook `reglas-pr` de
   Claude Code deniega el `git push` que toca `main` de cualquier repo que no sea el
   Vault (SHS-M42) o que sube archivos de secretos y, al crear o editar el PR con
   `gh pr create`/`gh pr edit`, corre `scripts/check-pr-rules.mjs` y publica el
@@ -135,6 +137,12 @@ infraestructura y todo lo que toca frameworks, en inglés.
   verify` y el test de dogfood lo vigilan.
 - Los archivos de skills con assets binarios llevan `"binary": true` en el manifest:
   sin eso, la lectura utf8 y la normalización LF corrompen los bytes.
+- El harness se instala siempre para Claude Code, Codex y Antigravity (SHS-M48, las
+  dos últimas en prueba). Una skill se declara **una vez** en el manifest, bajo
+  `.claude/skills/`: `loadManifest()` deriva su gemelo en `.agents/skills/`, y este
+  repo lleva copia local de las dos carpetas. La lógica de los hooks vive solo en
+  `.claude/hooks/`; `.codex/hooks.json` la invoca directo y Antigravity pasa por el
+  adaptador `.agents/hooks/souclaude-antigravity.mjs`, que traduce y no decide.
 - Escritura de archivos: siempre plana (nada de write-temp-then-rename): OneDrive y
   antivirus rompen el patrón "atómico" con EPERM.
 - `docs/metodologia/` es la carpeta publicable de la metodología: sus secciones
@@ -142,8 +150,10 @@ infraestructura y todo lo que toca frameworks, en inglés.
   frescura la exigen `souclaude verify`, el test-candado de la suite y el hook
   `reglas-pr` (deniega el push con drift). En cada release `dev` → `main`, revisa
   también la prosa de la carpeta.
-- Tests: `npm test` (Node >= 22.4). Quita `NO_COLOR` del entorno antes de correr los
-  tests de monitor-render.
+- Tests: `npm test` (Node >= 22.4); `npm run check` suma `verify --strict`. La suite
+  no depende del entorno: pasa con o sin terminal, con `NO_COLOR` y con las
+  variables de un PR de GitHub Actions. `npm run test:cobertura` (Node >= 22.8)
+  mide la cobertura del código del repo y falla si baja del piso.
 
 ## Economía de tokens
 

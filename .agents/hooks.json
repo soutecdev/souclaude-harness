@@ -1,0 +1,25 @@
+{
+  "souclaude-reglas-pr": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agents/hooks/souclaude-antigravity.mjs reglas-pr",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  },
+  "souclaude-inicio-de-sesion": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node .agents/hooks/souclaude-antigravity.mjs inicio-de-sesion",
+        "timeout": 60
+      }
+    ]
+  }
+}

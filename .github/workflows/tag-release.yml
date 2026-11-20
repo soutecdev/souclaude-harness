@@ -6,7 +6,7 @@ name: Tag de release
 # (o actualiza) el GitHub Release con scripts/release-publicar.mjs, tomando el
 # título y la descripción corta (menos de 30 palabras) de la sección
 # "## Release en GitHub" del cuerpo del PR de release (SHS-M44). Este workflow y
-# los scripts los distribuye y actualiza el harness (npx souclaude upgrade); no
+# los scripts los distribuye y actualiza el harness (souclaude upgrade); no
 # los edites a mano en el repo consumidor.
 
 on:

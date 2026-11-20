@@ -6,20 +6,35 @@ on:
   pull_request:
   workflow_dispatch:
 
+# El token del job solo lee: este workflow corre codigo del PR (los tests) y no
+# necesita escribir nada en el repo.
+permissions:
+  contents: read
+
+# Un push nuevo al mismo PR cancela la corrida anterior; en dev/main cada commit
+# conserva la suya.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     # Windows es el entorno real de los devs de SOUTEC (OneDrive, CRLF, rutas con
     # espacios). Ubuntu esta para que el lockfile escrito en Windows se pueda leer
     # desde CI: por eso el hash se normaliza a LF y las rutas van en POSIX.
+    # macOS esta porque su carpeta temporal es un enlace simbolico (/var ->
+    # /private/var): es el unico de los tres donde aparecia el hook reglas-pr
+    # saliendo sin hacer nada al invocarse por una ruta con enlace.
     # Node 22 custodia el piso de engines (>=22.4, por allowNegative en parseArgs);
     # 24 es la version de trabajo del equipo.
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         node: [22, 24]
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +42,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+          cache: npm
 
       - run: npm ci
 
@@ -38,6 +54,15 @@ jobs:
       # --test-concurrency=1 en CI elimina la carrera; en local (npm test) la
       # suite sigue en paralelo, que es rapido y no reproduce el problema.
       - run: npm run test:ci
+
+      # Cobertura del codigo del repo (sin contar test/), con piso: falla si baja
+      # de 89 % de lineas, 79 % de ramas o 90 % de funciones. Una sola celda de la
+      # matriz, y por ahora INFORMATIVO (continue-on-error): cuando lleve unas
+      # corridas en verde, quitar esa linea lo vuelve un check de verdad.
+      - name: cobertura con piso (informativo)
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        continue-on-error: true
+        run: npm run test:cobertura -- --test-concurrency=1
 
       - name: verifica integridad del manifest (huerfanos, rutas rotas, duplicados, criticos)
         run: node bin/cli.mjs verify --strict

@@ -151,4 +151,4 @@ Solo si el repo tiene el Vault conectado (`.claude/vault.local.json`):
 No lo apliques ni lo exijas: plantilla de PR, aprobaciones y coordinador,
 squash & merge obligatorio, checks de rama/commits en CI, milestones/kanban y
 espejo del tablero (Jira/Azure Boards). Para volver a la metodología completa:
-`npx souclaude upgrade --equipo`.
+`npx github:soutecdev/souclaude-harness#v3 upgrade --equipo`.

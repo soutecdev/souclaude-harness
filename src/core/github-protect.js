@@ -26,26 +26,26 @@ function sh(args, cwd, input) {
   }).trim()
 }
 
-function ghDisponible(cwd) {
+function ghDisponible(cwd, correr) {
   try {
-    sh(['gh', 'auth', 'status'], cwd, '')
+    correr(['gh', 'auth', 'status'], cwd, '')
     return true
   } catch {
     return false
   }
 }
 
-function repoRemoto(cwd) {
+function repoRemoto(cwd, correr) {
   try {
-    return sh(['gh', 'repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'], cwd, '')
+    return correr(['gh', 'repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'], cwd, '')
   } catch {
     return null
   }
 }
 
-function ramaExiste(cwd, repo) {
+function ramaExiste(cwd, repo, correr) {
   try {
-    sh(['gh', 'api', `repos/${repo}/branches/${RAMA_PROTEGIDA}`], cwd, '')
+    correr(['gh', 'api', `repos/${repo}/branches/${RAMA_PROTEGIDA}`], cwd, '')
     return true
   } catch {
     return false
@@ -77,9 +77,10 @@ function cuerpoProteccion() {
 // pero SOUTEC ya decidio que la regla "main solo desde dev" es no-negociable,
 // asi que hacerla cumplir en GitHub tampoco lo es. No rompe init/upgrade si
 // falla: se reporta y se sigue (mismo criterio que jira-sync cuando el
-// conector no esta autorizado).
-export function protegeBranchMain({ cwd }) {
-  if (!ghDisponible(cwd)) {
+// conector no esta autorizado). `correr` es el proceso que habla con gh: se
+// inyecta en los tests para comprobar QUE se le pide a GitHub sin pedirselo.
+export function protegeBranchMain({ cwd, correr = sh }) {
+  if (!ghDisponible(cwd, correr)) {
     ui.log.warn(
       'gh no esta instalado o no esta autenticado: no se pudo configurar la proteccion de main. ' +
         'Corre `gh auth login` y reintenta con `souclaude upgrade`.'
@@ -87,26 +88,26 @@ export function protegeBranchMain({ cwd }) {
     return { aplicado: false }
   }
 
-  const repo = repoRemoto(cwd)
+  const repo = repoRemoto(cwd, correr)
   if (!repo) {
     ui.log.warn('No se pudo resolver el repo de GitHub (sin remoto o sin permisos): proteccion de main no configurada.')
     return { aplicado: false }
   }
 
-  if (!ramaExiste(cwd, repo)) {
+  if (!ramaExiste(cwd, repo, correr)) {
     ui.log.info(`"${RAMA_PROTEGIDA}" todavia no existe en ${repo}: proteccion de main queda pendiente para cuando exista.`)
     return { aplicado: false }
   }
 
   try {
-    sh(
+    correr(
       ['gh', 'api', '-X', 'PUT', `repos/${repo}/branches/${RAMA_PROTEGIDA}/protection`, '--input', '-'],
       cwd,
       cuerpoProteccion()
     )
     const checks = CHECKS_REQUERIDOS.length
       ? `+ checks ${CHECKS_REQUERIDOS.map((c) => `"${c}"`).join(' y ')} en verde`
-      : '(sin checks requeridos: Actions en pausa, SHS-M36)'
+      : '(sin checks requeridos)'
     ui.log.success(`Branch protection de "${RAMA_PROTEGIDA}" en ${repo}: PR obligatorio ${checks}.`)
     return { aplicado: true }
   } catch (err) {
