@@ -1,6 +1,6 @@
 # souclaude-harness
 
-**v3.20.0**
+**v3.21.0**
 
 CLI para instalar y migrar el harness de Claude Code de SOUTEC en cualquier repo: uno
 nuevo, uno legacy de cinco años, o uno que ya tiene una versión vieja del harness.
@@ -94,6 +94,7 @@ de una instalación de cero en el modo nuevo.
 |---|---|
 | `souclaude init` | Instala. Sirve igual en un repo vacío y en uno con 5 años de código. |
 | `souclaude upgrade` | Actualiza a la última versión. Aplica migraciones. |
+| `souclaude diagnostico` | Solo lectura. Dice en qué caso de instalación está la carpeta (requisitos de máquina, git, remoto, ramas, harness y Vault), qué comando corresponde y qué falta. `--json` para un agente. Exit 1 si hay bloqueos. Es el primer paso del [prompt de instalación](docs/metodologia/03-prompt-instalacion.md). |
 | `souclaude status` | Solo lectura. Exit 0 = al día · 1 = hay upgrade · 2 = drift (ediciones locales o propuestas `.new` sin resolver). |
 | `souclaude adopt` | Para una estructura hecha a mano. **No toca ningún archivo**: solo escribe el lockfile. |
 | `souclaude monitor` | Panel de consumo de tokens de Claude Code. |

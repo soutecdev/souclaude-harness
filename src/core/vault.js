@@ -241,7 +241,7 @@ function nombreDelRemoto(cwd) {
 // solo si el registro apunta a UNA sola y esa carpeta existe. `esperada` viaja
 // aparte para poder distinguir "el registro no me conoce" de "me conoce y su
 // carpeta todavia no esta en el Vault": son dos situaciones distintas.
-function resolverPorRegistro(cwd, vaultPath, carpetas) {
+export function resolverPorRegistro(cwd, vaultPath, carpetas) {
   const nombres = new Set(identidadDelRepo(cwd))
   const esperadas = [
     ...new Set(
@@ -343,7 +343,7 @@ export async function ensureVault({ cwd, flags = {}, manifest, lock, yes, prompt
   // requisito para tener el harness instalado.
   try {
     await asegurarProyecto(cwd, abs, { flags, yes, prompts, git, modo })
-    await asegurarQuien(cwd, { yes, prompts })
+    await asegurarQuien(cwd, { flags, yes, prompts })
   } catch (err) {
     ui.log.warn(`No se pudo completar la config del Vault: ${err.message}`)
   }
@@ -395,6 +395,27 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
   }
 
   const declarado = typeof config?.project === 'string' ? config.project.trim() : ''
+
+  // Alta de un proyecto NUEVO por flags (SHS-M53): el unico camino desatendido
+  // para un repo que el registro todavia no conoce. Si este repo ya declara esa
+  // misma carpeta (una segunda corrida del mismo comando), no hay nada que dar
+  // de alta: sigue por el camino de "lo ya declarado".
+  const prefijoPedido = typeof flags['vault-prefix'] === 'string' ? flags['vault-prefix'].trim().toUpperCase() : ''
+  if (prefijoPedido && declarado !== `${PREFIJO_PROYECTO}${prefijoPedido}`) {
+    const creado = await altaProyecto(
+      cwd,
+      vaultPath,
+      carpetas,
+      {
+        prefijo: prefijoPedido,
+        nombreProyecto: String(flags['vault-project-name'] ?? '').trim(),
+        dueño: String(flags['vault-owner'] ?? '').trim(),
+      },
+      { prompts, git, modo }
+    )
+    return creado ? persistirProyecto(cwd, vaultPath, creado) : null
+  }
+
   if (declarado) {
     // Un puntero que quedo apuntando a una carpeta que ya no esta es el mismo
     // fallo silencioso, con otra causa: se avisa, pero no se pisa lo declarado
@@ -444,7 +465,10 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
   // intesteable, que es como termino asegurarQuien. Mismo criterio que
   // conectarVault.
   if (yes) {
-    ui.log.warn(`El Vault tiene ${carpetas.length} proyectos y ninguno declarado. ${disponibles()} Pasa --vault-project <${PREFIJO_PROYECTO}XXX>.`)
+    ui.log.warn(
+      `El Vault tiene ${carpetas.length} proyectos y ninguno declarado. ${disponibles()} Pasa --vault-project <${PREFIJO_PROYECTO}XXX>, ` +
+        'o da de alta uno nuevo con --vault-prefix <XXX> --vault-project-name "<nombre>".'
+    )
     return null
   }
 
@@ -473,22 +497,13 @@ async function asegurarProyecto(cwd, vaultPath, { flags = {}, yes, prompts, git 
 // camino desatendido sigue resolviendo por --vault-project o por el registro
 // ya existente, nunca inventa un prefijo en silencio.
 async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts, git = gitReal, modo = 'equipo' }) {
-  const registrados = new Set(leerRegistroDePrefijos(vaultPath).map((f) => f.prefijo.toUpperCase()))
-
   const prefijoIngresado = await prompts.text({
     message: 'Prefijo del proyecto nuevo (2 a 6 letras mayusculas, ej. RAM)',
   })
   const prefijo = String(prefijoIngresado ?? '').trim().toUpperCase()
-  if (!PREFIJO_VALIDO.test(prefijo)) {
-    ui.log.warn(`Alta de proyecto cancelada: "${prefijoIngresado ?? ''}" no son 2 a 6 letras (A-Z).`)
-    return null
-  }
-  if (registrados.has(prefijo)) {
-    ui.log.warn(`Alta de proyecto cancelada: el prefijo ${prefijo} ya esta registrado.`)
-    return null
-  }
-  if (carpetasExistentes.includes(`${PREFIJO_PROYECTO}${prefijo}`)) {
-    ui.log.warn(`Alta de proyecto cancelada: ya existe ${PREFIJO_PROYECTO}${prefijo} en el Vault.`)
+  const motivo = prefijoRechazado(vaultPath, carpetasExistentes, prefijo)
+  if (motivo) {
+    ui.log.warn(`Alta de proyecto cancelada: ${motivo}`)
     return null
   }
 
@@ -496,17 +511,51 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
     message: `Nombre del proyecto (para ${REGISTRO})`,
   })
   const nombreProyecto = String(nombreIngresado ?? '').trim()
-  if (!nombreProyecto) {
-    ui.log.warn('Alta de proyecto cancelada: falta el nombre del proyecto.')
-    return null
-  }
 
   const dueñoSugerido = gitUserNameLocal(cwd)
   const dueñoIngresado = await prompts.text({
     message: `Dueño del proyecto (para ${REGISTRO}, ej. @usuario)`,
     initialValue: dueñoSugerido ? `@${dueñoSugerido}` : '',
   })
-  const dueño = String(dueñoIngresado ?? '').trim() || '[dueño]'
+  const dueño = String(dueñoIngresado ?? '').trim()
+
+  return altaProyecto(cwd, vaultPath, carpetasExistentes, { prefijo, nombreProyecto, dueño }, { prompts, git, modo })
+}
+
+// Por que un prefijo no se puede dar de alta, o null si se puede.
+function prefijoRechazado(vaultPath, carpetasExistentes, prefijo) {
+  if (!PREFIJO_VALIDO.test(prefijo)) return `"${prefijo}" no son 2 a 6 letras (A-Z).`
+  const registrados = new Set(leerRegistroDePrefijos(vaultPath).map((f) => f.prefijo.toUpperCase()))
+  if (registrados.has(prefijo)) return `el prefijo ${prefijo} ya esta registrado.`
+  if (carpetasExistentes.includes(`${PREFIJO_PROYECTO}${prefijo}`)) return `ya existe ${PREFIJO_PROYECTO}${prefijo} en el Vault.`
+  return null
+}
+
+// Alta de un proyecto nuevo con los datos ya en mano -- vengan del flujo
+// interactivo (crearProyectoNuevo) o de los flags --vault-prefix,
+// --vault-project-name y --vault-owner (SHS-M53, el camino sin terminal).
+// Valida, agrega la fila al registro y siembra la carpeta. Los valores terminan
+// en una fila de una tabla markdown del repo compartido: sin "|" ni saltos de
+// linea, que romperian el registro para toda la organizacion.
+async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts, git = gitReal, modo = 'equipo' }) {
+  const prefijo = String(datos.prefijo ?? '').trim().toUpperCase()
+  const motivo = prefijoRechazado(vaultPath, carpetasExistentes, prefijo)
+  if (motivo) {
+    ui.log.warn(`Alta de proyecto cancelada: ${motivo}`)
+    return null
+  }
+  const nombreProyecto = String(datos.nombreProyecto ?? '').trim()
+  if (!nombreProyecto) {
+    ui.log.warn('Alta de proyecto cancelada: falta el nombre del proyecto (--vault-project-name).')
+    return null
+  }
+  const sugerido = gitUserNameLocal(cwd)
+  const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '[dueño]')
+  const invalido = [nombreProyecto, dueño].find((v) => /[|\r\n]/.test(v))
+  if (invalido !== undefined) {
+    ui.log.warn(`Alta de proyecto cancelada: "${invalido.split(/[\r\n]/)[0]}" no puede llevar "|" ni saltos de linea.`)
+    return null
+  }
 
   const carpeta = `${PREFIJO_PROYECTO}${prefijo}`
   const registro = await agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto: nombreProyecto, dueño }, { git })
@@ -664,7 +713,20 @@ function persistirProyecto(cwd, vaultPath, project) {
 // consumo (ADR 20260820): sin el, el monitor degrada al alias de la cuenta.
 // Se pregunta UNA vez (solo interactivo, solo si falta) y queda persistido;
 // con --yes o en CI se omite en silencio — nunca es bloqueante.
-async function asegurarQuien(cwd, { yes, prompts }) {
+async function asegurarQuien(cwd, { flags = {}, yes, prompts }) {
+  // --vault-quien: el camino sin terminal (SHS-M53). Mismo cuidado que la
+  // pregunta: solo sobre el archivo real, y un valor explicito reemplaza al
+  // anterior porque es una decision de quien corre el comando.
+  const pedido = typeof flags['vault-quien'] === 'string' ? flags['vault-quien'].trim() : ''
+  if (pedido) {
+    const actual = leerConfigDeArchivo(cwd)
+    if (!actual?.path) return
+    if (actual.quien !== pedido) {
+      writeVaultConfig(cwd, { path: actual.path, repo: actual.repo ?? null, quien: pedido })
+      ui.log.success(`Contribuyente registrado: "${pedido}" (${VAULT_CONFIG})`)
+    }
+    return
+  }
   if (yes || ui.isCI()) return
   // Solo el archivo real: si la config viene del respaldo VAULT_PATH (env),
   // preguntar aqui persistiria esa ruta en un archivo que el usuario no creo.

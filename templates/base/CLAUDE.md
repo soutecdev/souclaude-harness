@@ -49,7 +49,11 @@ por PR.
   como `fix:`. Prohibidos: `update`, `cosas`, `ahora sí`.
 - Sincronizar la rama: `git fetch origin && git merge origin/dev`. **Nunca
   `git push --force`.**
-- **Yo no mergeo PRs, no los apruebo y no creo repositorios.** Eso es del coordinador.
+- **Yo no mergeo PRs ni los apruebo.** Eso es del coordinador. **Repositorios: solo
+  creo el de un proyecto que nace desde cero**, al instalar el harness, con
+  `gh repo create` y únicamente después de que el usuario confirme de forma explícita
+  nombre, organización y visibilidad (privado salvo indicación contraria); fuera de
+  ese caso no creo repositorios.
   Los **tags de versión** (`vX.Y.Z` + tag móvil por major) los crea el workflow
   `tag-release.yml` al mergearse el release `dev` → `main`; si no corrió o el repo
   no lo tiene, los creo yo con `git fetch origin && node scripts/tag-release.mjs
