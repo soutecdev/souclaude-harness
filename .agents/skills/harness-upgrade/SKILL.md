@@ -186,7 +186,12 @@ de `.claude/harness.json` y `vY` la que imprima `status`.
    entra en el commit**.
 2. **Upgrade**, siempre con el **tag exacto**, nunca `#v3`:
    `npx -y github:soutecdev/souclaude-harness#vY upgrade --dry-run --prune` y
-   luego `… upgrade --prune`. Si un comando falla, no reintenta con variantes
+   luego `… upgrade --prune --yes --no-github-protect --no-vault`. Los tres
+   flags son obligatorios: sin `--yes` y sin terminal interactiva el comando
+   termina con error; `--no-github-protect` evita que un upgrade que nadie
+   pidió reescriba la protección de `main` en GitHub; `--no-vault` cumple que
+   este modo no toca el Vault. Ambas cosas se ponen al día con el flujo manual
+   (`actualiza el harness`). Si un comando falla, no reintenta con variantes
    ni con `--force`: termina con el error literal. Si avisa "este CLI es vX,
    pero el último release publicado es vZ", repite una vez con `#vZ` y usa
    `vZ` en el resto. Nunca `upgrade --force` ni editar `.claude/harness.json`.
