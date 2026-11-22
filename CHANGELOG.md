@@ -53,7 +53,9 @@ una versión nueva (SHS-M43).
 - **`init` y `adopt` se niegan a instalar en un subdirectorio de un repo**: el
   harness va en la raíz. En una carpeta sin git instalan igual, y lo avisan.
 - **La skill `harness-upgrade` corre `upgrade --prune --yes`**, en el flujo manual
-  y en el modo autónomo: sin terminal interactiva el `--yes` es obligatorio.
+  y en el modo autónomo: sin terminal interactiva el `--yes` es obligatorio. El
+  modo autónomo suma `--no-github-protect --no-vault`: un upgrade que nadie pidió
+  no reescribe la protección de `main` ni escribe en el Vault.
 
 ### Correcciones
 
