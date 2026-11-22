@@ -75,9 +75,12 @@ va por flags con `--yes`: el camino completo está en el
 Para actualizar más adelante no se repite nada de esto — y no hace falta estar
 pendiente de los anuncios: al abrir una sesión en un repo con el harness, el
 hook de inicio compara la versión instalada con el último release publicado y,
-si hay una nueva, la avisa ahí mismo (una consulta por máquina y por día; en
-silencio si no hay red). Basta decirle al agente "actualiza el harness" — o
-aceptar su ofrecimiento — y la skill `harness-upgrade` corre el flujo completo.
+si hay una nueva de la misma serie, la instala solo, en segundo plano y sin
+preguntar (una consulta por máquina y por día; en silencio si no hay red): commitea
+el upgrade en la rama actual, sin push, no pisa nada que hayas editado y cierra con
+«Harness actualizado: vX a vY». En `main` solo avisa, y un cambio de serie (una
+major nueva) tampoco se instala solo. Para hacerlo a mano basta decirle al agente
+"actualiza el harness": la skill `harness-upgrade` corre el flujo completo.
 
 ## Las skills que puede instalar
 
