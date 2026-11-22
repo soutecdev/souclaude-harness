@@ -31,6 +31,22 @@ export function note(message, title) {
   p.note(message, title)
 }
 
+// Sin terminal interactiva (un agente, un pipe) no hay nadie que conteste: los
+// prompts de clack dejaban el proceso colgado de una promesa que nunca se
+// resuelve y Node salia con codigo 13 y un aviso de "unsettled top-level
+// await", sin decir que hacer. Se corta con un error accionable ANTES de
+// escribir nada (SHS-M53).
+const hayTerminal = () => process.stdin.isTTY === true
+
+function exigirTerminal(message) {
+  if (hayTerminal()) return
+  throw new Error(
+    `Sin terminal interactiva no se puede preguntar "${String(message).split('\n')[0]}". ` +
+      'Corre el comando con --yes y responde por flags (--name, --type, --lang, --solo | --equipo, --skills, ' +
+      '--vault-path, --vault-project). `souclaude diagnostico` dice cuales hacen falta. No se escribio nada.'
+  )
+}
+
 async function guard(value) {
   if (p.isCancel(value)) {
     cancelled()
@@ -41,11 +57,13 @@ async function guard(value) {
 
 export async function text({ message, initialValue, yes }) {
   if (yes) return initialValue
+  exigirTerminal(message)
   return guard(await p.text({ message, initialValue, defaultValue: initialValue }))
 }
 
 export async function select({ message, options, initialValue, yes }) {
   if (yes) return initialValue ?? options[0].value
+  exigirTerminal(message)
   return guard(await p.select({ message, options, initialValue }))
 }
 
@@ -53,18 +71,21 @@ export async function select({ message, options, initialValue, yes }) {
 // cual (el default es "todas marcadas", igual que las demas preguntas).
 export async function multiselect({ message, options, initialValues = [], yes }) {
   if (yes) return initialValues
+  exigirTerminal(message)
   return guard(await p.multiselect({ message, options, initialValues, required: false }))
 }
 
 export async function confirm({ message, initialValue = false, yes }) {
   if (yes) return initialValue
+  exigirTerminal(message)
   return guard(await p.confirm({ message, initialValue }))
 }
 
 // P5: las acciones destructivas piden una segunda confirmacion explicita, y
 // --yes NUNCA la implica. Hay que tipear la palabra.
 export async function confirmDestructive({ message, word }) {
-  if (isCI()) return false
+  // Sin terminal nadie puede tipear la palabra: se deniega, igual que en CI.
+  if (isCI() || !hayTerminal()) return false
   const answer = await guard(
     await p.text({ message: `${message}\n  Escribe ${pc.bold(word)} para confirmar (cualquier otra cosa cancela):` })
   )

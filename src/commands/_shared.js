@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { computePlan, writeActions, MODOS, OBSOLETE, NOOP, LOCAL_EDIT, CONFLICT } from '../core/plan.js'
@@ -14,6 +16,44 @@ export function gitUserName(cwd) {
     return execFileSync('git', ['config', 'user.name'], { cwd, encoding: 'utf8' }).trim() || null
   } catch {
     return null
+  }
+}
+
+// SHS-M53: donde se instala. Dentro de un repo git, solo en la raiz: los hooks,
+// .github/ y el lockfile se resuelven contra ella, y un harness en un
+// subdirectorio queda a medias sin que nada lo avise. Fuera de un repo se
+// instala igual (el proyecto desde cero corre `git init` antes o despues),
+// pero se dice. Solo en init y adopt: una instalacion existente no se bloquea.
+export function revisarCarpeta(cwd) {
+  let raiz = null
+  try {
+    raiz = execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: 'pipe' }).trim()
+  } catch {
+    raiz = null
+  }
+  if (!raiz) {
+    if (!fs.existsSync(path.join(cwd, '.git'))) {
+      ui.log.warn(
+        'Esta carpeta no es un repo git: el harness se instala igual, pero el flujo de ramas, los hooks y la ' +
+          'proteccion de main no aplican hasta que corras `git init -b main` y conectes el remoto.'
+      )
+    }
+    return
+  }
+  const real = (p) => {
+    try {
+      return fs.realpathSync.native(p)
+    } catch {
+      return path.resolve(p)
+    }
+  }
+  const [a, b] = [real(raiz), real(cwd)]
+  const iguales = process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
+  if (!iguales) {
+    throw new Error(
+      `Esta carpeta es un subdirectorio del repo ${raiz}. El harness se instala en la raiz del repo: ` +
+        'repite el comando desde ahi. No se escribio nada.'
+    )
   }
 }
 

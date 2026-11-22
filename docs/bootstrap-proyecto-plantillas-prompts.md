@@ -30,7 +30,7 @@ Las fases 0–6 describen el caso base (proyecto nuevo desde cero). Las demás c
 |---|---|---|
 | `{{REPO}}` | Nombre del repositorio en GitHub | `chatbot-spacar` |
 | `{{PROYECTO}}` | Nombre legible del proyecto | `Chatbot Spacar` |
-| `{{PREFIJO}}` | Prefijo de 2-4 letras. Nombra `Project-<PREFIJO>/` en el Vault **y** es la clave del proyecto en Jira | `CSC` |
+| `{{PREFIJO}}` | Prefijo de 2 a 6 letras mayúsculas. Nombra `Project-<PREFIJO>/` en el Vault **y** es la clave del proyecto en Jira | `CSC` |
 | `{{RUTA_LOCAL}}` | Dónde vive el repo en tu disco. **Fuera de OneDrive** | `C:\Users\tu-usuario\dev\chatbot-spacar` |
 | `{{RUTA_VAULT}}` | Dónde clonas el Vault. **Fuera de OneDrive** | `C:\Users\tu-usuario\dev\soubunker-vault` |
 | `{{HARNESS_REPO}}` | Repo del harness | `https://github.com/soutecdev/souclaude-harness` |
@@ -60,7 +60,7 @@ a mitad de camino esperando una respuesta.
 | Decisión | Quién | Qué dejar resuelto |
 |---|---|---|
 | Visibilidad del repo | Coordinador + dueño | Privado salvo razón explícita; público es irreversible en la práctica |
-| Prefijo `{{PREFIJO}}` | Coordinador | 2-4 letras, **libre** en `00-System/id-registry.md` del Vault; es para siempre |
+| Prefijo `{{PREFIJO}}` | Coordinador | 2 a 6 letras mayúsculas, **libre** en `00-System/id-registry.md` del Vault; es para siempre |
 | Stack inicial | Dueño del proyecto | Si no está decidido, se pedirá andamiaje genérico en la fase 1 |
 | Rutas locales | Cada integrante | `{{RUTA_LOCAL}}` y `{{RUTA_VAULT}}` **fuera de OneDrive** |
 | Proyecto en Jira | Quien tenga permisos en el sitio | Ver el paso a paso de abajo |
@@ -78,6 +78,11 @@ no expone creación de proyectos, así que el agente no puede hacerlo):
 
 ---
 
+> **Camino recomendado.** Las fases 1 a 4 de este playbook las cubre hoy un único
+> prompt, que diagnostica la carpeta y elige el caso solo: ver
+> [Prompt de instalación](metodologia/03-prompt-instalacion.md). Las fases de abajo
+> quedan como referencia del detalle de cada paso.
+
 ## Fase 1 · Repositorio y andamiaje base
 
 ```
@@ -90,7 +95,7 @@ Antes de crear nada, verifica si el repositorio ya existe: si existe y está vac
 reutilízalo en vez de duplicarlo. Trabaja en {{RUTA_LOCAL}}.
 ```
 
-**Te va a preguntar:** visibilidad (privado salvo que haya razón para lo contrario) y stack. Si el stack no está decidido, pide un andamiaje genérico: es preferible a condicionar la arquitectura antes de tiempo.
+**Te va a preguntar:** nombre, organización y visibilidad del repo (privado salvo que haya razón para lo contrario) — el agente solo lo crea después de tu confirmación explícita de esos tres datos — y stack. Si el stack no está decidido, pide un andamiaje genérico: es preferible a condicionar la arquitectura antes de tiempo.
 
 **Debe quedar:** `.gitignore`, `.gitattributes`, `.editorconfig`, `.env.example`, `README.md`, primer commit y push.
 
@@ -166,17 +171,7 @@ Los tableros nacen vacíos: no inventes milestones.
 
 **Debe quedar:** el hook imprimiendo el tablero de `Project-{{PREFIJO}}` al arrancar.
 
-> **Problema conocido.** `souclaude upgrade --vault-path` escribe solo `path` y `repo` en `.claude/vault.local.json`. Falta `project`, y el hook únicamente autodetecta la carpeta cuando el Vault tiene **un solo** `Project-*`. Con dos o más queda ciego y **no da error**. Añádelo a mano:
->
-> ```json
-> {
->   "path": "{{RUTA_VAULT}}",
->   "repo": "{{VAULT_REPO}}",
->   "project": "Project-{{PREFIJO}}"
-> }
-> ```
->
-> Ese archivo está ignorado a propósito: la ruta es de cada máquina, así que **cada integrante repite este paso en la suya**.
+> **El campo `project` lo escribe el instalador.** `init` y `upgrade` declaran en `.claude/vault.local.json` la carpeta `Project-<PREFIJO>` del repo: por el registro de prefijos del Vault, con `--vault-project Project-{{PREFIJO}}` o, para un proyecto nuevo, con `--vault-prefix`. No lo añadas a mano. El archivo está ignorado a propósito — la ruta es de cada máquina —, así que **cada integrante conecta el Vault en la suya** (casuística 4).
 
 ---
 
@@ -308,13 +303,9 @@ otra máquina, nada de esto se hereda solo. En orden:
 2. **Clona el repo del proyecto** en una ruta **fuera de OneDrive**.
 3. **Clona el Vault** ({{VAULT_REPO}}) también fuera de OneDrive y conéctalo:
    `npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path {{RUTA_VAULT}}`.
-4. **Añade a mano `"project"`** a `.claude/vault.local.json` (problema conocido
-   de la fase 4: el CLI no lo escribe y el hook queda ciego en silencio si el
-   Vault tiene más de un proyecto):
-
-   ```json
-   { "path": "{{RUTA_VAULT}}", "repo": "{{VAULT_REPO}}", "project": "Project-{{PREFIJO}}" }
-   ```
+4. **Comprueba el campo `"project"`** de `.claude/vault.local.json`: el paso 3
+   lo escribe solo cuando el registro de prefijos del Vault conoce el repo. Si no
+   quedó, repite el comando con `--vault-project Project-{{PREFIJO}}`.
 
 5. **Autoriza el conector Jira**: `/mcp` en sesión interactiva → autenticar
    Atlassian (OAuth, una vez por máquina).
@@ -419,7 +410,7 @@ Decisiones que el agente debe consultar, no resolver solo:
 Cuatro cosas que van a repetirse en cada proyecto hasta que se arreglen en origen:
 
 1. ~~**El tag `v3` no existe.**~~ **Resuelto**: el tag móvil `v3` está publicado y el comando de instalación del README funciona tal cual.
-2. **`upgrade --vault-path` no escribe el campo `project`.** El hook queda ciego en silencio en cuanto el Vault tiene más de un proyecto.
+2. ~~**`upgrade --vault-path` no escribe el campo `project`.**~~ **Resuelto**: el instalador lo declara (registro de prefijos, `--vault-project` o `--vault-prefix`).
 3. **`CODEOWNERS` referencia equipos `@org-soutec/...`**, que solo existen en organizaciones de GitHub. En una cuenta personal nunca resuelven: la aprobación obligatoria **no se aplica y no avisa**. Sumado a la falta de branch protection, la regla de "el coordinador mergea" queda sin respaldo técnico. *(En camino: la organización va a incorporar seguridad en los repos vía cuentas de equipo de GitHub — al migrar, los equipos de CODEOWNERS resuelven y este problema y su raíz desaparecen.)*
 4. ~~**El prefijo `SHS` no está en `id-registry.md`**~~ **Resuelto** (20-ago-2026): registrado en el Vault.
 

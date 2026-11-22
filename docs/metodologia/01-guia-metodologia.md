@@ -5,7 +5,7 @@ repo de SOUTEC. En una lectura sabes qué instala, cómo se trabaja y dónde est
 detalle de cada cosa.
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.20.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.21.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 ## La idea en una frase
@@ -50,24 +50,38 @@ npm install -g github:soutecdev/souclaude-harness#v3
 El instalador corre igual en un repo vacío y en uno con años de código: solo agrega
 la superficie Claude, no toca tu código. Qué hace, en orden:
 
-1. **Pregunta el modo de trabajo**: `equipo` (el flujo completo de esta guía) o
-   `solo` (reglas relajadas para una sola persona: sin kanban ni espejo, con
-   `worklog.md` como traza). Los flags `--equipo`/`--solo` lo fijan sin preguntar.
-2. **Deja elegir las skills** con un checkbox (las obligatorias entran siempre).
+1. **Pregunta nombre, tipo de proyecto, idioma y modo de trabajo**: `equipo` (el
+   flujo completo de esta guía) o `solo` (reglas relajadas para una sola persona:
+   sin kanban ni espejo, con `worklog.md` como traza). Los flags `--name`,
+   `--type`, `--lang` y `--equipo`/`--solo` responden sin preguntar.
+2. **Deja elegir las skills** con un checkbox (las obligatorias entran siempre);
+   `--skills a,b` las fija sin preguntar.
 3. **Instala la superficie**: `CLAUDE.md`, `.claude/` (settings, skills, hooks),
    la plantilla de PR, los scripts de checks y `progress/`.
-4. **Conecta el Vault**: pide la ruta del clon local, escribe
-   `.claude/vault.local.json` y siembra `Project-<PREFIJO>/` si no existe
-   (milestones, kanban, sesiones y la ficha del Observatorio).
-5. **Ofrece instalar el CLI global** `souclaude`, para el monitor y el
-   `vault-sync` desde cualquier terminal.
+4. **Conecta el Vault**: usa el clon que ya haya en la máquina o propone
+   clonarlo junto al repo, escribe `.claude/vault.local.json` con el proyecto del
+   repo y siembra `Project-<PREFIJO>/` si no existe (milestones, kanban, sesiones
+   y la ficha del Observatorio).
+5. **Protege `main` en GitHub** (modo equipo) e **instala el CLI global**
+   `souclaude`, para el monitor y el `vault-sync` desde cualquier terminal.
+   Ninguno de los dos pregunta.
+
+Antes de instalar, `souclaude diagnostico` dice en qué caso está la carpeta
+(repo nuevo, con código, sin git, con harness previo…), qué comando corresponde y
+qué falta. Sin terminal interactiva — es decir, cuando instala un agente — todo
+va por flags con `--yes`: el camino completo está en el
+[prompt de instalación](03-prompt-instalacion.md).
 
 Para actualizar más adelante no se repite nada de esto — y no hace falta estar
 pendiente de los anuncios: al abrir una sesión en un repo con el harness, el
 hook de inicio compara la versión instalada con el último release publicado y,
-si hay una nueva, la avisa ahí mismo (una consulta por máquina y por día; en
-silencio si no hay red). Basta decirle al agente "actualiza el harness" — o
-aceptar su ofrecimiento — y la skill `harness-upgrade` corre el flujo completo.
+si hay una nueva de la misma serie, la instala solo, en segundo plano y sin
+preguntar (una consulta por máquina y por día; en silencio si no hay red): commitea
+el upgrade en la rama actual, sin push, no pisa nada que hayas editado, no toca el
+Vault ni la protección de `main` en GitHub, y cierra con
+«Harness actualizado: vX a vY». En `main` solo avisa, y un cambio de serie (una
+major nueva) tampoco se instala solo. Para hacerlo a mano basta decirle al agente
+"actualiza el harness": la skill `harness-upgrade` corre el flujo completo.
 
 ## Las skills que puede instalar
 

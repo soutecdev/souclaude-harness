@@ -153,21 +153,25 @@ partición por proyecto de la §7 de la guía.
 **Lo hace el instalador.** Al correr `npx github:soutecdev/souclaude-harness#v3` (harness ≥ 2.3.0) en un repo de
 proyecto, después de aplicar el plan aparece el paso del Vault:
 
-1. *¿Tienes el Vault clonado en esta máquina?*
-   - **Sí** → pide la ruta local y la valida (busca `00-System/`).
-   - **No** → propone clonarlo junto al repo (`../soubunker-vault`) y lo clona.
-2. Escribe la ruta en **`.claude/vault.local.json`** del repo. Ese archivo está
+1. Si el Vault ya está en la máquina (junto al repo, en `../soubunker-vault`, o
+   conectado desde otro repo), lo usa sin preguntar. Si no, propone clonarlo junto
+   al repo; quien rechaza ese destino escribe otra ruta, siempre fuera del repo.
+2. Escribe la ruta y el proyecto del repo (`Project-<PREFIJO>`) en
+   **`.claude/vault.local.json`**. Ese archivo está
    gitignorado: la ruta es de **esta máquina** y no debe viajar a la de otro.
 
 Sin modo interactivo:
 
 ```powershell
 npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path "C:/ruta/a/soubunker-vault"
+npx github:soutecdev/souclaude-harness#v3 init --yes --vault-clone # clonarlo junto al repo
+npx github:soutecdev/souclaude-harness#v3 upgrade --yes --vault-prefix ABC --vault-project-name "Mi Proyecto"  # proyecto nuevo
 npx github:soutecdev/souclaude-harness#v3 init --no-vault          # omitir el paso por completo
 npx github:soutecdev/souclaude-harness#v3 init --vault-repo <url>  # clonar otro repo (casos raros)
 ```
 
-Con `--yes` o en CI el paso **nunca clona**: solo usa `--vault-path` si se lo pasas. Si no
+Con `--yes` o en CI el paso **nunca clona** salvo que pases `--vault-clone`, y solo da de
+alta un proyecto nuevo con `--vault-prefix`. Si no
 hay Vault conectado, el espejo se **omite sin bloquear el trabajo** y queda anotado como
 `vault_skip` en el `history.md` del repo (§6 de la guía).
 

@@ -142,7 +142,10 @@ review antes del PR y registrar la sesión. Las reglas viven en `CLAUDE.md`,
 
 Lo que el agente **no hace nunca** (es tuyo o del coordinador):
 
-- Mergear o aprobar PRs (coordinador), crear repos (coordinador).
+- Mergear o aprobar PRs (coordinador).
+- Crear repos por su cuenta: solo crea el de un proyecto que nace desde cero, al
+  instalar el harness, y después de que confirmes nombre, organización y
+  visibilidad.
 - El OAuth del conector Jira (tú, una vez por máquina).
 - Decidir el alcance de un milestone nuevo: el agente lo propone, **tú lo apruebas**.
 
