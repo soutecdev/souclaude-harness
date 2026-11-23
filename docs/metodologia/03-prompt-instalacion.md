@@ -27,7 +27,7 @@ desde cero, crea una carpeta vacía y ábrelo ahí) y pega [el prompt](#el-promp
 ## Valores vigentes (generados — no los edites a mano)
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.21.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.22.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 Requisitos de máquina:

@@ -2,7 +2,7 @@
 
 El harness y el CLI se versionan juntos.
 
-## [Unreleased]
+## [3.22.0] — 2026-11-23
 
 La instalación por prompt deja una sola decisión a la persona: el prefijo del
 proyecto (SHS-M54).
