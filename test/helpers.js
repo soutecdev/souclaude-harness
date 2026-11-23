@@ -18,6 +18,12 @@ if (!process.env.SOUCLAUDE_CLAUDE_HOME) {
   process.env.SOUCLAUDE_CLAUDE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude home '))
 }
 
+// SHS-M54: el Vault tambien se autodetecta en ~/repos/soubunker-vault. Con el
+// home real, la suite conectaria -- y podria escribir -- el Vault del dev.
+if (!process.env.SOUCLAUDE_HOME) {
+  process.env.SOUCLAUDE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude casa '))
+}
+
 // Los tests que corren init/upgrade en proceso llegan a githubProtectionStep, que
 // lanza `gh auth status` de verdad: con la sesion de gh del dev eso eran
 // credenciales reales y una llamada de red en cada test (103 invocaciones, la

@@ -153,9 +153,11 @@ partición por proyecto de la §7 de la guía.
 **Lo hace el instalador.** Al correr `npx github:soutecdev/souclaude-harness#v3` (harness ≥ 2.3.0) en un repo de
 proyecto, después de aplicar el plan aparece el paso del Vault:
 
-1. Si el Vault ya está en la máquina (junto al repo, en `../soubunker-vault`, o
-   conectado desde otro repo), lo usa sin preguntar. Si no, propone clonarlo junto
-   al repo; quien rechaza ese destino escribe otra ruta, siempre fuera del repo.
+1. Si el Vault ya está en la máquina (junto al repo, en `../soubunker-vault`, en
+   `~/repos/soubunker-vault` o conectado desde otro repo), lo usa sin preguntar.
+   Si no, propone clonarlo junto al repo — o en `~/repos/soubunker-vault` cuando
+   el repo está dentro de OneDrive —; quien rechaza ese destino escribe otra ruta,
+   siempre fuera del repo.
 2. Escribe la ruta y el proyecto del repo (`Project-<PREFIJO>`) en
    **`.claude/vault.local.json`**. Ese archivo está
    gitignorado: la ruta es de **esta máquina** y no debe viajar a la de otro.
@@ -164,8 +166,8 @@ Sin modo interactivo:
 
 ```powershell
 npx github:soutecdev/souclaude-harness#v3 upgrade --vault-path "C:/ruta/a/soubunker-vault"
-npx github:soutecdev/souclaude-harness#v3 init --yes --vault-clone # clonarlo junto al repo
-npx github:soutecdev/souclaude-harness#v3 upgrade --yes --vault-prefix ABC --vault-project-name "Mi Proyecto"  # proyecto nuevo
+npx github:soutecdev/souclaude-harness#v3 init --yes --vault-clone # clonarlo en su ruta por defecto
+npx github:soutecdev/souclaude-harness#v3 upgrade --yes --vault-prefix ABC  # proyecto nuevo: el nombre y el dueño se deducen
 npx github:soutecdev/souclaude-harness#v3 init --no-vault          # omitir el paso por completo
 npx github:soutecdev/souclaude-harness#v3 init --vault-repo <url>  # clonar otro repo (casos raros)
 ```
