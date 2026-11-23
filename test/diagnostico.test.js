@@ -462,11 +462,10 @@ test('--vault-prefix da de alta el proyecto, lo siembra y lo declara, sin termin
   assert.equal(registro(vault), antes)
 })
 
-test('--vault-prefix rechaza sin escribir: prefijo repetido, invalido, sin nombre o con "|"', async () => {
+test('--vault-prefix rechaza sin escribir: prefijo repetido, invalido o con "|"', async () => {
   const casos = [
     ['--vault-prefix', 'SHS', '--vault-project-name', 'Otro'],
     ['--vault-prefix', 'A1', '--vault-project-name', 'Otro'],
-    ['--vault-prefix', 'ABC'],
     ['--vault-prefix', 'ABC', '--vault-project-name', 'Otro | activo |'],
   ]
   for (const flags of casos) {

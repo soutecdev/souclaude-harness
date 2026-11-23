@@ -231,7 +231,9 @@ ${pc.bold('FLAGS')}
   --vault-path <ruta>  Conecta el Vault ya clonado sin preguntar (escribe .claude/vault.local.json).
   --vault-repo <url>   Repo del Vault a clonar. Por defecto, el del manifest.
   --vault-clone        Con --yes, clona el Vault si no esta conectado (por defecto,
-                       --yes nunca clona). Rechaza cualquier destino dentro de este repo.
+                       --yes nunca clona). Sin --vault-path lo clona junto al repo
+                       o, si el repo esta en OneDrive, en ~/repos/soubunker-vault.
+                       Rechaza cualquier destino dentro de este repo.
   --vault-project <P>  Carpeta Project-<PREFIJO> del Vault a la que pertenece este
                        repo (ej: Project-SHS). Sin el flag: si el Vault tiene una
                        sola, se declara esa; si tiene varias, init pregunta y el
@@ -242,9 +244,14 @@ ${pc.bold('FLAGS')}
                        el Vault compartido). Con TTY se pregunta y el flag sobra.
   --vault-prefix <XXX> Da de alta un proyecto NUEVO en el Vault sin preguntar: agrega
                        la fila al id-registry y siembra Project-<XXX> (2 a 6 letras
-                       mayusculas). Exige --vault-project-name "<nombre>"; el dueño
-                       va en --vault-owner <@usuario> (por defecto, tu usuario de git).
-  --vault-quien <alias> Alias del contribuyente para el registro de consumo.
+                       mayusculas). Valida el prefijo contra el Vault recien
+                       sincronizado y, si no lo puede publicar, cancela el alta sin
+                       dejar nada a medias. El nombre (--vault-project-name) y el
+                       dueño (--vault-owner <@usuario>) son opcionales: por defecto,
+                       el nombre del repo y tu usuario de GitHub.
+  --vault-quien <alias> Alias del contribuyente para el registro de consumo. Con
+                       --yes y sin el flag, se usa el de esta maquina o el
+                       deducido de tu nombre de git.
   --cli-global         init/upgrade instalan o actualizan solos el CLI global
                        (npm install -g github:soutecdev/souclaude-harness#v3)
                        si falta o esta en otra version, tambien con --yes: deja
