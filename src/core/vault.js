@@ -672,7 +672,9 @@ async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts
   // persona en un alta es el prefijo.
   const nombreProyecto = String(datos.nombreProyecto ?? '').trim() || nombrePorDefecto(cwd)
   const sugerido = ghLogin() ?? gitUserNameLocal(cwd)
-  const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '[dueño]')
+  // Sin gh ni nombre de git no hay de donde deducirlo: queda @pendiente, la
+  // misma marca que usan las tarjetas del Vault sin dueño.
+  const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '@pendiente')
   // Ademas de lo que rompe la tabla, nada de HTML ni enlaces markdown, y un
   // tope de largo: el nombre y el dueño pueden venir deducidos (package.json,
   // nombre de git) y se publican sin que nadie los lea antes.

@@ -310,3 +310,25 @@ test('un registro con cambios sin commitear no se toca, ni con rebase.autoStash'
   assert.equal(registroLocal(local), antes, 'se perdio o se piso la edicion local del registro')
   assert.ok(!has(local, 'Project-ABC'))
 })
+
+// Una maquina sin sesion de gh y sin user.name de git (un runner de CI, un
+// equipo recien instalado): el dueño no se puede deducir y el alta igual sale.
+test('sin gh ni nombre de git, el alta se completa con el dueño @pendiente', async () => {
+  const vacio = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'souclaude gitcfg ')), 'gitconfig')
+  fs.writeFileSync(vacio, '')
+  const previo = { global: process.env.GIT_CONFIG_GLOBAL, sistema: process.env.GIT_CONFIG_NOSYSTEM }
+  const dir = mkRepo({ 'package.json': JSON.stringify({ name: 'proyecto-nuevo' }) })
+  const { local, remoto } = vaultConRemoto()
+  process.env.GIT_CONFIG_GLOBAL = vacio
+  process.env.GIT_CONFIG_NOSYSTEM = '1'
+  try {
+    assert.equal(await main(['init', ...YES, '--vault-path', local, '--vault-prefix', 'ABC'], dir), 0)
+  } finally {
+    for (const [k, v] of [['GIT_CONFIG_GLOBAL', previo.global], ['GIT_CONFIG_NOSYSTEM', previo.sistema]]) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
+  assert.match(registroRemoto(remoto), /\| ABC\s+\| proyecto-nuevo \| @pendiente \|/)
+  assert.equal(JSON.parse(read(dir, VAULT_CONFIG)).project, 'Project-ABC')
+})
