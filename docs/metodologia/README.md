@@ -2,13 +2,14 @@
 
 Esta carpeta es **la documentación del harness para compartir**: lo que una persona
 ajena al repo necesita para entender la metodología SOUTEC, verla de un vistazo e
-instalar el harness. Son tres artefactos:
+instalar el harness. Son cuatro artefactos:
 
 | Artefacto | Qué es |
 |---|---|
 | [01-guia-metodologia.md](01-guia-metodologia.md) | La guía: qué instala el harness y cómo se trabaja con él |
 | [02-infografia-metodologia.html](02-infografia-metodologia.html) | La infografía master: la metodología en una página, imprimible A4 |
-| [03-prompt-instalacion.md](03-prompt-instalacion.md) | El prompt listo para pegar en Claude Code e instalar el harness |
+| [03-prompt-instalacion.md](03-prompt-instalacion.md) | El prompt de instalación explicado: qué hace en cada caso, qué deduce y qué te pregunta |
+| [prompt-instalacion.txt](prompt-instalacion.txt) | El prompt solo, sin nada más: para compartirlo y pegarlo tal cual en Claude Code |
 
 <!-- souclaude:gen version -->
 Documenta el **harness souclaude v3.21.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
@@ -17,7 +18,8 @@ Documenta el **harness souclaude v3.21.0**. El sello lo regenera `node scripts/g
 ## Cómo se mantiene fresca
 
 Las secciones entre marcadores `souclaude:gen` se **regeneran** desde las fuentes de
-verdad (`package.json` y `templates/harness.manifest.json`):
+verdad (`package.json`, `templates/harness.manifest.json` y, para el prompt
+embebido en la página 03, `prompt-instalacion.txt`):
 
 ```bash
 node scripts/gen-docs-metodologia.mjs          # regenera

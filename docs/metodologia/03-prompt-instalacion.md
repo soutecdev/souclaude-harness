@@ -14,8 +14,10 @@ desde cero, crea una carpeta vacía y ábrelo ahí) y pega [el prompt](#el-promp
 
 - **La carpeta vive fuera de OneDrive.** OneDrive sincroniza `.git/` y lo corrompe.
   Si ya está adentro, el diagnóstico lo avisa y el agente te pregunta antes de seguir.
-- **La máquina cumple los requisitos** de abajo. Si falta alguno, el agente se
-  detiene y te dice exactamente qué instalar.
+- **La máquina cumple los requisitos** de abajo. Si falta Node o git, el agente se
+  detiene y te dice exactamente qué instalar. Si falta `gh` o su sesión, no hace
+  falta que lo resuelvas antes: el agente lo instala con tu permiso y te guía por
+  el inicio de sesión, que es lo único que tienes que hacer tú en el navegador.
 - **Ten pensado el prefijo del proyecto**, si es nuevo: 2 a 6 letras mayúsculas,
   libre en el registro del Vault y **para siempre**. Es lo único que el agente te
   va a preguntar. Todo lo demás lo deduce y te lo muestra en un plan antes de
@@ -70,8 +72,11 @@ Skills disponibles al instalar:
 
 ## El prompt
 
-Se pega tal cual, sin editar:
+Se pega tal cual, sin editar. Para compartirlo sin esta página, el prompt solo
+está en [prompt-instalacion.txt](prompt-instalacion.txt): ese archivo es la fuente
+y el bloque de abajo se regenera desde él.
 
+<!-- souclaude:gen prompt -->
 ```text
 Instala el harness de Claude Code de SOUTEC en esta carpeta. Sigue las cinco fases
 en orden, sin saltarte ninguna.
@@ -96,12 +101,32 @@ FASE 1 · DIAGNÓSTICO (solo lectura)
    no sigas hasta que te diga que está resuelto; entonces repite el diagnóstico.
 3. Resúmeme en pocas líneas: el "caso", el "comando" que corresponde, los "avisos"
    y los "pendientes".
-4. Avisos que exigen mi respuesta antes de seguir:
-   - gh o gh-auth: dame la instrucción de su "solucion" y espera a que te confirme.
+4. Credenciales. Lo que puedas hacer tú, hazlo; lo que exige mi cuenta, guíame
+   paso a paso, espera mi "listo" y compruébalo tú antes de seguir. Nunca me pidas
+   un token ni una contraseña en el chat, ni los escribas en un archivo o comando.
+   - Aviso gh (no está instalado): pregúntame si lo instalas. Con mi sí, en
+     Windows: winget install --id GitHub.cli -e   y en macOS: brew install gh
+     En Linux dame el enlace https://cli.github.com. Comprueba con gh --version;
+     si la terminal todavía no lo ve, pídeme reabrir Claude Code y pegar de nuevo
+     este prompt.
+   - Aviso gh-auth (sin sesión): el login pasa por el navegador y no lo puedes
+     hacer tú. Dame estos pasos, tal cual:
+       1. Abre otra terminal y corre:
+          gh auth login --hostname github.com --git-protocol https --web
+       2. Copia el código que aparece, pulsa Enter y pégalo en el navegador.
+       3. Inicia sesión con tu cuenta de la organización, autoriza y vuelve aquí.
+     Cuando te diga "listo", corre gh auth status. Si falla, muéstrame el error y
+     repite la guía. Si pasa, corre gh auth setup-git: así git usa esa misma
+     sesión y no me pide credenciales al clonar ni al pushear.
+   - Acceso al Vault, ya con sesión: corre
+       gh api repos/soutecdev/soubunker-vault --jq .permissions.push
+     Si no responde true, detente y dime que pida al coordinador acceso de
+     escritura al Vault para mi usuario (sácalo con gh api user --jq .login).
+5. Avisos que exigen mi respuesta antes de seguir:
    - onedrive: pregúntame si muevo la carpeta fuera de OneDrive antes de instalar.
    - arbol-sucio: pregúntame si commiteo o guardo mis cambios antes.
    - remoto-inaccesible o remoto-no-github: muéstramelo y pregúntame cómo seguir.
-5. Si el caso es "harness-al-dia": no hay nada que instalar; salta a la fase 5.
+6. Si el caso es "harness-al-dia": no hay nada que instalar; salta a la fase 5.
    Si es "harness-desactualizado": aplica la skill harness-upgrade en vez de las
    fases 2 a 4, y cierra con la fase 5.
 
@@ -209,6 +234,7 @@ FASE 5 · VERIFICAR Y CERRAR
      OAuth, lo hago yo), el merge del PR (coordinador), archivos .new por revisar;
    - mi primer paso: declarar o dar de alta el primer milestone en el Vault.
 ```
+<!-- /souclaude:gen prompt -->
 
 ## Qué hace en cada caso
 
@@ -229,11 +255,13 @@ casos; el prompt hace lo que corresponde a cada uno.
 
 Y se detiene, con la instrucción exacta para resolverlo, cuando:
 
-- **falta un requisito de máquina** (Node anterior a 22.4, sin git, `gh` ausente o
-  sin autenticar);
+- **falta un requisito de máquina** (Node anterior a 22.4 o sin git). Con `gh`
+  ausente o sin sesión no se detiene: lo instala con tu permiso, te guía por el
+  inicio de sesión y sigue cuando comprueba que quedó;
 - **la sesión está en un subdirectorio** del repo (el harness va en la raíz);
 - **`.claude/harness.json` está dañado**;
-- **no hay acceso al Vault**.
+- **no hay acceso de escritura al Vault**: lo comprueba antes de instalar y te dice
+  qué usuario tiene que habilitar el coordinador.
 
 En **modo solo** no se crea `dev`, no se protege `main` y no hay PR: el flujo de
 ese modo es directo.

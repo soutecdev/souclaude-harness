@@ -1,0 +1,155 @@
+Instala el harness de Claude Code de SOUTEC en esta carpeta. Sigue las cinco fases
+en orden, sin saltarte ninguna.
+
+REGLAS DE TODA LA INSTALACIÓN
+- El instalador se invoca SIEMPRE así: npx -y github:soutecdev/souclaude-harness#v3 <comando>
+  Nunca con el nombre corto del paquete en npx: ese nombre no es el del harness.
+- No tienes terminal interactiva: todo comando que escribe lleva --yes y las
+  respuestas van por flags. Nunca uses --force ni --prune en esta instalación.
+- Deduce todo lo que la fase 2 te dice que deduzcas y muéstramelo en el plan antes
+  de instalar. Fuera de eso no adivines: si un dato no sale del diagnóstico ni de
+  la fase 2, pregúntamelo.
+- No toques código del proyecto: solo la superficie del harness.
+- Si un comando falla, detente y muéstrame el error literal. Sin rodeos ni
+  soluciones alternativas por tu cuenta.
+
+FASE 1 · DIAGNÓSTICO (solo lectura)
+1. Corre: npx -y github:soutecdev/souclaude-harness#v3 diagnostico --json
+   Si el comando no arranca (no hay Node, o es anterior a 22.4), detente y dime que
+   instale Node 22.4 o superior y reabra la terminal.
+2. Si "bloqueos" no está vacío: detente, muéstrame cada bloqueo con su solución y
+   no sigas hasta que te diga que está resuelto; entonces repite el diagnóstico.
+3. Resúmeme en pocas líneas: el "caso", el "comando" que corresponde, los "avisos"
+   y los "pendientes".
+4. Credenciales. Lo que puedas hacer tú, hazlo; lo que exige mi cuenta, guíame
+   paso a paso, espera mi "listo" y compruébalo tú antes de seguir. Nunca me pidas
+   un token ni una contraseña en el chat, ni los escribas en un archivo o comando.
+   - Aviso gh (no está instalado): pregúntame si lo instalas. Con mi sí, en
+     Windows: winget install --id GitHub.cli -e   y en macOS: brew install gh
+     En Linux dame el enlace https://cli.github.com. Comprueba con gh --version;
+     si la terminal todavía no lo ve, pídeme reabrir Claude Code y pegar de nuevo
+     este prompt.
+   - Aviso gh-auth (sin sesión): el login pasa por el navegador y no lo puedes
+     hacer tú. Dame estos pasos, tal cual:
+       1. Abre otra terminal y corre:
+          gh auth login --hostname github.com --git-protocol https --web
+       2. Copia el código que aparece, pulsa Enter y pégalo en el navegador.
+       3. Inicia sesión con tu cuenta de la organización, autoriza y vuelve aquí.
+     Cuando te diga "listo", corre gh auth status. Si falla, muéstrame el error y
+     repite la guía. Si pasa, corre gh auth setup-git: así git usa esa misma
+     sesión y no me pide credenciales al clonar ni al pushear.
+   - Acceso al Vault, ya con sesión: corre
+       gh api repos/soutecdev/soubunker-vault --jq .permissions.push
+     Si no responde true, detente y dime que pida al coordinador acceso de
+     escritura al Vault para mi usuario (sácalo con gh api user --jq .login).
+5. Avisos que exigen mi respuesta antes de seguir:
+   - onedrive: pregúntame si muevo la carpeta fuera de OneDrive antes de instalar.
+   - arbol-sucio: pregúntame si commiteo o guardo mis cambios antes.
+   - remoto-inaccesible o remoto-no-github: muéstramelo y pregúntame cómo seguir.
+6. Si el caso es "harness-al-dia": no hay nada que instalar; salta a la fase 5.
+   Si es "harness-desactualizado": aplica la skill harness-upgrade en vez de las
+   fases 2 a 4, y cierra con la fase 5.
+
+FASE 2 · PLAN (deduce todo; a mí pregúntame solo lo que se indica)
+Arma el plan con estos valores, sin preguntármelos:
+a) Modo: el de "harness.modo" si ya existe; si no, equipo.
+b) Nombre del proyecto: "carpeta.nombre". Idioma de las respuestas: es. Tipo
+   (backend, frontend, data, ml, automation, infra o integration): dedúcelo del
+   código y de "carpeta.stack".
+c) Skills: todas las de "catalogoSkills" que aplican al modo, con un solo espejo
+   del tablero: azdo-sync (Azure Boards). Nunca jira-sync y azdo-sync a la vez.
+d) Vault: la ruta, el nombre del proyecto, su dueño y mi alias los resuelve el
+   instalador. No me los preguntes.
+e) Repo de GitHub, solo si hay un pendiente crear-repo-github: nombre, el de la
+   carpeta; organización, soutecdev; visibilidad, privada.
+f) Protección de main, solo en modo equipo y si el repo ya existía en GitHub:
+   gh api repos/<repo.github>/branches/main/protection
+   Si devuelve reglas, alguien ya la administra: usa --no-github-protect y
+   avísame. Si devuelve 404, la aplica el instalador.
+
+Muéstrame el plan en una lista corta y hazme, juntas, solo las preguntas que
+apliquen:
+1. El prefijo, si hay un pendiente alta-prefijo: «¿Cuál es el prefijo del
+   proyecto?» (2 a 6 letras mayúsculas; es para siempre). Si el que te doy está
+   en "vault.prefijosRegistrados", pregúntame si este repo pertenece a ese
+   proyecto: si te digo que sí va con --vault-project Project-XXX; si no, pídeme
+   otro. Si no está registrado, es un proyecto nuevo: --vault-prefix XXX.
+   Si hay un pendiente conectar-vault, todavía no se sabe si el Vault ya conoce
+   este repo: instala primero (fase 4), repite el diagnóstico y aplica con
+   upgrade --yes los flags del Vault de los pendientes que queden. El prefijo me
+   lo preguntas ahí, y solo si alta-prefijo sigue pendiente.
+2. Qué voy a construir, en una línea, solo si la carpeta no tiene código del que
+   deducir el tipo.
+3. La confirmación para crear el repo, solo si hay que crearlo (fase 3).
+Cualquier otro valor del plan lo cambio yo si te lo pido; si no digo nada, sigue.
+
+FASE 3 · PREPARAR GIT (solo los pendientes que haya)
+- git-init: git init -b main
+- crear-repo-github: repíteme nombre, organización y visibilidad del plan y espera
+  mi "sí" explícito. Solo entonces:
+  gh repo create <organización>/<nombre> --private --source . --remote origin
+  (--public o --internal solo si te lo pedí). Si el repo ya existía:
+  git remote add origin <url>
+- primer-commit: es el único commit que va directo a main, porque sin él no puede
+  nacer dev. Hazlo vacío: git commit --allow-empty -m "chore: inicio del repositorio"
+  Si la carpeta ya tenía archivos (caso carpeta-sin-git), pregúntame antes si van
+  en ese commit inicial o los dejo fuera del repo.
+- pushear-main: git push -u origin main
+- crear-dev (solo modo equipo): git switch -c dev   y   git push -u origin dev
+- pushear-dev: git push -u origin dev
+- Rama de instalación: en modo equipo, git switch dev y luego
+  git switch -c chore/instalar-harness. Todo lo que sigue se commitea ahí, nunca en
+  main ni en dev. En modo solo trabaja en main.
+
+FASE 4 · INSTALAR
+Arma UN comando con el plan de la fase 2 y muéstramelo antes de correrlo.
+- comando "init":
+  npx -y github:soutecdev/souclaude-harness#v3 init --yes --name "<nombre>"
+    --type <tipo> --lang <es|en> <--equipo|--solo> --skills <a,b,c> <flags del Vault>
+- comando "adopt" (ya hay un CLAUDE.md o .claude/ hechos a mano): son dos pasos.
+  Primero adopt --yes --name "<nombre>" --type <tipo> --lang <es|en>, que no toca
+  ningún archivo; después upgrade --yes <--equipo|--solo> --skills <a,b,c>
+  <flags del Vault>. Lo que yo había escrito no se pisa: la propuesta del harness
+  queda al lado como <archivo>.new. No los fusiones por tu cuenta: enuméralos y
+  pregúntame.
+- comando "upgrade" con caso "maquina-nueva": upgrade --yes <flags del Vault>.
+  Aquí no se elige modo ni skills: ya están en el repo.
+Flags del Vault, según los pendientes del diagnóstico:
+  --vault-clone               conectar-vault: lo clona solo, fuera del repo y de
+                              OneDrive. No pases ninguna ruta.
+  --vault-seed                declarar-proyecto que pide crear la carpeta
+  --vault-project Project-XXX alta-prefijo y el repo pertenece a un proyecto que
+                              ya existe
+  --vault-prefix XXX          alta-prefijo y el proyecto es nuevo: lo da de alta
+                              y siembra su carpeta
+Lee la salida del instalador. Si dice "Alta de proyecto cancelada", el prefijo no
+quedó registrado: muéstrame el motivo literal. Si el prefijo ya estaba tomado,
+pídeme otro y repite con upgrade --yes --vault-prefix <nuevo>. Si no se pudo
+sincronizar o publicar el Vault, detente: tengo que pedir acceso de escritura al
+Vault al coordinador. Lo mismo si el Vault no se pudo clonar. En modo equipo la
+instalación no está completa sin Vault.
+
+FASE 5 · VERIFICAR Y CERRAR
+1. Repite el diagnóstico (--json): no debe haber bloqueos. Lista los pendientes
+   que queden.
+2. Corre: npx -y github:soutecdev/souclaude-harness#v3 status
+   Exit 0 o 2 es correcto (2 = hay archivos .new o ediciones mías por revisar);
+   exit 1 significa que quedó algo sin aplicar: muéstramelo.
+3. Commitea la instalación: chore: instala el harness souclaude v<versión>
+   Agrega solo los archivos que escribió el instalador (los que lista su salida):
+   nunca git add -A ni git add . — en la carpeta puede haber archivos míos o
+   secretos. Muéstrame git status --short antes de commitear.
+   .claude/vault.local.json no se commitea (es de esta máquina). Haz push de la
+   rama. En modo equipo pregúntame, una sola vez, si abres el PR contra dev.
+4. Lee el CLAUDE.md instalado y progress/README.md. Si la sección "Contexto" de
+   CLAUDE.md quedó con el texto de plantilla, pregúntame en una línea qué hace el
+   proyecto y complétala.
+5. Dame el reporte final:
+   - caso detectado, versión instalada, modo y skills;
+   - Vault: ruta, proyecto declarado y si se dio de alta un prefijo nuevo;
+   - lo que dedujiste por mí (modo, tipo, espejo del tablero, alias de
+     contribuyente, dueño del proyecto) y cómo cambio cada cosa;
+   - qué creaste en GitHub (repo, ramas, protección de main);
+   - qué quedó pendiente y de quién es: autorizar el conector del tablero (/mcp,
+     OAuth, lo hago yo), el merge del PR (coordinador), archivos .new por revisar;
+   - mi primer paso: declarar o dar de alta el primer milestone en el Vault.

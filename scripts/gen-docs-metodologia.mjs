@@ -31,6 +31,8 @@ export const ARCHIVOS = [
   'docs/metodologia/03-prompt-instalacion.md',
 ]
 
+export const PROMPT = 'docs/metodologia/prompt-instalacion.txt'
+
 export function leerFuentes(raiz = RAIZ) {
   const pkg = JSON.parse(readFileSync(path.join(raiz, 'package.json'), 'utf8'))
   const manifest = JSON.parse(readFileSync(path.join(raiz, 'templates', 'harness.manifest.json'), 'utf8'))
@@ -44,6 +46,9 @@ export function leerFuentes(raiz = RAIZ) {
     slug,
     tagMayor: `v${pkg.version.split('.')[0]}`,
     skills: manifest.skills ?? [],
+    // El prompt de instalacion vive solo, en un .txt para copiar y pegar; la
+    // pagina que lo explica lo embebe desde ahi (bloque "prompt").
+    prompt: existsSync(path.join(raiz, PROMPT)) ? readFileSync(path.join(raiz, PROMPT), 'utf8').replace(/\r\n/g, '\n').trimEnd() : null,
   }
 }
 
@@ -76,6 +81,7 @@ export function renderBloques(f) {
     ].join('\n'),
     skills: ['| Skill | Modo | Qué hace |', '|---|---|---|', ...f.skills.map(filaSkill)].join('\n'),
     'version-pie': `harness souclaude v${f.version}`,
+    ...(f.prompt ? { prompt: ['```text', f.prompt, '```'].join('\n') } : {}),
   }
 }
 

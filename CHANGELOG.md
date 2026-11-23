@@ -13,6 +13,15 @@ proyecto (SHS-M54).
   nuevo en el Vault. El modo (equipo), el tipo, el idioma, las skills (con Azure
   Boards como espejo del tablero) y los datos del repo a crear se deducen y se
   muestran en un plan antes de instalar; quien no esté de acuerdo los cambia ahí.
+- **El prompt está también solo, para compartir**:
+  `docs/metodologia/prompt-instalacion.txt` trae únicamente el texto a pegar. Es
+  la fuente; la página `03-prompt-instalacion.md` lo embebe generado, y el candado
+  de `docs/metodologia` falla si se desincronizan.
+- **Sin `gh` o sin sesión, el prompt ya no se detiene**: el agente instala `gh`
+  con permiso, guía paso a paso el inicio de sesión (lo único que hace la persona,
+  en el navegador), lo comprueba, deja a git usando esa sesión
+  (`gh auth setup-git`) y verifica el acceso de escritura al Vault antes de
+  instalar. Nunca pide tokens ni contraseñas en el chat.
 - **La ruta del Vault ya no se pregunta ni se pasa.** `--vault-clone` sin
   `--vault-path` lo clona junto al repo o, si el repo está dentro de OneDrive, en
   `~/repos/soubunker-vault`. Un clon que ya esté en cualquiera de los dos lugares
