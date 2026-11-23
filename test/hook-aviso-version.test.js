@@ -61,6 +61,9 @@ for (const hook of Object.keys(HOOKS)) {
     const salida = correrHook(hook, consumidorCon('3.16.2'), { remoto, home: homeTmp() })
     assert.match(salida, /Version nueva del harness: v3\.18\.0 \(instalada: v3\.16\.2\)\./)
     assert.match(salida, /harness-upgrade/)
+    // SHS-M43-T006: el aviso ofrece el upgrade; nunca ordena correrlo solo.
+    assert.match(salida, /ofrecele actualizar/)
+    assert.doesNotMatch(salida, /sin pedirle confirmacion|subagente|harness-upgrader/)
   })
 
   test(`${hook}: al dia no avisa nada (el tag movil v3 no cuenta como version)`, () => {

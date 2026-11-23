@@ -21,6 +21,9 @@ Se retira la actualización autónoma del harness (SHS-M43-T006).
   sección «Modo autónomo» de la skill `harness-upgrade`.** El harness vuelve a no
   instalar ningún agente. En un repo ya instalado, `upgrade --prune` borra el
   archivo del agente; si lo editaste, lo reporta como obsoleto y no lo toca.
+- **Si editaste el hook de inicio de sesión**, el upgrade deja la versión nueva
+  al lado como `.new` y tu copia sigue ordenando actualizar sin preguntar:
+  intégralo en el momento.
 - El ADR `20261120-upgrade-automatico-con-subagente.md` queda como revertido.
 
 Los repos con la 3.21.0 o la 3.22.0 todavía traen el aviso que ordena
