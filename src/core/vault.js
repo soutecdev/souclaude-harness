@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import * as ui from '../ui.js'
 import { exists, readIfExists, writeFileLF, toPosix } from './fsx.js'
-import { pushSeguro, gitReal } from './vault-sync.js'
+import { pushSeguro, pullRebaseSeguro, gitReal } from './vault-sync.js'
 import { semillasProyecto, renderSemilla, PLANTILLA_OBSERVATORIO } from './vault-seeds.js'
 
 const PACKAGE_JSON = fileURLToPath(new URL('../../package.json', import.meta.url))
@@ -194,6 +194,8 @@ const PREFIJO_VALIDO = /^[A-Z]{2,6}$/
 // sobre id-registry.md (vault-guide §3: solo se agregan filas). No valida
 // duplicados: eso lo hace el llamador contra leerRegistroDePrefijos, que ya
 // tiene el registro fresco en memoria.
+const mensajeDeAlta = (prefijo) => `chore: alta del prefijo ${prefijo} en el registro`
+
 async function agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto, dueño }, { git = gitReal } = {}) {
   const abs = path.join(vaultPath, ...REGISTRO.split('/'))
   const actual = fs.readFileSync(abs, 'utf8')
@@ -204,10 +206,26 @@ async function agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto, dueño }
 
   return pushSeguro({
     vaultPath,
-    mensaje: `chore: alta del prefijo ${prefijo} en el registro`,
+    mensaje: mensajeDeAlta(prefijo),
     paths: [REGISTRO],
     git,
   })
+}
+
+// Retira del clon local una fila que no se pudo publicar: el commit de alta (si
+// llego a hacerse) y la linea del archivo. Un prefijo que solo existe en una
+// maquina no esta reservado para nadie -- otro puede registrarlo mientras tanto
+// -- y dejarlo ahi lo empujaria, tarde y sin validar, el proximo push del Vault.
+// Solo toca `id-registry.md` y solo el commit que lleva el mensaje del alta.
+async function retirarFilaSinPublicar(vaultPath, prefijo, { git = gitReal } = {}) {
+  try {
+    const ultimo = (await git(['-C', vaultPath, 'log', '-1', '--format=%s'])).trim()
+    if (ultimo === mensajeDeAlta(prefijo)) await git(['-C', vaultPath, 'reset', '--mixed', 'HEAD~1'])
+    await git(['-C', vaultPath, 'checkout', 'HEAD', '--', REGISTRO])
+    return true
+  } catch {
+    return false
+  }
 }
 
 // Nombres con los que este repo puede figurar en el registro, de la senal mas
@@ -284,6 +302,29 @@ export function isInsideCwd(cwd, target) {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))
 }
 
+// OneDrive sincroniza .git/ y lo corrompe: ningun clon del Vault va ahi.
+export function enOneDrive(ruta) {
+  return /[\\/]OneDrive[^\\/]*[\\/]/i.test(`${ruta}${path.sep}`)
+}
+
+// SOUCLAUDE_HOME redirige el home en tests, igual que SOUCLAUDE_CLAUDE_HOME en
+// machineConfigPath: sin eso, la suite detectaria el Vault real del dev.
+const homeDir = () => process.env.SOUCLAUDE_HOME ?? os.homedir()
+
+// Donde vive el Vault cuando nadie lo indica (SHS-M54): la ruta se resuelve
+// sola en vez de preguntarse. El hermano del repo es el lugar de siempre; si el
+// repo esta dentro de OneDrive, su hermano tambien, y el clon nuevo va a
+// ~/repos/soubunker-vault. `detectado` es un clon que ya esta en alguno de los
+// dos lugares.
+export function rutasDelVault(cwd) {
+  const hermano = path.join(path.dirname(path.resolve(cwd)), 'soubunker-vault')
+  const enHome = path.join(homeDir(), 'repos', 'soubunker-vault')
+  return {
+    destino: enOneDrive(hermano) ? enHome : hermano,
+    detectado: [hermano, enHome].find((r) => exists(r) && looksLikeVault(r)) ?? null,
+  }
+}
+
 // execFile con args en array: nunca pasa por el shell, asi que las rutas con
 // espacios (todo OneDrive) dejan de ser un problema. Mismo criterio que gitUserName.
 function git(args, opts = {}) {
@@ -298,6 +339,56 @@ function gitUserNameLocal(cwd) {
   } catch {
     return null
   }
+}
+
+// Login de GitHub de quien instala: es como figuran los dueños en el registro
+// (@usuario). Sin gh o sin sesion devuelve null y el llamador cae al nombre de git.
+function ghLogin() {
+  try {
+    return execFileSync('gh', ['api', 'user', '--jq', '.login'], { encoding: 'utf8', stdio: 'pipe', timeout: 10_000 }).trim() || null
+  } catch {
+    return null
+  }
+}
+
+// "María José Pérez" -> "maria": el alias corto con el que el equipo firma las
+// tarjetas del Vault. Sin nada utilizable devuelve null.
+export function aliasDesdeNombre(nombre) {
+  const primero = String(nombre ?? '').trim().split(/\s+/)[0] ?? ''
+  const alias = primero
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '')
+  return alias || null
+}
+
+// Alias de contribuyente cuando nadie lo indica (SHS-M54): el que esta maquina
+// ya uso en otro repo o, si es la primera vez, el deducido del nombre de git.
+export function quienPorDefecto(cwd) {
+  try {
+    const maquina = JSON.parse(readIfExists(machineConfigPath()) ?? 'null')
+    if (typeof maquina?.quien === 'string' && maquina.quien.trim()) return { quien: maquina.quien.trim(), origen: 'maquina' }
+  } catch {
+    // Config de maquina ilegible: queda la deduccion.
+  }
+  const deducido = aliasDesdeNombre(gitUserNameLocal(cwd))
+  return deducido ? { quien: deducido, origen: 'git' } : null
+}
+
+// Nombre con el que un proyecto nuevo entra al registro cuando nadie lo indica:
+// el del repo. Es ademas el unico que resolverPorRegistro reconoce despues en
+// las otras maquinas -- un nombre libre no vuelve a matchear con el repo.
+export function nombrePorDefecto(cwd) {
+  const remoto = nombreDelRemoto(cwd)
+  if (remoto) return remoto
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8'))
+    if (typeof pkg?.name === 'string' && pkg.name.trim()) return pkg.name.trim()
+  } catch {
+    // Sin package.json: queda la carpeta.
+  }
+  return path.basename(path.resolve(cwd))
 }
 
 export function vaultRemote(abs) {
@@ -509,6 +600,7 @@ async function crearProyectoNuevo(cwd, vaultPath, carpetasExistentes, { prompts,
 
   const nombreIngresado = await prompts.text({
     message: `Nombre del proyecto (para ${REGISTRO})`,
+    initialValue: nombrePorDefecto(cwd),
   })
   const nombreProyecto = String(nombreIngresado ?? '').trim()
 
@@ -539,21 +631,59 @@ function prefijoRechazado(vaultPath, carpetasExistentes, prefijo) {
 // linea, que romperian el registro para toda la organizacion.
 async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts, git = gitReal, modo = 'equipo' }) {
   const prefijo = String(datos.prefijo ?? '').trim().toUpperCase()
-  const motivo = prefijoRechazado(vaultPath, carpetasExistentes, prefijo)
+
+  // SHS-M54: el registro contra el que se valida es el del remoto, no el de
+  // este clon -- que puede llevar dias sin sincronizar y no conocer el prefijo
+  // que otro registro ayer. Un Vault sin remoto (local, de una sola persona) no
+  // tiene con quien chocar: se valida contra lo que hay.
+  const compartido = vaultRemote(vaultPath) !== null
+  let carpetas = carpetasExistentes
+  if (compartido && PREFIJO_VALIDO.test(prefijo)) {
+    const pull = await pullRebaseSeguro({ vaultPath, git })
+    if (!pull.ok) {
+      ui.log.warn(
+        `Alta de proyecto cancelada: no se pudo sincronizar el Vault, y sin el registro al dia no se puede saber si ${prefijo} esta libre. ` +
+          'Revisa la red, tu acceso al Vault y que su clon no tenga cambios sin commitear; despues vuelve a correr el comando.'
+      )
+      return null
+    }
+    carpetas = carpetasProyecto(vaultPath)
+    // Con rebase.autoStash el pull pasa aunque el registro tenga ediciones sin
+    // commitear: entrarian en el commit del alta y, si hubiera que retirarlo,
+    // se perderian. Un registro con cambios locales no se toca.
+    let sucio
+    try {
+      sucio = (await git(['-C', vaultPath, 'status', '--porcelain', '--', REGISTRO])).trim() !== ''
+    } catch {
+      sucio = true
+    }
+    if (sucio) {
+      ui.log.warn(`Alta de proyecto cancelada: ${REGISTRO} tiene cambios sin commitear en el clon del Vault. Commitealos o descartalos y vuelve a correr el comando.`)
+      return null
+    }
+  }
+
+  const motivo = prefijoRechazado(vaultPath, carpetas, prefijo)
   if (motivo) {
     ui.log.warn(`Alta de proyecto cancelada: ${motivo}`)
     return null
   }
-  const nombreProyecto = String(datos.nombreProyecto ?? '').trim()
-  if (!nombreProyecto) {
-    ui.log.warn('Alta de proyecto cancelada: falta el nombre del proyecto (--vault-project-name).')
-    return null
-  }
-  const sugerido = gitUserNameLocal(cwd)
-  const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '[dueño]')
-  const invalido = [nombreProyecto, dueño].find((v) => /[|\r\n]/.test(v))
+  // El nombre y el dueño se deducen si no vienen: lo unico que decide una
+  // persona en un alta es el prefijo.
+  const nombreProyecto = String(datos.nombreProyecto ?? '').trim() || nombrePorDefecto(cwd)
+  const sugerido = ghLogin() ?? gitUserNameLocal(cwd)
+  // Sin gh ni nombre de git no hay de donde deducirlo: queda @pendiente, la
+  // misma marca que usan las tarjetas del Vault sin dueño.
+  const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '@pendiente')
+  // Ademas de lo que rompe la tabla, nada de HTML ni enlaces markdown, y un
+  // tope de largo: el nombre y el dueño pueden venir deducidos (package.json,
+  // nombre de git) y se publican sin que nadie los lea antes.
+  const invalido = [nombreProyecto, dueño].find((v) => /[|\r\n<>[\]`]/.test(v) || v.length > 80)
   if (invalido !== undefined) {
-    ui.log.warn(`Alta de proyecto cancelada: "${invalido.split(/[\r\n]/)[0]}" no puede llevar "|" ni saltos de linea.`)
+    ui.log.warn(
+      `Alta de proyecto cancelada: "${invalido.split(/[\r\n]/)[0].slice(0, 80)}" no sirve para el registro (maximo 80 caracteres, sin "|", "<", ">", "[", "]", acentos graves ni saltos de linea). ` +
+        'Indicalo con --vault-project-name o --vault-owner.'
+    )
     return null
   }
 
@@ -561,10 +691,21 @@ async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts
   const registro = await agregarPrefijoAlRegistro(vaultPath, { prefijo, proyecto: nombreProyecto, dueño }, { git })
   if (registro.ok) {
     ui.log.success(`Prefijo ${prefijo} agregado a ${REGISTRO} (${nombreProyecto} · ${dueño}).`)
+  } else if (compartido) {
+    // Sin publicar no hay alta: el prefijo no quedo reservado en el remoto. Se
+    // retira la fila del clon local y no se siembra ni se declara nada.
+    const retirada = await retirarFilaSinPublicar(vaultPath, prefijo, { git })
+    ui.log.warn(
+      `Alta de proyecto cancelada: el prefijo ${prefijo} no se pudo publicar en el Vault (${registro.motivo}). ` +
+        (retirada
+          ? 'No quedo nada a medias: la fila se retiro del clon local. '
+          : `La fila quedo en el clon local: quitala de ${REGISTRO} antes de reintentar. `) +
+        'Verifica tu acceso de escritura al Vault y vuelve a correr el comando.'
+    )
+    return null
   } else {
-    // La fila ya quedo escrita en el clon local (agregarPrefijoAlRegistro
-    // escribe antes de pushear): igual que sembrarProyecto, un push que falla
-    // degrada a warning y sigue -- el proximo push del Vault la empuja.
+    // Vault sin remoto: no hay donde publicar. La fila queda en el clon local,
+    // que es todo el Vault que existe.
     ui.log.warn(`Prefijo ${prefijo} agregado en el clon local pero no se pudo publicar (${registro.motivo}). Pushea el Vault a mano.`)
   }
 
@@ -713,7 +854,7 @@ function persistirProyecto(cwd, vaultPath, project) {
 // consumo (ADR 20260820): sin el, el monitor degrada al alias de la cuenta.
 // Se pregunta UNA vez (solo interactivo, solo si falta) y queda persistido;
 // con --yes o en CI se omite en silencio — nunca es bloqueante.
-async function asegurarQuien(cwd, { flags = {}, yes, prompts }) {
+export async function asegurarQuien(cwd, { flags = {}, yes, prompts, esCI = ui.isCI() }) {
   // --vault-quien: el camino sin terminal (SHS-M53). Mismo cuidado que la
   // pregunta: solo sobre el archivo real, y un valor explicito reemplaza al
   // anterior porque es una decision de quien corre el comando.
@@ -727,15 +868,28 @@ async function asegurarQuien(cwd, { flags = {}, yes, prompts }) {
     }
     return
   }
-  if (yes || ui.isCI()) return
+  // Un runner de CI no es un contribuyente: ahi no se deduce ni se pregunta.
+  if (esCI) return
   // Solo el archivo real: si la config viene del respaldo VAULT_PATH (env),
   // preguntar aqui persistiria esa ruta en un archivo que el usuario no creo.
   const config = leerConfigDeArchivo(cwd)
   if (!config?.path || (typeof config.quien === 'string' && config.quien.trim() !== '')) return
 
+  // SHS-M54: sin terminal el alias se deduce en vez de quedar vacio -- el que
+  // esta maquina ya uso en otro repo o el nombre de git. Se informa de donde
+  // salio para que quien no este de acuerdo lo corrija con --vault-quien.
+  const porDefecto = quienPorDefecto(cwd)
+  if (yes) {
+    if (!porDefecto) return
+    writeVaultConfig(cwd, { path: config.path, repo: config.repo ?? null, quien: porDefecto.quien })
+    const origen = porDefecto.origen === 'maquina' ? 'el que ya usa esta maquina' : 'deducido del nombre de git'
+    ui.log.success(`Contribuyente registrado: "${porDefecto.quien}" (${origen}; se cambia con --vault-quien).`)
+    return
+  }
+
   const respuesta = await prompts.text({
     message: 'Alias del contribuyente para el registro de consumo del Vault (campo "quien"; vacio para omitir)',
-    initialValue: '',
+    initialValue: porDefecto?.quien ?? '',
   })
   const quien = String(respuesta ?? '').trim()
   if (!quien) return
@@ -763,13 +917,13 @@ async function conectarVault({ cwd, flags = {}, manifest, lock, yes, prompts = u
     ui.log.warn(`La ruta configurada del Vault ya no existe: ${configured}`)
   }
 
-  const destino = path.join(path.dirname(cwd), 'soubunker-vault')
+  const { destino, detectado } = rutasDelVault(cwd)
 
-  // Autodeteccion: si el sibling de siempre ya esta clonado y parece un Vault,
+  // Autodeteccion: si el Vault ya esta clonado en uno de los lugares de siempre,
   // conectar directo. Ahorra las preguntas en el caso mas comun -- alguien que ya
   // clono el Vault junto a OTRO repo de la organizacion en esta misma maquina.
-  if (exists(destino) && looksLikeVault(destino)) {
-    return finish(cwd, destino, repo)
+  if (detectado) {
+    return finish(cwd, detectado, repo)
   }
 
   // Con --yes o en CI no se clona salvo pedido explicito (--vault-clone): git

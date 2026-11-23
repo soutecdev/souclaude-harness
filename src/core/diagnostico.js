@@ -11,6 +11,9 @@ import {
   leerRegistroDePrefijos,
   resolverPorRegistro,
   comandoNpx,
+  enOneDrive,
+  rutasDelVault,
+  quienPorDefecto,
 } from './vault.js'
 
 // SHS-M53: el diagnostico es la foto de solo lectura que le permite al agente
@@ -151,10 +154,14 @@ function leerHarness(cwd, manifest) {
 
 function leerVault(cwd) {
   const config = readVaultConfig(cwd)
-  const hermano = path.join(path.dirname(cwd), 'soubunker-vault')
+  const { destino, detectado } = rutasDelVault(cwd)
   const base = {
     configurado: false,
-    hermano: exists(hermano) && looksLikeVault(hermano) ? hermano.replace(/\\/g, '/') : null,
+    // Clon del Vault que ya esta en uno de los lugares de siempre (junto al
+    // repo o en ~/repos): `init` lo conecta solo.
+    hermano: detectado ? detectado.replace(/\\/g, '/') : null,
+    // Donde lo clona `--vault-clone` si no esta: nadie tiene que elegir la ruta.
+    destino: destino.replace(/\\/g, '/'),
   }
   // Sin config, el hermano de siempre es el Vault que `init` conectaria solo:
   // se lee igual para poder decir si el proyecto ya esta dado de alta.
@@ -174,6 +181,8 @@ function leerVault(cwd) {
     proyecto,
     proyectoExiste: proyecto ? carpetas.includes(proyecto) : false,
     quien: config?.quien ?? null,
+    // Alias que el instalador registra solo si falta (SHS-M54).
+    quienPorDefecto: quienPorDefecto(cwd)?.quien ?? null,
     proyectos: carpetas,
     prefijosRegistrados: existe ? leerRegistroDePrefijos(ruta).map((f) => f.prefijo) : [],
     // Carpeta que el registro de prefijos le asigna a este repo (exista o no).
@@ -190,7 +199,7 @@ export function recolectar(cwd, { correr = sh, manifest }) {
       ruta: cwd.replace(/\\/g, '/'),
       vacia: entradas.length === 0,
       soloAndamiaje: detectado.isEmpty,
-      enOneDrive: /[\\/]OneDrive[^\\/]*[\\/]/i.test(`${cwd}${path.sep}`),
+      enOneDrive: enOneDrive(cwd),
       stack: detectado.stackLabel,
       nombre: detectado.projectName,
     },
@@ -290,7 +299,7 @@ export function clasificar(h) {
   }
 
   if (!vault.configurado && !vault.hermano) {
-    pendiente('conectar-vault', 'El Vault no esta en esta maquina: clonarlo fuera del repo (`--vault-clone`) o indicar su ruta (`--vault-path`).')
+    pendiente('conectar-vault', `El Vault no esta en esta maquina: \`--vault-clone\` lo clona solo en ${vault.destino ?? 'su ruta por defecto'} (fuera del repo y de OneDrive).`)
   } else if (vault.ruta && !vault.existe) {
     aviso('vault-ruta', `La ruta configurada del Vault ya no existe: ${vault.ruta}.`, 'Vuelve a clonarlo o corrige la ruta con `--vault-path`.')
   } else if (vault.ruta && !vault.pareceVault) {
@@ -302,10 +311,10 @@ export function clasificar(h) {
       if (vault.segunRegistro) {
         pendiente('declarar-proyecto', `El registro del Vault asocia este repo a ${vault.segunRegistro}: se declara solo${vault.proyectos.includes(vault.segunRegistro) ? '' : ' (pasar `--vault-seed` para crear la carpeta)'}.`)
       } else {
-        pendiente('alta-prefijo', 'Este repo no figura en el registro del Vault: elegir con el usuario un proyecto existente (`--vault-project`) o dar de alta uno nuevo (`--vault-prefix`, `--vault-project-name`, `--vault-owner`).')
+        pendiente('alta-prefijo', 'Este repo no figura en el registro del Vault: elegir con el usuario un proyecto existente (`--vault-project`) o dar de alta uno nuevo con `--vault-prefix <XXX>` (el nombre y el dueño se deducen).')
       }
     }
-    if (!vault.quien) pendiente('quien', 'Falta el alias del contribuyente para el registro de consumo: `--vault-quien <alias>`.')
+    if (!vault.quien && !vault.quienPorDefecto) pendiente('quien', 'Falta el alias del contribuyente y no se pudo deducir de git: `--vault-quien <alias>`.')
   }
 
   return { caso, comando, bloqueos, avisos, pendientes }
