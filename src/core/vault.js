@@ -648,6 +648,19 @@ async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts
       return null
     }
     carpetas = carpetasProyecto(vaultPath)
+    // Con rebase.autoStash el pull pasa aunque el registro tenga ediciones sin
+    // commitear: entrarian en el commit del alta y, si hubiera que retirarlo,
+    // se perderian. Un registro con cambios locales no se toca.
+    let sucio
+    try {
+      sucio = (await git(['-C', vaultPath, 'status', '--porcelain', '--', REGISTRO])).trim() !== ''
+    } catch {
+      sucio = true
+    }
+    if (sucio) {
+      ui.log.warn(`Alta de proyecto cancelada: ${REGISTRO} tiene cambios sin commitear en el clon del Vault. Commitealos o descartalos y vuelve a correr el comando.`)
+      return null
+    }
   }
 
   const motivo = prefijoRechazado(vaultPath, carpetas, prefijo)
@@ -660,9 +673,15 @@ async function altaProyecto(cwd, vaultPath, carpetasExistentes, datos, { prompts
   const nombreProyecto = String(datos.nombreProyecto ?? '').trim() || nombrePorDefecto(cwd)
   const sugerido = ghLogin() ?? gitUserNameLocal(cwd)
   const dueño = String(datos.dueño ?? '').trim() || (sugerido ? `@${sugerido}` : '[dueño]')
-  const invalido = [nombreProyecto, dueño].find((v) => /[|\r\n]/.test(v))
+  // Ademas de lo que rompe la tabla, nada de HTML ni enlaces markdown, y un
+  // tope de largo: el nombre y el dueño pueden venir deducidos (package.json,
+  // nombre de git) y se publican sin que nadie los lea antes.
+  const invalido = [nombreProyecto, dueño].find((v) => /[|\r\n<>[\]`]/.test(v) || v.length > 80)
   if (invalido !== undefined) {
-    ui.log.warn(`Alta de proyecto cancelada: "${invalido.split(/[\r\n]/)[0]}" no puede llevar "|" ni saltos de linea.`)
+    ui.log.warn(
+      `Alta de proyecto cancelada: "${invalido.split(/[\r\n]/)[0].slice(0, 80)}" no sirve para el registro (maximo 80 caracteres, sin "|", "<", ">", "[", "]", acentos graves ni saltos de linea). ` +
+        'Indicalo con --vault-project-name o --vault-owner.'
+    )
     return null
   }
 

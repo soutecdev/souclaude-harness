@@ -36,8 +36,9 @@ FASE 1 · DIAGNÓSTICO (solo lectura)
        2. Copia el código que aparece, pulsa Enter y pégalo en el navegador.
        3. Inicia sesión con tu cuenta de la organización, autoriza y vuelve aquí.
      Cuando te diga "listo", corre gh auth status. Si falla, muéstrame el error y
-     repite la guía. Si pasa, corre gh auth setup-git: así git usa esa misma
-     sesión y no me pide credenciales al clonar ni al pushear.
+     repite la guía. Si pasa, dime que vas a correr gh auth setup-git y córrelo:
+     configura git, para toda la máquina, para usar esa misma sesión, y así no me
+     pide credenciales al clonar ni al pushear.
    - Acceso al Vault, ya con sesión: corre
        gh api repos/soutecdev/soubunker-vault --jq .permissions.push
      Si no responde true, detente y dime que pida al coordinador acceso de
@@ -53,7 +54,8 @@ FASE 1 · DIAGNÓSTICO (solo lectura)
 FASE 2 · PLAN (deduce todo; a mí pregúntame solo lo que se indica)
 Arma el plan con estos valores, sin preguntármelos:
 a) Modo: el de "harness.modo" si ya existe; si no, equipo.
-b) Nombre del proyecto: "carpeta.nombre". Idioma de las respuestas: es. Tipo
+b) Nombre del proyecto: "carpeta.nombre"; si trae algo que no sea letras,
+   números, espacios, puntos o guiones, pregúntamelo. Idioma de las respuestas: es. Tipo
    (backend, frontend, data, ml, automation, infra o integration): dedúcelo del
    código y de "carpeta.stack".
 c) Skills: todas las de "catalogoSkills" que aplican al modo, con un solo espejo

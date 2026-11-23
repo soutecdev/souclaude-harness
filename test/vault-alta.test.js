@@ -281,3 +281,32 @@ test('diagnostico: sin Vault en la maquina, el pendiente dice donde se clona sol
   assert.match(pendientes[0].mensaje, /--vault-clone/)
   assert.match(pendientes[0].mensaje, /C:\/Users\/ana\/repos\/soubunker-vault/)
 })
+
+// --- endurecimiento del security review
+
+test('un nombre deducido con HTML, enlaces o demasiado largo no llega al registro', async () => {
+  for (const name of ['<img src=https://x/t.png>', '[texto](https://x)', 'a'.repeat(81)]) {
+    const dir = mkRepo({ 'package.json': JSON.stringify({ name }) })
+    const { local, remoto } = vaultConRemoto()
+    const antes = registroRemoto(remoto)
+
+    assert.equal(await main(['init', ...YES, '--vault-path', local, '--vault-prefix', 'ABC'], dir), 0)
+
+    assert.equal(registroRemoto(remoto), antes, `se publico el nombre ${name.slice(0, 20)}`)
+    assert.ok(!registroLocal(local).includes('ABC'))
+    assert.equal(JSON.parse(read(dir, VAULT_CONFIG)).project, undefined)
+  }
+})
+
+test('un registro con cambios sin commitear no se toca, ni con rebase.autoStash', async () => {
+  const dir = mkRepo({ 'package.json': JSON.stringify({ name: 'proyecto-nuevo' }) })
+  const { local } = vaultConRemoto()
+  git(local, 'config', 'rebase.autoStash', 'true')
+  fs.appendFileSync(path.join(local, ...REGISTRO.split('/')), '| ZZZ | a-mano | @x | 2026-11-23 | activo |\n')
+  const antes = registroLocal(local)
+
+  assert.equal(await main(['init', ...YES, '--vault-path', local, '--vault-prefix', 'ABC'], dir), 0)
+
+  assert.equal(registroLocal(local), antes, 'se perdio o se piso la edicion local del registro')
+  assert.ok(!has(local, 'Project-ABC'))
+})
