@@ -2,6 +2,41 @@
 
 El harness y el CLI se versionan juntos.
 
+## [Unreleased]
+
+La instalación por prompt deja una sola decisión a la persona: el prefijo del
+proyecto (SHS-M54).
+
+### Cambios
+
+- **El prompt de instalación solo pregunta el prefijo**, y solo si el proyecto es
+  nuevo en el Vault. El modo (equipo), el tipo, el idioma, las skills (con Azure
+  Boards como espejo del tablero) y los datos del repo a crear se deducen y se
+  muestran en un plan antes de instalar; quien no esté de acuerdo los cambia ahí.
+- **La ruta del Vault ya no se pregunta ni se pasa.** `--vault-clone` sin
+  `--vault-path` lo clona junto al repo o, si el repo está dentro de OneDrive, en
+  `~/repos/soubunker-vault`. Un clon que ya esté en cualquiera de los dos lugares
+  se conecta solo. `souclaude diagnostico` informa el destino en `vault.destino`.
+- **`--vault-prefix` alcanza para dar de alta un proyecto.** El nombre
+  (`--vault-project-name`) y el dueño (`--vault-owner`) pasan a ser opcionales:
+  por defecto, el nombre del repo y el usuario de GitHub de quien instala. Antes,
+  sin nombre el alta se cancelaba.
+- **El alias de contribuyente se registra solo** con `--yes`: el que la máquina ya
+  usa en otro repo o, la primera vez, el primer nombre de git en minúsculas. Se
+  cambia con `--vault-quien`. En CI no se deduce nada.
+
+### Correcciones
+
+- **El prefijo se valida contra el Vault recién sincronizado.** El alta hacía la
+  comprobación contra el clon local, que podía no conocer un prefijo registrado
+  por otra persona después del último pull. Ahora sincroniza antes de validar y,
+  si no puede, cancela el alta.
+- **Un prefijo que no se pudo publicar ya no queda a medias.** Si el push del
+  registro falla, el alta se cancela: la fila se retira del clon local y no se
+  siembra la carpeta ni se declara el proyecto. Antes el instalador avisaba y
+  seguía, con un prefijo que solo existía en esa máquina. No aplica a un Vault sin
+  remoto, que no tiene con quién chocar.
+
 ## [3.21.0] — 2026-11-22
 
 Dos cambios en este release: el harness se instala con un único prompt que cubre
