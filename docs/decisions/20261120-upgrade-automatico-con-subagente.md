@@ -1,7 +1,7 @@
 # ADR: El upgrade del harness corre solo en sesión, con un subagente que commitea en la rama actual
 
 **Fecha**: 2026-11-20
-**Status**: proposed
+**Status**: revertido el 2026-11-23 (SHS-M43-T006, v3.22.1): el security review marcó como riesgo alto que la sesión ejecute con `npx` código del repo del harness y lo commitee sin confirmación del usuario. Se retiran el subagente `harness-upgrader`, la sección «Modo autónomo» de la skill y la orden del hook; vuelve el aviso manual del ADR `20261008-aviso-de-version-en-sesion.md` (alternativa A de este documento).
 **Deciders**: Leonardo I (@leonardo), con evaluación de alternativas de Claude
 
 ## Context

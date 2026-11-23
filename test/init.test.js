@@ -49,15 +49,7 @@ test('init en repo vacio: emite el harness completo + scaffolding', async () => 
   assert.ok(files.includes('docs/decisions/_template.md'))
 
   // El flujo SDD/CCEM ya no existe: ni agentes, ni constitucion, ni specs.
-  // Unica excepcion: el subagente harness-upgrader del upgrade automatico
-  // (SHS-M43-T005, ADR 20261120-upgrade-automatico-con-subagente), que no es
-  // un rol del flujo sino un envoltorio de la skill harness-upgrade.
-  assert.ok(files.includes('.claude/agents/harness-upgrader.md'), 'falta el subagente harness-upgrader')
-  assert.deepEqual(
-    files.filter((f) => f.startsWith('.claude/agents/')),
-    ['.claude/agents/harness-upgrader.md'],
-    'se emitio un agente fuera de la excepcion'
-  )
+  assert.ok(!files.some((f) => f.startsWith('.claude/agents/')), 'se emitio un agente')
   assert.ok(!files.some((f) => f.startsWith('specs/')), 'se emitio specs/')
   // AGENTS.md volvio en SHS-M48, pero como puntero a CLAUDE.md para Codex y
   // Antigravity, no como el orquestador del flujo SDD.

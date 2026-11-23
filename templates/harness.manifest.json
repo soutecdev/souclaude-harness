@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/harness.manifest.schema.json",
-  "harnessVersion": "3.22.0",
+  "harnessVersion": "3.22.1",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
@@ -164,12 +164,6 @@
       "id": "hook-reglas-pr",
       "src": "base/claude/hooks/reglas-pr.mjs",
       "dest": ".claude/hooks/reglas-pr.mjs",
-      "policy": "managed"
-    },
-    {
-      "id": "agent-harness-upgrader",
-      "src": "base/claude/agents/harness-upgrader.md",
-      "dest": ".claude/agents/harness-upgrader.md",
       "policy": "managed"
     },
     {
