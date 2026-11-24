@@ -135,6 +135,5 @@ milestone → plan → tarea → rama → PR → Vault → espejo del tablero
 - [Playbook de bootstrap](../bootstrap-proyecto-plantillas-prompts.md) — prompts por
   fase para cada casuística (proyecto nuevo, repo existente, integrante nuevo,
   máquina nueva).
-- [Infografías](../infografias/) — una por casuística de adopción, imprimibles.
 - [El protocolo del progreso](../../progress/README.md) — los tres niveles del Vault
   y el protocolo anti-solapamiento, al detalle.
