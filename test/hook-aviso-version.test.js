@@ -61,6 +61,9 @@ for (const hook of Object.keys(HOOKS)) {
     const salida = correrHook(hook, consumidorCon('3.16.2'), { remoto, home: homeTmp() })
     assert.match(salida, /Version nueva del harness: v3\.18\.0 \(instalada: v3\.16\.2\)\./)
     assert.match(salida, /harness-upgrade/)
+    // SHS-M43-T006: el aviso ofrece el upgrade; nunca ordena correrlo solo.
+    assert.match(salida, /ofrecele actualizar/)
+    assert.doesNotMatch(salida, /sin pedirle confirmacion|subagente|harness-upgrader/)
   })
 
   test(`${hook}: al dia no avisa nada (el tag movil v3 no cuenta como version)`, () => {
@@ -70,65 +73,6 @@ for (const hook of Object.keys(HOOKS)) {
     assert.doesNotMatch(salida, /Major nueva del harness/)
   })
 }
-
-// Upgrade automatico en sesion (SHS-M43-T005): con la skill harness-upgrade
-// instalada (en .claude/ o .agents/, cualquier herramienta) y en una rama de
-// trabajo, el aviso ordena actualizar sin confirmacion via el subagente
-// harness-upgrader; en main/master o con HEAD suelto solo avisa; sin la skill
-// queda el aviso manual.
-function conSkillYHead(dir, head, base = '.claude') {
-  write(dir, `${base}/skills/harness-upgrade/SKILL.md`, '---\nname: harness-upgrade\n---\n')
-  write(dir, '.git/HEAD', `${head}\n`)
-  return dir
-}
-
-const LANZA = /Actualiza el harness ya, sin pedirle confirmacion al usuario: lanza en segundo plano el subagente harness-upgrader/
-
-for (const hook of Object.keys(HOOKS)) {
-  test(`${hook}: en rama de trabajo con la skill instalada ordena actualizar sin confirmacion`, () => {
-    const remoto = remotoConTags(['v3.16.2', 'v3.18.0'])
-    const dir = conSkillYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo')
-    const salida = correrHook(hook, dir, { remoto, home: homeTmp() })
-    assert.match(salida, LANZA)
-    assert.match(salida, /Actualiza el harness de v3\.16\.2 a v3\.18\.0\./)
-    // Agnostico a la herramienta: sin el agente, subagente propio con la consigna de la skill.
-    assert.match(salida, /subagente propio .*skill harness-upgrade, seccion "Modo autonomo"/)
-    assert.doesNotMatch(salida, /ofrecele actualizar/)
-  })
-}
-
-test('la skill solo en .agents/ (Codex, Antigravity) tambien activa el upgrade automatico', () => {
-  const remoto = remotoConTags(['v3.18.0'])
-  const dir = conSkillYHead(consumidorCon('3.16.2'), 'ref: refs/heads/feature/M7-algo', '.agents')
-  assert.match(correrHook('declarar-milestone', dir, { remoto, home: homeTmp() }), LANZA)
-})
-
-test('en main o master con la skill instalada no lanza el subagente: solo avisa', () => {
-  const remoto = remotoConTags(['v3.18.0'])
-  for (const rama of ['main', 'master']) {
-    const dir = conSkillYHead(consumidorCon('3.16.2'), `ref: refs/heads/${rama}`)
-    const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
-    assert.match(salida, new RegExp(`Estas en ${rama}: el harness no se actualiza solo aqui`))
-    assert.doesNotMatch(salida, LANZA)
-  }
-})
-
-test('con HEAD suelto no lanza el subagente: solo avisa', () => {
-  const remoto = remotoConTags(['v3.18.0'])
-  const dir = conSkillYHead(consumidorCon('3.16.2'), 'a'.repeat(40))
-  const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
-  assert.match(salida, /Estas en HEAD suelto/)
-  assert.doesNotMatch(salida, LANZA)
-})
-
-test('en rama de trabajo sin la skill instalada queda el aviso manual', () => {
-  const remoto = remotoConTags(['v3.18.0'])
-  const dir = consumidorCon('3.16.2')
-  write(dir, '.git/HEAD', 'ref: refs/heads/feature/M7-algo\n')
-  const salida = correrHook('declarar-milestone', dir, { remoto, home: homeTmp() })
-  assert.match(salida, /ofrecele actualizar con la skill harness-upgrade/)
-  assert.doesNotMatch(salida, LANZA)
-})
 
 // Los demas casos cubren la logica compartida: con un solo hook alcanza.
 

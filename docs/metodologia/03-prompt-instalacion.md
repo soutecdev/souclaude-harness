@@ -27,7 +27,7 @@ desde cero, crea una carpeta vacía y ábrelo ahí) y pega [el prompt](#el-promp
 ## Valores vigentes (generados — no los edites a mano)
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.22.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.22.1**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 Requisitos de máquina:
@@ -297,9 +297,8 @@ cambias diciéndoselo.
 ## Después de instalar
 
 - **Actualizar el harness** más adelante: no hace falta nada — al abrir una sesión,
-  si hay versión nueva el harness se actualiza solo en segundo plano y te avisa al
-  terminar; para hacerlo a mano, dile al agente "actualiza el harness" (skill
-  `harness-upgrade`).
+  el harness avisa si hay versión nueva; o dile al agente "actualiza el harness"
+  (skill `harness-upgrade`).
 - **El primer milestone**: antes de cualquier código, el agente te pedirá declarar
   (o dar de alta) el milestone del Vault — es la regla central de la metodología.
 - **El detalle de cada paso** (crear el proyecto en Jira, el primer milestone, un

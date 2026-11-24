@@ -2,6 +2,33 @@
 
 El harness y el CLI se versionan juntos.
 
+## [3.22.1] — 2026-11-23
+
+Se retira la actualización autónoma del harness (SHS-M43-T006).
+
+### Correcciones
+
+- **El harness ya no se actualiza solo: vuelve a avisar y a ofrecer el upgrade.**
+  Desde la 3.21.0, ante una versión nueva de la misma major el aviso de inicio de
+  sesión ordenaba actualizar sin pedir confirmación: la sesión corría con `npx`
+  código del repo del harness y commiteaba el resultado en la rama de trabajo. El
+  security review lo marcó como riesgo alto: quien lograra publicar una versión
+  ejecutaría código con los privilegios de cada desarrollador, sin que nadie lo
+  aprobara. El aviso vuelve a ser el de la 3.17.0 («avísale al usuario una sola
+  vez y ofrécele actualizar con la skill `harness-upgrade`») y el upgrade corre
+  solo cuando el usuario lo pide.
+- **Se eliminan el subagente `harness-upgrader`** (`.claude/agents/`) **y la
+  sección «Modo autónomo» de la skill `harness-upgrade`.** El harness vuelve a no
+  instalar ningún agente. En un repo ya instalado, `upgrade --prune` borra el
+  archivo del agente; si lo editaste, lo reporta como obsoleto y no lo toca.
+- **Si editaste el hook de inicio de sesión**, el upgrade deja la versión nueva
+  al lado como `.new` y tu copia sigue ordenando actualizar sin preguntar:
+  intégralo en el momento.
+- El ADR `20261120-upgrade-automatico-con-subagente.md` queda como revertido.
+
+Los repos con la 3.21.0 o la 3.22.0 todavía traen el aviso que ordena
+actualizar sin preguntar: esta versión es la última que les llega por esa vía.
+
 ## [3.22.0] — 2026-11-23
 
 La instalación por prompt deja una sola decisión a la persona: el prefijo del
