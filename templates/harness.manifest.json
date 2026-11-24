@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/harness.manifest.schema.json",
-  "harnessVersion": "3.22.0",
+  "harnessVersion": "3.22.1",
   "vault": {
     "repo": "https://github.com/soutecdev/soubunker-vault.git"
   },
@@ -164,12 +164,6 @@
       "id": "hook-reglas-pr",
       "src": "base/claude/hooks/reglas-pr.mjs",
       "dest": ".claude/hooks/reglas-pr.mjs",
-      "policy": "managed"
-    },
-    {
-      "id": "agent-harness-upgrader",
-      "src": "base/claude/agents/harness-upgrader.md",
-      "dest": ".claude/agents/harness-upgrader.md",
       "policy": "managed"
     },
     {
@@ -596,6 +590,10 @@
     }
   ],
   "obsolete": [
+    {
+      "dest": ".claude/agents/harness-upgrader.md",
+      "reason": "Subagente del upgrade autonomo, retirado en el harness 3.22.1: el harness vuelve a avisar la version nueva y no se actualiza solo."
+    },
     {
       "dest": ".claudeignore",
       "reason": "Claude Code nunca soporto .claudeignore: el archivo se ignora en silencio. La exclusion real se configura en permissions.deny de .claude/settings.json, que este harness ya emite."

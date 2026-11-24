@@ -12,7 +12,7 @@ instalar el harness. Son cuatro artefactos:
 | [prompt-instalacion.txt](prompt-instalacion.txt) | El prompt solo, sin nada más: para compartirlo y pegarlo tal cual en Claude Code |
 
 <!-- souclaude:gen version -->
-Documenta el **harness souclaude v3.22.0**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
+Documenta el **harness souclaude v3.22.1**. El sello lo regenera `node scripts/gen-docs-metodologia.mjs` y siempre coincide con la versión de `package.json`.
 <!-- /souclaude:gen version -->
 
 ## Cómo se mantiene fresca
