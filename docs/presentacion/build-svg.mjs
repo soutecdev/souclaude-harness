@@ -986,7 +986,7 @@ const slides = [
               type: 'kv', kw: 190, size: 16, rows: [
                 { k: 'progress/README.md', v: 'El protocolo completo: los dos repos, el anti-solapamiento y el formato de los tableros.' },
                 { k: 'CLAUDE.md', v: 'Las reglas duras del repo: ramas, commits, PR y qué no se hace nunca.' },
-                { k: 'docs/infografias/', v: 'Una master de la metodología y una por caso de adopción, listas para imprimir.' },
+                { k: 'docs/metodologia/', v: 'La guía, la infografía master y el prompt de instalación, siempre al día.' },
                 { k: 'docs/decisions/', v: 'Los ADR: por qué las cosas son como son.' }
               ]
             },
